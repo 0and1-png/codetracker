@@ -1,3 +1,72 @@
+export const COURSE_PRESETS = [
+  { id: 'course_cpp', name: 'C++信奥' },
+  { id: 'course_python', name: 'Python' },
+  { id: 'course_visual', name: '图形化' },
+] as const;
+
+export const DEFAULT_CPP_KNOWLEDGE = [
+  '变量与数据类型',
+  '运算符与表达式',
+  '顺序结构',
+  '分支结构',
+  '循环结构',
+  '数组',
+  '字符串',
+  '函数',
+  '递归',
+  '排序算法',
+  '搜索算法',
+  '贪心算法',
+  '动态规划入门',
+] as const;
+
+export const DEFAULT_PYTHON_KNOWLEDGE = [
+  '变量与数据类型',
+  '运算符',
+  '条件判断',
+  '循环结构',
+  '列表与元组',
+  '字典与集合',
+  '字符串操作',
+  '函数定义',
+  '文件操作',
+  '模块与包',
+  '面向对象基础',
+  '常用库使用',
+] as const;
+
+export const DEFAULT_VISUAL_KNOWLEDGE = [
+  '角色与舞台',
+  '运动与坐标',
+  '外观与造型',
+  '事件与广播',
+  '条件判断',
+  '循环结构',
+  '变量',
+  '列表',
+  '自定义积木',
+  '侦测与感知',
+  '画笔与绘图',
+  '克隆',
+] as const;
+
+export const KNOWLEDGE_STATUS_LABELS: Record<string, string> = {
+  not_started: '未开始',
+  learning: '学习中',
+  mastered: '已掌握',
+};
+
+export const KNOWLEDGE_STATUS_COLORS: Record<string, string> = {
+  not_started: 'bg-gray-200 text-gray-600',
+  learning: 'bg-amber-100 text-amber-700',
+  mastered: 'bg-emerald-100 text-emerald-700',
+};
+
+export const BEHAVIOR_LABELS = {
+  focus: '专注度',
+  attendance: '出勤',
+} as const;
+
 export const PRESET_STRENGTHS = [
   '逻辑清晰',
   '独立完成',
@@ -27,35 +96,3 @@ export const PRESET_IMPROVEMENTS = [
   '注释缺失',
   '顺序逻辑不清',
 ] as const;
-
-export const DEFAULT_KNOWLEDGE_POINTS = [
-  '顺序结构',
-  '条件判断',
-  '循环结构',
-  '变量与数据类型',
-  '运算符',
-  '字符串操作',
-  '列表/数组',
-  '函数定义与调用',
-  '递归思想',
-  '事件与交互',
-  '坐标系与绘图',
-  '逻辑运算',
-] as const;
-
-export const BEHAVIOR_LABELS = {
-  focus: '专注度',
-  attendance: '出勤',
-} as const;
-
-export const KNOWLEDGE_STATUS_LABELS: Record<string, string> = {
-  not_started: '未开始',
-  learning: '学习中',
-  mastered: '已掌握',
-};
-
-export const KNOWLEDGE_STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-gray-200 text-gray-600',
-  learning: 'bg-amber-100 text-amber-700',
-  mastered: 'bg-emerald-100 text-emerald-700',
-};

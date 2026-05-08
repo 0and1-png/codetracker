@@ -1,64 +1,76 @@
+// ============ Course ============
+export interface KnowledgePointDef {
+  id: string;
+  name: string;
+}
+
+export interface ProblemDef {
+  id: string;
+  name: string;
+  knowledgePointId?: string;
+}
+
+export interface Course {
+  id: string;
+  name: string;
+  teachingHabits: string;
+  knowledgePoints: KnowledgePointDef[];
+  problems: ProblemDef[];
+}
+
+// ============ Student ============
 export interface Student {
   id: string;
   name: string;
+  courseId: string;
   className?: string;
-  course?: string;
   notes?: string;
   createdAt: string;
 }
 
-export interface ProblemRetry {
+// ============ Records (separated by type) ============
+export interface TypingRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  date: string;
+  speed: number;
+  accuracy: number;
+}
+
+export interface ProblemRetryRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  date: string;
+  problemId: string;
   problemName: string;
   attempt: number;
   timeSpent: number;
-  date: string;
+  notes?: string;
 }
 
-export interface WorkUpload {
-  imageUrl: string;
-  comment?: string;
-  date: string;
-}
-
-export interface BehaviorRating {
-  focus: number;
-  attendance: number;
-}
-
-export interface LearningRecord {
+export interface HomeworkRecord {
   id: string;
   studentId: string;
+  courseId: string;
   date: string;
-  strengths: string[];
-  improvements: string[];
-  customStrengths: string[];
-  customImprovements: string[];
-  typingSpeed?: number;
-  accuracy?: number;
-  problemRetries: ProblemRetry[];
-  works: WorkUpload[];
-  behavior: BehaviorRating;
-  notes: string;
+  title: string;
+  content: string;
+  score?: number;
+  comment?: string;
+  imageUrl?: string;
 }
 
+// ============ Knowledge Progress ============
 export type KnowledgeStatus = 'not_started' | 'learning' | 'mastered';
 
-export interface KnowledgePoint {
+export interface KnowledgeProgress {
   id: string;
   studentId: string;
-  name: string;
+  knowledgePointId: string;
+  knowledgePointName: string;
+  courseId: string;
   status: KnowledgeStatus;
   updatedAt: string;
-}
-
-export interface MonthlyReport {
-  studentId: string;
-  month: string;
-  growthKeywords: string[];
-  typingSpeedData: { date: string; speed: number }[];
-  problemTrendData: { problemName: string; attempts: { attempt: number; timeSpent: number }[] }[];
-  knowledgeStatus: { name: string; status: KnowledgeStatus }[];
-  teacherMessage: string;
-  bestWork: WorkUpload | null;
-  nextMonthGoals: string;
 }

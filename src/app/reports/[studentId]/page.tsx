@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import {
@@ -16,19 +16,27 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import type { Student, LearningRecord, KnowledgePoint } from '@/lib/types';
+import type {
+  Student,
+  Course,
+  TypingRecord,
+  ProblemRetryRecord,
+  HomeworkRecord,
+  KnowledgeProgress,
+} from '@/lib/types';
 import {
   getStudents,
-  getRecordsByStudent,
+  getCourse,
+  getTypingByStudent,
+  getRetryByStudent,
+  getHomeworkByStudent,
   getKnowledgeByStudent,
 } from '@/lib/store';
-import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
+import { KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -44,8 +52,11 @@ export default function ReportPage() {
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [student, setStudent] = useState<Student | null>(null);
-  const [records, setRecords] = useState<LearningRecord[]>([]);
-  const [knowledge, setKnowledge] = useState<KnowledgePoint[]>([]);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [typingRecords, setTypingRecords] = useState<TypingRecord[]>([]);
+  const [retryRecords, setRetryRecords] = useState<ProblemRetryRecord[]>([]);
+  const [homeworkRecords, setHomeworkRecords] = useState<HomeworkRecord[]>([]);
+  const [knowledge, setKnowledge] = useState<KnowledgeProgress[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [teacherMessage, setTeacherMessage] = useState('');
   const [nextGoals, setNextGoals] = useState('');
@@ -54,7 +65,13 @@ export default function ReportPage() {
   const loadData = useCallback(() => {
     const s = getStudents().find((s) => s.id === studentId);
     setStudent(s || null);
-    setRecords(getRecordsByStudent(studentId));
+    if (s) {
+      const c = getCourse(s.courseId);
+      setCourse(c || null);
+    }
+    setTypingRecords(getTypingByStudent(studentId));
+    setRetryRecords(getRetryByStudent(studentId));
+    setHomeworkRecords(getHomeworkByStudent(studentId));
     setKnowledge(getKnowledgeByStudent(studentId));
   }, [studentId]);
 
@@ -71,31 +88,21 @@ export default function ReportPage() {
   }
 
   // Filter records for selected month
-  const monthRecords = records.filter((r) => r.date.startsWith(selectedMonth));
+  const monthTyping = typingRecords.filter((r) => r.date.startsWith(selectedMonth));
+  const monthRetry = retryRecords.filter((r) => r.date.startsWith(selectedMonth));
+  const monthHomework = homeworkRecords.filter((r) => r.date.startsWith(selectedMonth));
 
-  // Generate growth keywords from strengths
-  const allStrengths = monthRecords.flatMap((r) => [...r.strengths, ...r.customStrengths]);
-  const strengthCounts = allStrengths.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = (acc[s] || 0) + 1;
-    return acc;
-  }, {});
-  const growthKeywords = Object.entries(strengthCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name]) => name);
-
-  // Typing speed chart data
-  const typingChartData = monthRecords
-    .filter((r) => r.typingSpeed != null)
+  // Typing chart data
+  const typingChartData = monthTyping
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((r) => ({
       date: format(new Date(r.date), 'M/d'),
-      speed: r.typingSpeed!,
-      accuracy: r.accuracy ?? 0,
+      speed: r.speed,
+      accuracy: r.accuracy,
     }));
 
   // Problem trend for the month
-  const allProblemRetries = monthRecords.flatMap((r) => r.problemRetries);
+  const allProblemRetries = monthRetry;
   const problemNames = [...new Set(allProblemRetries.map((r) => r.problemName))];
   const problemTrendData = problemNames.map((name) => {
     const attempts = allProblemRetries
@@ -103,16 +110,6 @@ export default function ReportPage() {
       .sort((a, b) => a.attempt - b.attempt);
     return { problemName: name, attempts };
   });
-
-  // Knowledge status
-  const knowledgeSummary = knowledge.map((k) => ({
-    name: k.name,
-    status: k.status,
-  }));
-
-  // Best work
-  const allWorks = monthRecords.flatMap((r) => r.works);
-  const bestWork = allWorks.length > 0 ? allWorks[allWorks.length - 1] : null;
 
   // Improvement cards
   const improvementCards = problemTrendData.map((pt) => {
@@ -128,8 +125,24 @@ export default function ReportPage() {
     };
   }).filter(Boolean);
 
+  // Knowledge status summary
+  const knowledgeSummary = knowledge.map((k) => ({
+    name: k.knowledgePointName,
+    status: k.status,
+  }));
+
+  // Best homework
+  const bestHomework = monthHomework.length > 0
+    ? monthHomework.reduce((best, h) => ((h.score ?? 0) > (best.score ?? 0) ? h : best))
+    : null;
+
   // Available months
-  const availableMonths = [...new Set(records.map((r) => r.date.substring(0, 7)))].sort().reverse();
+  const allDates = [
+    ...typingRecords.map((r) => r.date),
+    ...retryRecords.map((r) => r.date),
+    ...homeworkRecords.map((r) => r.date),
+  ];
+  const availableMonths = [...new Set(allDates.map((d) => d.substring(0, 7)))].sort().reverse();
   if (availableMonths.length === 0) {
     availableMonths.push(format(new Date(), 'yyyy-MM'));
   }
@@ -180,6 +193,7 @@ export default function ReportPage() {
   };
 
   const monthLabel = format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN });
+  const totalSessions = monthTyping.length + monthRetry.length + monthHomework.length;
 
   return (
     <div className="min-h-screen">
@@ -258,45 +272,27 @@ export default function ReportPage() {
           <div className="bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 text-white px-8 py-10">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-violet-200 text-sm mb-1">少儿编程学习月度报告</p>
+                <p className="text-violet-200 text-sm mb-1">
+                  {course?.name || '少儿编程'}学习月度报告
+                </p>
                 <h2 className="text-3xl font-bold">{student.name}</h2>
                 <p className="text-violet-200 mt-1">{monthLabel}</p>
               </div>
               <div className="text-right">
                 <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-2">
-                  <span className="text-2xl font-bold">{monthRecords.length}</span>
-                  <span className="text-sm text-violet-200">次课</span>
+                  <span className="text-2xl font-bold">{totalSessions}</span>
+                  <span className="text-sm text-violet-200">次练习</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="p-8 space-y-8">
-            {/* Growth Keywords */}
-            {growthKeywords.length > 0 && (
-              <section>
-                <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                  <span className="w-1 h-6 bg-violet-500 rounded-full" />
-                  本月成长关键词
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {growthKeywords.map((kw) => (
-                    <span
-                      key={kw}
-                      className="bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 px-4 py-2 rounded-full font-medium"
-                    >
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {/* Typing Speed Progress */}
             {typingChartData.length >= 2 && (
               <section>
                 <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-                  <span className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  <span className="w-1 h-6 bg-violet-500 rounded-full" />
                   打字速度进步趋势
                 </h3>
                 <div className="bg-gray-50 rounded-xl p-4">
@@ -333,7 +329,7 @@ export default function ReportPage() {
               <section>
                 <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <span className="w-1 h-6 bg-amber-500 rounded-full" />
-                  题目重刷进步
+                  题目三刷进步
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {improvementCards.map((card) => (
@@ -351,7 +347,7 @@ export default function ReportPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">首次(分钟)</p>
                         </div>
-                        <div className="text-3xl text-amber-400">→</div>
+                        <div className="text-3xl text-amber-400">&rarr;</div>
                         <div className="text-center">
                           <p className="text-2xl font-bold text-emerald-600">
                             {card!.lastTime}
@@ -370,6 +366,46 @@ export default function ReportPage() {
                           <p className="text-xs text-muted-foreground">提升</p>
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Homework Summary */}
+            {monthHomework.length > 0 && (
+              <section>
+                <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-emerald-500 rounded-full" />
+                  作业完成情况
+                </h3>
+                <div className="space-y-3">
+                  {monthHomework.map((hw) => (
+                    <div
+                      key={hw.id}
+                      className="bg-emerald-50 rounded-xl p-4 border border-emerald-100"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-foreground">{hw.title}</h4>
+                        {hw.score != null && (
+                          <span className="text-lg font-bold text-emerald-600">{hw.score}分</span>
+                        )}
+                      </div>
+                      {hw.content && (
+                        <p className="text-sm text-muted-foreground">{hw.content}</p>
+                      )}
+                      {hw.comment && (
+                        <p className="text-sm text-emerald-700 mt-1 italic">
+                          &ldquo;{hw.comment}&rdquo;
+                        </p>
+                      )}
+                      {hw.imageUrl && (
+                        <img
+                          src={hw.imageUrl}
+                          alt="作业"
+                          className="max-w-full max-h-40 rounded-lg shadow-sm mt-2"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -414,7 +450,7 @@ export default function ReportPage() {
             )}
 
             {/* Best Work */}
-            {bestWork && (
+            {bestHomework && bestHomework.imageUrl && (
               <section>
                 <h3 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <span className="w-1 h-6 bg-pink-500 rounded-full" />
@@ -422,13 +458,13 @@ export default function ReportPage() {
                 </h3>
                 <div className="bg-gradient-to-br from-pink-50 to-violet-50 rounded-xl p-4 border border-pink-100">
                   <img
-                    src={bestWork.imageUrl}
+                    src={bestHomework.imageUrl}
                     alt="最佳作品"
                     className="max-w-full max-h-64 rounded-lg mx-auto shadow-md"
                   />
-                  {bestWork.comment && (
+                  {bestHomework.comment && (
                     <p className="text-center text-sm text-muted-foreground mt-3 italic">
-                      &ldquo;{bestWork.comment}&rdquo;
+                      &ldquo;{bestHomework.comment}&rdquo;
                     </p>
                   )}
                 </div>
@@ -466,13 +502,13 @@ export default function ReportPage() {
             )}
 
             {/* Empty state */}
-            {monthRecords.length === 0 && (
+            {totalSessions === 0 && (
               <div className="text-center py-16">
                 <p className="text-lg text-muted-foreground mb-2">
                   {monthLabel} 暂无学习记录
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  请先在学生详情页添加学习记录
+                  请先在工作台添加学习记录
                 </p>
               </div>
             )}

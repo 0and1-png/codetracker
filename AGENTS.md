@@ -24,18 +24,19 @@
 ├── src/
 │   ├── app/                # 页面路由与布局
 │   │   ├── layout.tsx      # 根布局
-│   │   ├── page.tsx        # 首页 - 学生管理列表
+│   │   ├── page.tsx        # 工作台 - 课程选择/学生多选/记录录入
 │   │   ├── students/[id]/  # 学生详情页 - 时间线/图表/知识点
 │   │   │   └── page.tsx
 │   │   └── reports/[studentId]/ # 月度报告页 - 预览/PDF导出
 │   │       └── page.tsx
 │   ├── components/
 │   │   ├── ui/             # Shadcn UI 组件库
+│   │   ├── course-manager.tsx # 课程管理（知识点+自定义题目）
 │   │   ├── star-rating.tsx # 星级评分组件
 │   │   └── tag-selector.tsx # 标签选择器组件（含自定义标签）
 │   ├── hooks/              # 自定义 Hooks
 │   ├── lib/
-│   │   ├── constants.ts    # 预设标签、知识点、颜色配置
+│   │   ├── constants.ts    # 预设课程/标签/知识点/颜色配置
 │   │   ├── store.ts        # localStorage 数据存取层
 │   │   ├── types.ts        # TypeScript 类型定义
 │   │   └── utils.ts        # 通用工具函数 (cn)
@@ -47,16 +48,19 @@
 
 ## 核心数据模型
 
-- **Student**: 学生基本信息（姓名、班级、课程、备注）
-- **LearningRecord**: 学习记录（日期、优/缺标签、打字速度、正确率、题目重刷、作品、行为评分、备注）
-- **KnowledgePoint**: 知识点掌握状态（not_started/learning/mastered）
+- **Course**: 课程（C++信奥/Python/图形化），含自定义知识点和题目
+- **Student**: 学生基本信息（姓名、课程ID、备注）
+- **TypingRecord**: 打字记录（速度、正确率、日期）
+- **ProblemRetryRecord**: 三刷记录（题目、次数、耗时、提升百分比、日期）
+- **HomeworkRecord**: 作业记录（内容、点评、日期）
+- **KnowledgeProgress**: 知识点掌握状态（not_started/learning/mastered）
 
 ## 页面路由
 
 | 路径 | 功能 |
 |------|------|
-| `/` | 首页 - 学生列表、添加/批量导入/删除学生 |
-| `/students/[id]` | 学生详情 - 学习时间线、数据图表、知识点进度、添加记录 |
+| `/` | 工作台 - 课程选择、学生多选、三种记录录入（打字/三刷/作业） |
+| `/students/[id]` | 学生详情 - 学习时间线、数据图表、知识点进度 |
 | `/reports/[studentId]` | 月度报告 - 预览报告、编辑教师寄语/目标、导出PDF |
 
 ## 构建与测试命令
@@ -99,9 +103,12 @@ pnpm lint:build   # ESLint 静态检查（构建级别）
 ### 数据存储规范
 
 - 所有数据使用 localStorage 存储，key 前缀 `coding_`
+- 课程数据: `coding_courses`
 - 学生数据: `coding_students`
-- 学习记录: `coding_records`
-- 知识点: `coding_knowledge`
+- 打字记录: `coding_typing_records`
+- 三刷记录: `coding_retry_records`
+- 作业记录: `coding_homework_records`
+- 知识点: `coding_knowledge_progress`
 - 组件挂载后通过 `useEffect` + `useCallback` 读取数据，避免 SSR/CSR 不一致
 
 ### PDF 导出规范

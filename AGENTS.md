@@ -25,13 +25,16 @@
 │   ├── app/                # 页面路由与布局
 │   │   ├── layout.tsx      # 根布局
 │   │   ├── page.tsx        # 工作台 - 课程选择/学生多选/记录录入
+│   │   ├── courses/        # 课程管理
+│   │   │   ├── page.tsx    # 课程列表 - 三课程卡片导航
+│   │   │   └── [id]/       # 课程详情 - 授课体系/知识点
+│   │   │       └── page.tsx
 │   │   ├── students/[id]/  # 学生详情页 - 时间线/图表/知识点
 │   │   │   └── page.tsx
 │   │   └── reports/[studentId]/ # 月度报告页 - 预览/PDF导出
 │   │       └── page.tsx
 │   ├── components/
 │   │   ├── ui/             # Shadcn UI 组件库
-│   │   ├── course-manager.tsx # 课程管理（知识点+自定义题目）
 │   │   ├── star-rating.tsx # 星级评分组件
 │   │   └── tag-selector.tsx # 标签选择器组件（含自定义标签）
 │   ├── hooks/              # 自定义 Hooks
@@ -48,7 +51,7 @@
 
 ## 核心数据模型
 
-- **Course**: 课程（C++信奥/Python/图形化），含自定义知识点和题目
+- **Course**: 课程（C++信奥/Python/图形化），含授课体系(teachingContent)、自定义知识点和题目
 - **Student**: 学生基本信息（姓名、课程ID、备注）
 - **TypingRecord**: 打字记录（速度、正确率、日期）
 - **ProblemRetryRecord**: 三刷记录（题目、次数、耗时、提升百分比、日期）
@@ -60,6 +63,8 @@
 | 路径 | 功能 |
 |------|------|
 | `/` | 工作台 - 课程选择、学生多选、三种记录录入（打字/三刷/作业） |
+| `/courses` | 课程列表 - 三个课程卡片导航 |
+| `/courses/[id]` | 课程详情 - 授课体系(Markdown备课) / 知识点(含子题目) |
 | `/students/[id]` | 学生详情 - 学习时间线、数据图表、知识点进度 |
 | `/reports/[studentId]` | 月度报告 - 预览报告、编辑教师寄语/目标、导出PDF |
 

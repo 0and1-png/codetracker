@@ -13,7 +13,7 @@ export interface ProblemDef {
 export interface Course {
   id: string;
   name: string;
-  teachingHabits: string;
+  teachingContent: string; // Markdown-style teaching plan content
   knowledgePoints: KnowledgePointDef[];
   problems: ProblemDef[];
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Plus,
   Upload,
@@ -61,7 +62,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CourseManager } from '@/components/course-manager';
 import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord } from '@/lib/types';
 import {
   getCourses,
@@ -95,7 +95,6 @@ export default function HomePage() {
   // Dialogs
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [courseManagerOpen, setCourseManagerOpen] = useState(false);
 
   // Add student form
   const [newName, setNewName] = useState('');
@@ -355,9 +354,11 @@ export default function HomePage() {
               </SelectContent>
             </Select>
 
-            <Button size="sm" variant="outline" className="border-violet-200 text-violet-600" onClick={() => setCourseManagerOpen(true)}>
-              <Settings className="h-4 w-4 mr-1" />课程管理
-            </Button>
+            <Link href="/courses">
+              <Button size="sm" variant="outline" className="border-violet-200 text-violet-600">
+                <Settings className="h-4 w-4 mr-1" />课程管理
+              </Button>
+            </Link>
             <Button size="sm" variant="outline" className="border-violet-200 text-violet-600" onClick={() => setAddStudentOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />添加学生
             </Button>
@@ -870,12 +871,6 @@ export default function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Course Manager */}
-      <CourseManager
-        open={courseManagerOpen}
-        onOpenChange={setCourseManagerOpen}
-        onCoursesChange={() => { loadData(); }}
-      />
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function getCourses(): Course[] {
       return {
         id: preset.id,
         name: preset.name,
-        teachingHabits: '',
+        teachingContent: '',
         knowledgePoints: kpNames.map((name, idx) => ({
           id: `${preset.id}_kp_${idx}`,
           name,

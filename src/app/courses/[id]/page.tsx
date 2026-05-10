@@ -65,7 +65,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const found = list.find((c) => c.id === courseId);
     if (found) {
       setCourse(found);
-      setEditContent(found.teachingContent);
+      setEditContent(found.teachingContent || '');
     }
   }, [courseId]);
 
@@ -98,11 +98,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   };
 
   // Simple markdown-like rendering
-  const renderContent = (text: string) => {
-    if (!text.trim()) {
+  const renderContent = (text: string | undefined) => {
+    if (!text || !text.trim()) {
       return <p className="text-muted-foreground italic">暂无内容，点击右上角编辑按钮开始备课...</p>;
     }
-    return text.split('\n').map((line, i) => {
+    return (text || '').split('\n').map((line, i) => {
       // Headers
       if (line.startsWith('### ')) {
         return <h3 key={i} className="text-base font-bold mt-4 mb-2 text-foreground">{line.slice(4)}</h3>;

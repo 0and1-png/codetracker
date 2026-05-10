@@ -62,7 +62,15 @@ export function getCourses(): Course[] {
     setItem(COURSES_KEY, defaults);
     return defaults;
   }
-  return courses;
+  // Migrate old courses missing teachingContent
+  const migrated = courses.map((c) => ({
+    ...c,
+    teachingContent: c.teachingContent ?? '',
+  }));
+  if (migrated.some((c, i) => c.teachingContent !== courses[i].teachingContent)) {
+    setItem(COURSES_KEY, migrated);
+  }
+  return migrated;
 }
 
 export function getCourse(id: string): Course | undefined {

@@ -261,3 +261,21 @@ export function updateKnowledgeStatus(
     saveKnowledge(list);
   }
 }
+
+export function updateKnowledgeScore(
+  studentId: string,
+  knowledgePointId: string,
+  score: number,
+  description?: string
+): void {
+  const list = getKnowledge();
+  const existing = list.find(
+    (k) => k.studentId === studentId && k.knowledgePointId === knowledgePointId
+  );
+  if (existing) {
+    existing.score = score;
+    if (description !== undefined) existing.description = description;
+    existing.updatedAt = new Date().toISOString();
+    saveKnowledge(list);
+  }
+}

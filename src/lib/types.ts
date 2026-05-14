@@ -2,6 +2,7 @@
 export interface KnowledgePointDef {
   id: string;
   name: string;
+  description?: string;
 }
 
 export interface ProblemDef {
@@ -72,5 +73,7 @@ export interface KnowledgeProgress {
   knowledgePointName: string;
   courseId: string;
   status: KnowledgeStatus;
+  score?: number; // 1-10 rating
+  description?: string; // Teacher's assessment description
   updatedAt: string;
 }

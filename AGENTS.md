@@ -56,7 +56,7 @@
 - **TypingRecord**: 打字记录（速度、正确率、日期）
 - **ProblemRetryRecord**: 三刷记录（题目、次数、耗时、提升百分比、日期）
 - **HomeworkRecord**: 作业记录（内容、点评、日期）
-- **KnowledgeProgress**: 知识点掌握状态（not_started/learning/mastered）
+- **KnowledgeProgress**: 知识点掌握状态（not_started/learning/mastered）+ 评分(1-10) + 掌握情况描述
 
 ## 页面路由
 

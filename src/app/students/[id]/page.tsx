@@ -62,6 +62,7 @@ import {
   deleteRetryRecord,
   deleteHomeworkRecord,
   updateKnowledgeStatus,
+  updateKnowledgeScore,
 } from '@/lib/store';
 import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
 
@@ -110,6 +111,11 @@ export default function StudentDetailPage() {
 
   const handleKnowledgeStatusChange = (kp: KnowledgeProgress, status: KnowledgeStatus) => {
     updateKnowledgeStatus(kp.studentId, kp.knowledgePointId, status);
+    loadData();
+  };
+
+  const handleKnowledgeScoreChange = (kp: KnowledgeProgress, score: number, description?: string) => {
+    updateKnowledgeScore(kp.studentId, kp.knowledgePointId, score, description);
     loadData();
   };
 
@@ -513,8 +519,8 @@ export default function StudentDetailPage() {
               {knowledge.map((point) => (
                 <Card key={point.id} className="border-purple-50">
                   <CardContent className="p-4">
-                    <h4 className="font-medium text-sm mb-3">{point.knowledgePointName}</h4>
-                    <div className="flex gap-1">
+                    <h4 className="font-medium text-sm mb-2">{point.knowledgePointName}</h4>
+                    <div className="flex gap-1 mb-2">
                       {(['not_started', 'learning', 'mastered'] as KnowledgeStatus[]).map(
                         (status) => (
                           <Button
@@ -533,6 +539,42 @@ export default function StudentDetailPage() {
                         )
                       )}
                     </div>
+                    {point.status !== 'not_started' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-8">评分</span>
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                              <button
+                                key={n}
+                                className={`w-4 h-4 rounded-sm text-[8px] font-bold transition-colors ${
+                                  point.score && n <= point.score
+                                    ? 'bg-violet-500 text-white'
+                                    : 'bg-gray-100 text-gray-300 hover:bg-violet-100'
+                                }`}
+                                onClick={() =>
+                                  handleKnowledgeScoreChange(point, n, point.description)
+                                }
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <textarea
+                          className="w-full text-xs border rounded p-1.5 min-h-[40px] resize-y bg-gray-50 border-gray-200 focus:border-violet-300 focus:bg-white"
+                          placeholder="掌握情况描述（会显示在报告中）"
+                          value={point.description || ''}
+                          onChange={(e) =>
+                            handleKnowledgeScoreChange(
+                              point,
+                              point.score || 0,
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -1,10 +1,41 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Download, Heart, BookOpen, Sparkles, MessageCircle } from 'lucide-react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  Download,
+  Printer,
+  CheckCircle,
+  Star,
+  AlertTriangle,
+  Zap,
+  Target,
+  BookOpen,
+  Keyboard,
+  TrendingUp,
+  RotateCcw,
+  MessageSquare,
+  Calendar,
+  FileText,
+  Users,
+  ChevronDown,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   LineChart,
   Line,
@@ -13,6 +44,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
 } from 'recharts';
 import type {
   Student,
@@ -21,7 +55,6 @@ import type {
   ProblemRetryRecord,
   HomeworkRecord,
   KnowledgeProgress,
-  ProblemDef,
 } from '@/lib/types';
 import {
   getStudents,
@@ -31,52 +64,214 @@ import {
   getHomeworkByStudent,
   getKnowledgeByStudent,
 } from '@/lib/store';
-import { KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  getMonthRange,
+  getPreviousMonthRange,
+  getRecordsInPeriod,
+  calcTypingSummary,
+  calcTypingImprovement,
+  calcRetrySummary,
+  calcHomeworkSummary,
+  calcKnowledgeMastery,
+  getWeakKnowledgePoints,
+  getStrongKnowledgePoints,
+  generateAutoTags,
+  generateGrowthDescription,
+  generateStudySuggestions,
+  getTypingWeeklyData,
+  recommendCommentTemplate,
+  COMMENT_TEMPLATES,
+  type AutoTag,
+  type CommentTemplate,
+} from '@/lib/analytics';
+import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
 
 export default function ReportPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const studentId = params.studentId as string;
-  const reportRef = useRef<HTMLDivElement>(null);
+  const urlMonth = searchParams.get('month');
 
   const [student, setStudent] = useState<Student | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(urlMonth || format(new Date(), 'yyyy-MM'));
+  const [teacherComment, setTeacherComment] = useState('');
+  const [nextMonthGoal, setNextMonthGoal] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Batch mode state
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchStudentIds, setBatchStudentIds] = useState<string[]>([]);
+  const [batchCurrentIdx, setBatchCurrentIdx] = useState(0);
+
+  // Report data (computed per current student)
   const [typingRecords, setTypingRecords] = useState<TypingRecord[]>([]);
   const [retryRecords, setRetryRecords] = useState<ProblemRetryRecord[]>([]);
   const [homeworkRecords, setHomeworkRecords] = useState<HomeworkRecord[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeProgress[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
-  const [teacherMessage, setTeacherMessage] = useState('');
-  const [nextGoals, setNextGoals] = useState('');
-  const [pdfExporting, setPdfExporting] = useState(false);
 
-  const loadData = useCallback(() => {
-    const s = getStudents().find((s) => s.id === studentId);
-    setStudent(s || null);
-    if (s) {
-      const c = getCourse(s.courseId);
-      setCourse(c || null);
-    }
-    setTypingRecords(getTypingByStudent(studentId));
-    setRetryRecords(getRetryByStudent(studentId));
-    setHomeworkRecords(getHomeworkByStudent(studentId));
-    setKnowledge(getKnowledgeByStudent(studentId));
-  }, [studentId]);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const loadStudentData = useCallback(
+    (sid: string) => {
+      const s = getStudents().find((st) => st.id === sid);
+      setStudent(s || null);
+      if (s) {
+        setCourse(getCourse(s.courseId) || null);
+      }
+      setTypingRecords(getTypingByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
+      setRetryRecords(getRetryByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
+      setHomeworkRecords(getHomeworkByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
+      setKnowledge(getKnowledgeByStudent(sid));
+    },
+    []
+  );
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadStudentData(studentId);
+  }, [studentId, loadStudentData]);
+
+  // Available months
+  const allDates = [
+    ...typingRecords.map((r) => r.date),
+    ...retryRecords.map((r) => r.date),
+    ...homeworkRecords.map((r) => r.date),
+  ];
+  const availableMonths = [...new Set(allDates.map((d) => d.substring(0, 7)))].sort().reverse();
+  if (availableMonths.length === 0) availableMonths.push(format(new Date(), 'yyyy-MM'));
+
+  // Period filtering
+  const currentRange = getMonthRange(selectedMonth);
+  const prevRange = getPreviousMonthRange(selectedMonth);
+
+  const monthTyping = getRecordsInPeriod(typingRecords, currentRange.start, currentRange.end);
+  const monthRetry = getRecordsInPeriod(retryRecords, currentRange.start, currentRange.end);
+  const monthHomework = getRecordsInPeriod(homeworkRecords, currentRange.start, currentRange.end);
+  const prevTypingRecs = getRecordsInPeriod(typingRecords, prevRange.start, prevRange.end);
+  const prevRetryRecs = getRecordsInPeriod(retryRecords, prevRange.start, prevRange.end);
+
+  // Computed analytics
+  const curTyping = calcTypingSummary(monthTyping);
+  const prevTyping = calcTypingSummary(prevTypingRecs);
+  const curRetry = calcRetrySummary(monthRetry, course || undefined);
+  const prevRetry = calcRetrySummary(prevRetryRecs, course || undefined);
+  const curHomework = calcHomeworkSummary(monthHomework);
+  const mastery = calcKnowledgeMastery(knowledge, retryRecords, course || undefined);
+  const weakKPs = getWeakKnowledgePoints(mastery);
+  const strongKPs = getStrongKnowledgePoints(mastery);
+  const autoTags = generateAutoTags(
+    curTyping,
+    prevTyping,
+    curRetry,
+    prevRetry,
+    curHomework,
+    mastery
+  );
+  const speedImprove = calcTypingImprovement(curTyping, prevTyping);
+
+  // Auto-fill on first load
+  useEffect(() => {
+    if (student && !teacherComment) {
+      const recommended = recommendCommentTemplate(autoTags);
+      setTeacherComment(recommended.content);
+    }
+  }, [student, autoTags, teacherComment]);
+
+  useEffect(() => {
+    if (student && !nextMonthGoal) {
+      const suggestions = generateStudySuggestions(weakKPs, curRetry, curTyping);
+      setNextMonthGoal(suggestions.slice(0, 2).join('\n'));
+    }
+  }, [student, weakKPs, curRetry, curTyping, nextMonthGoal]);
+
+  const monthLabel = format(new Date(selectedMonth + '-01'), 'M月', { locale: zhCN });
+  const fullMonthLabel = format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN });
+
+  // Chart data
+  const weeklyTypingData = getTypingWeeklyData(typingRecords, selectedMonth);
+
+  // Problem retry comparison for report
+  const retryProblems = curRetry.problems;
+
+  // Best homework
+  const bestHomework =
+    monthHomework.length > 0
+      ? monthHomework.reduce((a, b) => ((a.score ?? 0) >= (b.score ?? 0) ? a : b))
+      : null;
+
+  // Growth description
+  const growthDesc = student
+    ? generateGrowthDescription(student.name, curTyping, prevTyping, curRetry, mastery, monthLabel)
+    : '';
+
+  // Study suggestions
+  const suggestions = generateStudySuggestions(weakKPs, curRetry, curTyping);
+
+  // ===== PDF Export =====
+  const exportPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExporting(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = -(imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(
+        `${student?.name || '学员'}_${fullMonthLabel}学习报告.pdf`
+      );
+    } catch (err) {
+      console.error('PDF导出失败:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ===== Batch mode =====
+  const handleBatchMode = () => {
+    const allStudents = getStudents();
+    setBatchStudentIds(allStudents.map((s) => s.id));
+    setBatchCurrentIdx(0);
+    setBatchMode(true);
+    if (allStudents.length > 0) {
+      loadStudentData(allStudents[0].id);
+    }
+  };
+
+  const handleBatchNext = () => {
+    const nextIdx = batchCurrentIdx + 1;
+    if (nextIdx < batchStudentIds.length) {
+      setBatchCurrentIdx(nextIdx);
+      loadStudentData(batchStudentIds[nextIdx]);
+      setTeacherComment('');
+      setNextMonthGoal('');
+    }
+  };
 
   if (!student) {
     return (
@@ -86,243 +281,33 @@ export default function ReportPage() {
     );
   }
 
-  // Filter records for selected month
-  const monthTyping = typingRecords.filter((r) => r.date.startsWith(selectedMonth));
-  const monthRetry = retryRecords.filter((r) => r.date.startsWith(selectedMonth));
-  const monthHomework = homeworkRecords.filter((r) => r.date.startsWith(selectedMonth));
-
-  // ===== Knowledge table data (template: 知识点 + 掌握情况 + 评分) =====
-  const courseKnowledge = knowledge.filter((k) => k.courseId === student.courseId);
-  const knowledgeTableData = courseKnowledge.map((k) => {
-    const kpDef = course?.knowledgePoints.find((kp) => kp.id === k.knowledgePointId);
-    return {
-      name: k.knowledgePointName,
-      status: k.status,
-      score: k.score,
-      description: k.description || kpDef?.description || getStatusDefaultDesc(k.status, k.knowledgePointName),
-    };
-  });
-
-  function getStatusDefaultDesc(status: string, name: string): string {
-    if (status === 'mastered') return `${name}已经基本掌握，理解到位，后续继续巩固练习即可`;
-    if (status === 'learning') return `${name}正在学习中，还需要加强练习和理解`;
-    return `${name}尚未开始学习`;
-  }
-
-  // ===== Typing weekly data (template: 第一周/第二周/第三周/第四周) =====
-  const typingByWeek: Record<string, TypingRecord[]> = {};
-  monthTyping
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .forEach((r) => {
-      const weekNum = Math.ceil(new Date(r.date).getDate() / 7);
-      const weekKey = `第${['一', '二', '三', '四', '五'][weekNum - 1] || weekNum}周`;
-      if (!typingByWeek[weekKey]) typingByWeek[weekKey] = [];
-      typingByWeek[weekKey].push(r);
-    });
-
-  const weeklyTypingSummary = Object.entries(typingByWeek).map(([week, records]) => {
-    const avgSpeed = Math.round(records.reduce((s, r) => s + r.speed, 0) / records.length);
-    const avgAccuracy = Math.round(records.reduce((s, r) => s + r.accuracy, 0) / records.length);
-    return { week, avgSpeed, avgAccuracy, count: records.length };
-  });
-
-  // Typing chart data
-  const typingChartData = monthTyping
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((r) => ({
-      date: format(new Date(r.date), 'M/d'),
-      speed: r.speed,
-      accuracy: r.accuracy,
-    }));
-
-  // ===== Problem retry table (template: 测试题 + 提升情况 + 测试知识点) =====
-  const problemMap = new Map<string, ProblemDef>();
-  course?.problems.forEach((p) => problemMap.set(p.id, p));
-
-  const retryTableData = (() => {
-    const grouped = new Map<string, ProblemRetryRecord[]>();
-    monthRetry.forEach((r) => {
-      const key = r.problemId || r.problemName;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(r);
-    });
-
-    return Array.from(grouped.entries()).map(([key, attempts]) => {
-      const sorted = attempts.sort((a, b) => a.attempt - b.attempt);
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
-      const pct = first.timeSpent > 0
-        ? Math.round(((first.timeSpent - last.timeSpent) / first.timeSpent) * 100)
-        : 0;
-      const problemDef = problemMap.get(key);
-      const knowledgePointName = problemDef?.knowledgePointId
-        ? course?.knowledgePoints.find((kp) => kp.id === problemDef.knowledgePointId)?.name || ''
-        : '';
-
-      return {
-        problemName: first.problemName,
-        firstTime: first.timeSpent,
-        lastTime: last.timeSpent,
-        firstAttempt: first.attempt,
-        lastAttempt: last.attempt,
-        improvement: pct,
-        knowledgePoint: knowledgePointName,
-      };
-    });
-  })();
-
-  // Monthly speed trend (up or down) - needed before growthTrajectory
-  const monthlySpeedTrend = (() => {
-    if (monthTyping.length < 2) return 0;
-    const sorted = [...monthTyping].sort((a, b) => a.date.localeCompare(b.date));
-    const first = sorted[0].speed;
-    const last = sorted[sorted.length - 1].speed;
-    return first > 0 ? Math.round(((last - first) / first) * 100) : 0;
-  })();
-
-  // ===== Growth trajectory (template: 差异化成长轨迹) =====
-  const growthTrajectory = (() => {
-    const traits: string[] = [];
-    const mastered = knowledgeTableData.filter((k) => k.status === 'mastered');
-    const learning = knowledgeTableData.filter((k) => k.status === 'learning');
-
-    if (mastered.length > learning.length) {
-      traits.push('基础知识掌握扎实');
-    }
-    if (retryTableData.some((r) => r.improvement > 30)) {
-      traits.push('做题效率提升显著');
-    }
-    if (retryTableData.length > 0 && retryTableData.every((r) => r.improvement > 0)) {
-      traits.push('各题型均有进步');
-    }
-    if (monthlySpeedTrend > 0) {
-      traits.push('打字速度持续提升');
-    }
-    if (mastered.length >= 3) {
-      traits.push('知识面覆盖广泛');
-    }
-
-    const strongPoints = retryTableData
-      .filter((r) => r.improvement > 20)
-      .map((r) => r.problemName);
-
-    let summary = `${student.name}`;
-    if (traits.length > 0) {
-      summary += `本月表现${traits.slice(0, 3).join('，')}`;
-    }
-    if (strongPoints.length > 0) {
-      summary += `，在${strongPoints.slice(0, 2).join('、')}等题型上进步突出`;
-    }
-    if (mastered.length > 0) {
-      summary += `。已扎实掌握${mastered.map((k) => k.name).join('、')}等知识点`;
-    }
-    if (learning.length > 0) {
-      summary += `，${learning.map((k) => k.name).join('、')}仍在学习中，需要继续加强`;
-    }
-    summary += '。';
-    return summary;
-  })();
-
-  // Best homework
-  const bestHomework = monthHomework.length > 0
-    ? monthHomework.reduce((best, h) => ((h.score ?? 0) > (best.score ?? 0) ? h : best))
-    : null;
-
-  // Available months
-  const allDates = [
-    ...typingRecords.map((r) => r.date),
-    ...retryRecords.map((r) => r.date),
-    ...homeworkRecords.map((r) => r.date),
-  ];
-  const availableMonths = [...new Set(allDates.map((d) => d.substring(0, 7)))].sort().reverse();
-  if (availableMonths.length === 0) {
-    availableMonths.push(format(new Date(), 'yyyy-MM'));
-  }
-
-  // PDF export
-  const handleExportPDF = async () => {
-    if (!reportRef.current) return;
-    setPdfExporting(true);
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      });
-
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      let position = 0;
-      const pageHeight = 297;
-
-      while (position < imgHeight) {
-        pdf.addImage(
-          canvas.toDataURL('image/png'),
-          'PNG',
-          0,
-          -position,
-          imgWidth,
-          imgHeight
-        );
-        position += pageHeight;
-        if (position < imgHeight) {
-          pdf.addPage();
-        }
-      }
-
-      const monthLabel = format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN });
-      pdf.save(`${student.name}_${monthLabel}_学习报告.pdf`);
-    } catch (err) {
-      console.error('PDF export failed:', err);
-    } finally {
-      setPdfExporting(false);
-    }
-  };
-
-  const monthLabel = format(new Date(selectedMonth + '-01'), 'M月', { locale: zhCN });
-  const totalSessions = monthTyping.length + monthRetry.length + monthHomework.length;
-
-  // Score color helper
-  const scoreColor = (score: number) => {
-    if (score >= 9) return 'text-emerald-600';
-    if (score >= 7) return 'text-blue-600';
-    if (score >= 5) return 'text-amber-600';
-    return 'text-red-500';
-  };
-
-  const scoreBg = (score: number) => {
-    if (score >= 9) return 'bg-emerald-50';
-    if (score >= 7) return 'bg-blue-50';
-    if (score >= 5) return 'bg-amber-50';
-    return 'bg-red-50';
-  };
+  const highlightTags = autoTags.filter((t) => t.type === 'highlight');
+  const weaknessTags = autoTags.filter((t) => t.type === 'weakness');
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100 no-print">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push(`/students/${studentId}`)}
+              onClick={() => router.back()}
               className="h-9 w-9"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold text-foreground">
-              月度学习报告 - {student.name}
+            <h1 className="text-lg font-bold">
+              {batchMode
+                ? `批量报告 (${batchCurrentIdx + 1}/${batchStudentIds.length})`
+                : '月度学习报告'}
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-36 h-9 text-sm">
+                <Calendar className="h-4 w-4 mr-1" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -333,418 +318,450 @@ export default function ReportPage() {
                 ))}
               </SelectContent>
             </Select>
+            {!batchMode && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-violet-200 text-violet-600"
+                onClick={handleBatchMode}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                批量生成
+              </Button>
+            )}
+            {batchMode && batchCurrentIdx < batchStudentIds.length - 1 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-violet-200 text-violet-600"
+                onClick={handleBatchNext}
+              >
+                下一位
+              </Button>
+            )}
             <Button
               size="sm"
-              className="bg-violet-600 hover:bg-violet-700"
-              onClick={handleExportPDF}
-              disabled={pdfExporting}
+              className="bg-gradient-to-r from-violet-500 to-indigo-500"
+              onClick={exportPDF}
+              disabled={isExporting}
             >
               <Download className="h-4 w-4 mr-1" />
-              {pdfExporting ? '导出中...' : '导出PDF'}
+              {isExporting ? '导出中...' : '导出PDF'}
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        {/* Editable fields (not in PDF) */}
-        <div className="no-print mb-6 space-y-4">
-          <Card className="border-purple-100 bg-gradient-to-r from-violet-50 to-indigo-50">
-            <CardContent className="p-5 space-y-4">
-              <h3 className="font-bold text-violet-800 flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                编辑报告内容（仅编辑区可见，导出PDF时自动包含）
-              </h3>
-              <div>
-                <Label className="text-violet-700">教师暖心寄语</Label>
-                <Textarea
-                  value={teacherMessage}
-                  onChange={(e) => setTeacherMessage(e.target.value)}
-                  placeholder="写一段鼓励的话给家长和孩子..."
-                  rows={3}
-                  className="bg-white border-violet-200"
-                />
-              </div>
-              <div>
-                <Label className="text-violet-700">下月目标建议</Label>
-                <Textarea
-                  value={nextGoals}
-                  onChange={(e) => setNextGoals(e.target.value)}
-                  placeholder="建议下个月的学习目标和方向..."
-                  rows={2}
-                  className="bg-white border-violet-200"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* ===== Edit Panel (above report) ===== */}
+        <Card className="border-violet-100">
+          <CardContent className="p-4 space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-violet-500" />
+              报告内容编辑
+            </h3>
 
-        {/* ===== Report Preview (PDF content) ===== */}
-        <div ref={reportRef} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {/* Report Cover Header */}
-          <div className="relative bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 text-white px-10 py-12 overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4" />
-            <div className="relative">
-              <p className="text-violet-200 text-sm tracking-wider mb-1">
-                {course?.name || '少儿编程'} · 月度学习报告
-              </p>
-              <h2 className="text-3xl font-bold mb-4">{student.name}</h2>
-              <div className="flex items-center gap-6 text-sm">
-                <span className="text-violet-200">
-                  课&emsp;&emsp;程：{course?.name || '-'}
-                </span>
-                <span className="text-violet-200">
-                  班&emsp;&emsp;级：{student.className || '-'}
-                </span>
+            {/* Comment Templates */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">
+                老师寄语（系统推荐模板，可修改）
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {COMMENT_TEMPLATES.map((tmpl) => (
+                  <Button
+                    key={tmpl.id}
+                    size="sm"
+                    variant="outline"
+                    className={`text-xs h-7 ${
+                      teacherComment === tmpl.content
+                        ? 'bg-violet-50 border-violet-300 text-violet-700'
+                        : 'text-gray-500'
+                    }`}
+                    onClick={() => setTeacherComment(tmpl.content)}
+                  >
+                    {tmpl.label}
+                  </Button>
+                ))}
               </div>
-              <div className="flex items-center gap-6 text-sm mt-1">
-                <span className="text-violet-200">
-                  报告月份：{format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN })}
-                </span>
-                <span className="text-violet-200">
-                  本月练习：{totalSessions}次
-                </span>
+              <Textarea
+                value={teacherComment}
+                onChange={(e) => setTeacherComment(e.target.value)}
+                className="min-h-[80px] text-sm"
+                placeholder="输入老师寄语..."
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">
+                下月目标建议
+              </label>
+              <Textarea
+                value={nextMonthGoal}
+                onChange={(e) => setNextMonthGoal(e.target.value)}
+                className="min-h-[60px] text-sm"
+                placeholder="输入下月目标..."
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ===== Report Preview ===== */}
+        <div ref={reportRef} className="bg-white rounded-2xl shadow-sm border border-purple-50 overflow-hidden">
+          {/* Report Header */}
+          <div className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-8 py-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">{student.name} · {fullMonthLabel}学习报告</h2>
+                <p className="text-violet-100 text-sm">
+                  {course?.name || '编程课程'} | 编程学习月度反馈
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-violet-100">报告日期</p>
+                <p className="text-lg font-semibold">{format(new Date(), 'yyyy.M.d')}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-8 sm:p-10 space-y-10">
-            {/* ===== Section 1: 知识点及掌握情况 ===== */}
+          <div className="px-8 py-6 space-y-8">
+            {/* 1. Knowledge Mastery Table */}
             <section>
-              <SectionTitle month={monthLabel} title="所学知识点及掌握情况" color="violet" />
-              <div className="overflow-hidden rounded-xl border border-purple-100">
+              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、知识点及掌握情况" />
+              <div className="overflow-hidden rounded-lg border border-gray-100">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gradient-to-r from-violet-50 to-purple-50">
-                      <th className="text-left px-4 py-3 font-semibold text-violet-800 w-1/5">知识点</th>
-                      <th className="text-left px-4 py-3 font-semibold text-violet-800">掌握情况</th>
-                      <th className="text-center px-4 py-3 font-semibold text-violet-800 w-16">评分</th>
+                    <tr className="bg-violet-50/60">
+                      <th className="px-4 py-2.5 text-left text-violet-800 font-medium w-1/4">知识点</th>
+                      <th className="px-4 py-2.5 text-left text-violet-800 font-medium w-2/5">掌握情况</th>
+                      <th className="px-4 py-2.5 text-center text-violet-800 font-medium w-1/4">掌握度</th>
+                      <th className="px-4 py-2.5 text-center text-violet-800 font-medium w-1/6">评分</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {knowledgeTableData.length > 0 ? knowledgeTableData.map((k, i) => (
+                    {mastery.map((m, idx) => (
                       <tr
-                        key={k.name}
-                        className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} border-t border-purple-50`}
+                        key={m.knowledgePointId}
+                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} ${
+                          m.isWeak ? 'bg-amber-50/50' : ''
+                        }`}
                       >
-                        <td className="px-4 py-3 font-medium text-foreground">{k.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground leading-relaxed">
-                          {k.description}
+                        <td className="px-4 py-2.5 font-medium">{m.knowledgePointName}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground text-xs">
+                          {knowledge.find((k) => k.knowledgePointId === m.knowledgePointId)?.description || KNOWLEDGE_STATUS_LABELS[m.status as keyof typeof KNOWLEDGE_STATUS_LABELS] || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          {k.score ? (
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-sm font-bold ${scoreColor(k.score)} ${scoreBg(k.score)}`}>
-                              {k.score}
+                        <td className="px-4 py-2.5 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${m.masteryPercent}%`,
+                                  backgroundColor:
+                                    m.masteryPercent >= 80
+                                      ? '#10b981'
+                                      : m.masteryPercent >= 40
+                                      ? '#f59e0b'
+                                      : '#ef4444',
+                                }}
+                              />
+                            </div>
+                            <span
+                              className={`text-xs font-bold ${
+                                m.masteryPercent >= 80
+                                  ? 'text-emerald-600'
+                                  : m.masteryPercent >= 40
+                                  ? 'text-amber-600'
+                                  : 'text-red-500'
+                              }`}
+                            >
+                              {m.masteryPercent}%
                             </span>
-                          ) : (
-                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs ${
-                              k.status === 'mastered' ? 'bg-emerald-50 text-emerald-600' :
-                              k.status === 'learning' ? 'bg-amber-50 text-amber-600' :
-                              'bg-gray-100 text-gray-400'
-                            }`}>
-                              {KNOWLEDGE_STATUS_LABELS[k.status]}
-                            </span>
-                          )}
+                          </div>
                         </td>
+                        <td className="px-4 py-2.5 text-center font-bold">{m.score || '-'}</td>
                       </tr>
-                    )) : (
-                      <tr className="border-t border-purple-50">
-                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
-                          暂无知识点记录，请在学生详情页标记知识点状态
-                        </td>
-                      </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
             </section>
 
-            {/* ===== Section 2: 能力测试情况 ===== */}
+            {/* 2. Ability Testing */}
             <section>
-              <SectionTitle month={monthLabel} title="能力测试情况" color="blue" />
+              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、能力测试情况" />
 
-              {/* 2a: 打字测试 */}
+              {/* Typing Test */}
               <div className="mb-6">
-                <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-4 bg-blue-400 rounded-full" />
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Keyboard className="h-4 w-4 text-violet-500" />
                   打字测试
                 </h4>
-
-                {weeklyTypingSummary.length > 0 ? (
-                  <div className="space-y-3">
-                    {/* Weekly summary table */}
-                    <div className="overflow-hidden rounded-lg border border-blue-100">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-blue-50/60">
-                            <th className="px-4 py-2 text-left text-blue-800 font-medium">周次</th>
-                            <th className="px-4 py-2 text-center text-blue-800 font-medium">平均速度</th>
-                            <th className="px-4 py-2 text-center text-blue-800 font-medium">平均正确率</th>
-                            <th className="px-4 py-2 text-center text-blue-800 font-medium">测试次数</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {weeklyTypingSummary.map((w) => (
-                            <tr key={w.week} className="border-t border-blue-50">
-                              <td className="px-4 py-2 font-medium">{w.week}</td>
-                              <td className="px-4 py-2 text-center">
-                                <span className="font-bold text-violet-600">{w.avgSpeed}</span>
-                                <span className="text-muted-foreground text-xs ml-1">字/分</span>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                <span className="font-bold text-emerald-600">{w.avgAccuracy}</span>
-                                <span className="text-muted-foreground text-xs ml-1">%</span>
-                              </td>
-                              <td className="px-4 py-2 text-center text-muted-foreground">{w.count}次</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Typing chart */}
-                    {typingChartData.length >= 2 && (
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <ResponsiveContainer width="100%" height={200}>
-                          <LineChart data={typingChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Line
-                              type="monotone"
-                              dataKey="speed"
-                              stroke="#7c3aed"
-                              strokeWidth={2}
-                              dot={{ fill: '#7c3aed', r: 3 }}
-                              name="打字速度(字/分)"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="accuracy"
-                              stroke="#10b981"
-                              strokeWidth={2}
-                              dot={{ fill: '#10b981', r: 3 }}
-                              name="正确率(%)"
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-violet-50 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-bold text-violet-600">{curTyping.avgSpeed}</p>
+                    <p className="text-xs text-muted-foreground mt-1">平均速度(字/分)</p>
+                    {speedImprove !== 0 && (
+                      <p
+                        className={`text-xs font-medium mt-1 ${
+                          speedImprove > 0 ? 'text-emerald-600' : 'text-red-500'
+                        }`}
+                      >
+                        {speedImprove > 0 ? '↑' : '↓'} 较上月{speedImprove > 0 ? '提升' : '下降'}
+                        {Math.abs(speedImprove)}%
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-3">本月暂无打字测试记录</p>
-                )}
-              </div>
+                  <div className="bg-emerald-50 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{curTyping.avgAccuracy}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">平均正确率</p>
+                  </div>
+                </div>
 
-              {/* 2b: 三刷测试 */}
-              <div>
-                <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-4 bg-amber-400 rounded-full" />
-                  三刷测试
-                </h4>
-
-                {retryTableData.length > 0 ? (
-                  <div className="overflow-hidden rounded-lg border border-amber-100">
+                {/* Weekly Summary Table */}
+                {weeklyTypingData.some((w) => w.count > 0) && (
+                  <div className="overflow-hidden rounded-lg border border-gray-100 mb-4">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-amber-50/60">
-                          <th className="px-4 py-2 text-left text-amber-800 font-medium">测试题</th>
-                          <th className="px-4 py-2 text-center text-amber-800 font-medium">提升情况</th>
-                          <th className="px-4 py-2 text-center text-amber-800 font-medium">测试知识点</th>
+                        <tr className="bg-gray-50">
+                          <th className="px-3 py-2 text-left font-medium">周次</th>
+                          <th className="px-3 py-2 text-center font-medium">平均速度</th>
+                          <th className="px-3 py-2 text-center font-medium">平均正确率</th>
+                          <th className="px-3 py-2 text-center font-medium">测试次数</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {retryTableData.map((r) => (
-                          <tr key={r.problemName} className="border-t border-amber-50">
-                            <td className="px-4 py-2.5 font-medium text-foreground">{r.problemName}</td>
-                            <td className="px-4 py-2.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <span className="text-amber-600 font-bold">{r.firstTime}分</span>
-                                <span className="text-gray-300">&rarr;</span>
-                                <span className="text-emerald-600 font-bold">{r.lastTime}分</span>
-                                <span className={`ml-1 text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                                  r.improvement > 0
-                                    ? 'bg-emerald-50 text-emerald-600'
-                                    : 'bg-red-50 text-red-500'
-                                }`}>
-                                  {r.improvement > 0 ? '+' : ''}{r.improvement}%
-                                </span>
-                              </div>
+                        {weeklyTypingData.map((w) =>
+                          w.count > 0 ? (
+                            <tr key={w.week} className="border-t border-gray-50">
+                              <td className="px-3 py-2 font-medium">{w.week}</td>
+                              <td className="px-3 py-2 text-center font-bold text-violet-600">
+                                {w.avgSpeed}
+                              </td>
+                              <td className="px-3 py-2 text-center font-bold text-emerald-600">
+                                {w.avgAccuracy}%
+                              </td>
+                              <td className="px-3 py-2 text-center text-muted-foreground">{w.count}次</td>
+                            </tr>
+                          ) : null
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Typing Chart */}
+                {monthTyping.length >= 2 && (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart
+                      data={monthTyping
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map((r) => ({
+                          date: format(new Date(r.date), 'M/d'),
+                          speed: r.speed,
+                          accuracy: r.accuracy,
+                        }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0e6ff" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="speed" stroke="#7c3aed" strokeWidth={2} name="速度" />
+                      <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={2} name="正确率" />
+                      <Legend />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              {/* Retry Test */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-amber-500" />
+                  三刷测试
+                </h4>
+                {retryProblems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{monthLabel}暂无三刷记录</p>
+                ) : (
+                  <div className="overflow-hidden rounded-lg border border-gray-100">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-amber-50/60">
+                          <th className="px-3 py-2 text-left font-medium">测试题</th>
+                          <th className="px-3 py-2 text-center font-medium">首次用时</th>
+                          <th className="px-3 py-2 text-center font-medium">最新用时</th>
+                          <th className="px-3 py-2 text-center font-medium">提升</th>
+                          <th className="px-3 py-2 text-left font-medium">关联知识点</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {retryProblems.map((p, idx) => (
+                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                            <td className="px-3 py-2 font-medium">{p.problemName}</td>
+                            <td className="px-3 py-2 text-center text-muted-foreground">{p.firstTime}分钟</td>
+                            <td className="px-3 py-2 text-center font-bold">{p.lastTime}分钟</td>
+                            <td className="px-3 py-2 text-center">
+                              <span
+                                className={`font-bold ${
+                                  p.improvement > 0 ? 'text-emerald-600' : 'text-red-500'
+                                }`}
+                              >
+                                {p.improvement > 0 ? '+' : ''}
+                                {p.improvement}%
+                              </span>
                             </td>
-                            <td className="px-4 py-2.5 text-center text-muted-foreground">
-                              {r.knowledgePoint || '-'}
-                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{p.knowledgePoint || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-3">本月暂无三刷测试记录</p>
                 )}
               </div>
             </section>
 
-            {/* ===== Section 3: 差异化成长轨迹 ===== */}
+            {/* 3. Growth Trajectory */}
             <section>
-              <SectionTitle month={monthLabel} title="差异化成长轨迹" color="emerald" />
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-5 border border-emerald-100">
-                {totalSessions > 0 ? (
-                  <>
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="h-4 w-4 text-emerald-600" />
-                      </div>
-                      <p className="text-foreground leading-relaxed text-sm">{growthTrajectory}</p>
-                    </div>
-                    {/* Key metrics summary */}
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {monthlySpeedTrend !== 0 && (
-                        <MetricCard
-                          label="打字速度趋势"
-                          value={`${monthlySpeedTrend > 0 ? '+' : ''}${monthlySpeedTrend}%`}
-                          positive={monthlySpeedTrend > 0}
-                        />
-                      )}
-                      {retryTableData.length > 0 && (
-                        <MetricCard
-                          label="平均提升幅度"
-                          value={`${Math.round(retryTableData.reduce((s, r) => s + r.improvement, 0) / retryTableData.length)}%`}
-                          positive
-                        />
-                      )}
-                      {knowledgeTableData.filter((k) => k.status === 'mastered').length > 0 && (
-                        <MetricCard
-                          label="已掌握知识点"
-                          value={`${knowledgeTableData.filter((k) => k.status === 'mastered').length}/${knowledgeTableData.length}`}
-                          positive
-                        />
-                      )}
-                      {monthHomework.length > 0 && (
-                        <MetricCard
-                          label="作业完成"
-                          value={`${monthHomework.length}次`}
-                          positive
-                        />
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">本月暂无学习数据</p>
-                )}
+              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、差异化成长轨迹" />
+
+              {/* Key Indicators */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="bg-violet-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-violet-600">{curTyping.count}</p>
+                  <p className="text-xs text-muted-foreground">打字测试次数</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-emerald-600">{curRetry.count}</p>
+                  <p className="text-xs text-muted-foreground">三刷测试次数</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-amber-600">{curHomework.count}</p>
+                  <p className="text-xs text-muted-foreground">作业完成次数</p>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-blue-600">
+                    {strongKPs.length}/{mastery.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">知识点达标</p>
+                </div>
+              </div>
+
+              {/* Auto-generated description */}
+              <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-gray-700 leading-relaxed">{growthDesc}</p>
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2">
+                {highlightTags.map((tag, i) => (
+                  <Badge key={i} className="bg-emerald-50 text-emerald-700 border-0 text-xs px-3 py-1">
+                    <Star className="h-3 w-3 mr-1" />
+                    {tag.label}
+                  </Badge>
+                ))}
+                {weaknessTags.map((tag, i) => (
+                  <Badge key={i} className="bg-amber-50 text-amber-700 border-0 text-xs px-3 py-1">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {tag.label}
+                  </Badge>
+                ))}
               </div>
             </section>
 
-            {/* ===== Section 4: 家校共育 ===== */}
+            {/* 4. Home-School Co-education */}
             <section>
-              <SectionTitle month={monthLabel} title="家校共育" color="pink" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-5 border border-pink-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Heart className="h-4 w-4 text-pink-500" />
-                    <h4 className="font-semibold text-pink-800 text-sm">陪伴创新</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    建议预留专属亲子陪伴时间，支持孩子在家开展自主创新实践项目，以项目式学习深化知识点的理解与内化，在实践中巩固课堂所学，培养创新思维与问题解决能力。
+              <SectionTitle icon={<Users className="h-5 w-5" />} title="四、家校共育" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-violet-50 rounded-xl p-4">
+                  <h5 className="font-semibold text-violet-800 text-sm mb-2">陪伴创新</h5>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    鼓励家长陪伴孩子探索编程项目，在创意实现中培养逻辑思维和创新能力
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BookOpen className="h-4 w-4 text-blue-500" />
-                    <h4 className="font-semibold text-blue-800 text-sm">学业跟进</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    陪伴并引导孩子每周高效完成课后巩固练习，通过有规划的复习夯实课堂所学知识点，帮助孩子建立稳定的学习节奏，逐步提升知识掌握的扎实度。
+                <div className="bg-emerald-50 rounded-xl p-4">
+                  <h5 className="font-semibold text-emerald-800 text-sm mb-2">学业跟进</h5>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    关注孩子每周的打字速度和做题进步情况，及时给予肯定和鼓励
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-amber-500" />
-                    <h4 className="font-semibold text-amber-800 text-sm">成果互动</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    邀请孩子在家中分享月度学习成果，并共同体验作品功能，在沉浸式互动中感受孩子的创意成长，强化孩子的成就感与表达欲。
+                <div className="bg-amber-50 rounded-xl p-4">
+                  <h5 className="font-semibold text-amber-800 text-sm mb-2">成果互动</h5>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    与孩子一起回顾编程作品和作业成果，让孩子讲解实现思路，巩固学习效果
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-5 border border-violet-100">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="h-4 w-4 text-violet-500" />
-                    <h4 className="font-semibold text-violet-800 text-sm">引导表达</h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    多问孩子&ldquo;你最喜欢这个作品里的哪个功能？&rdquo;或者&ldquo;你是如何实现让怪兽跑出来的？&rdquo;，引导孩子用语言表达编程思路，加深理解。
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <h5 className="font-semibold text-blue-800 text-sm mb-2">引导表达</h5>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    引导孩子用语言描述编程思路，把抽象代码转化为可表达的逻辑，提升理解深度
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* ===== Section 5: 本月最佳作品 ===== */}
+            {/* 5. Best Work */}
             {bestHomework && (
               <section>
-                <SectionTitle month={monthLabel} title="本月最佳作品" color="amber" />
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-                  <h4 className="font-medium text-foreground mb-3">{bestHomework.title}</h4>
-                  {bestHomework.imageUrl && (
-                    <img
-                      src={bestHomework.imageUrl}
-                      alt="最佳作品"
-                      className="max-w-full max-h-64 rounded-lg mx-auto shadow-md mb-3"
-                    />
-                  )}
-                  {bestHomework.content && (
-                    <p className="text-sm text-muted-foreground mb-2">{bestHomework.content}</p>
-                  )}
-                  {bestHomework.comment && (
-                    <p className="text-sm text-amber-700 italic bg-white/60 rounded-lg px-4 py-2">
-                      &ldquo;{bestHomework.comment}&rdquo;
-                    </p>
-                  )}
+                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月最佳作品" />
+                <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl p-5">
+                  <div className="flex items-start gap-4">
+                    {bestHomework.imageUrl && (
+                      <img
+                        src={bestHomework.imageUrl}
+                        alt="作品"
+                        className="w-32 h-32 object-cover rounded-lg shadow-sm"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <h5 className="font-semibold text-gray-800 mb-1">
+                        {bestHomework.title}
+                        {bestHomework.score != null && (
+                          <span className="ml-2 text-sm text-violet-600 font-normal">
+                            评分：{bestHomework.score}
+                          </span>
+                        )}
+                      </h5>
+                      {bestHomework.content && (
+                        <p className="text-sm text-muted-foreground mb-2">{bestHomework.content}</p>
+                      )}
+                      {bestHomework.comment && (
+                        <p className="text-sm text-gray-600 italic bg-white/50 rounded-lg px-3 py-2">
+                          老师点评：&ldquo;{bestHomework.comment}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
 
-            {/* ===== Section 6: 教师寄语 ===== */}
-            {teacherMessage && (
-              <section>
-                <SectionTitle month={monthLabel} title="老师寄语" color="violet" />
-                <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-6 border border-violet-100">
-                  <p className="text-foreground leading-relaxed whitespace-pre-wrap text-sm">
-                    {teacherMessage}
-                  </p>
-                </div>
-              </section>
-            )}
-
-            {/* ===== Section 7: 下月目标 ===== */}
-            {nextGoals && (
-              <section>
-                <SectionTitle month={monthLabel} title="下月目标" color="indigo" />
-                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
-                  <p className="text-foreground leading-relaxed whitespace-pre-wrap text-sm">
-                    {nextGoals}
-                  </p>
-                </div>
-              </section>
-            )}
-
-            {/* Empty state */}
-            {totalSessions === 0 && (
-              <div className="text-center py-16">
-                <p className="text-lg text-muted-foreground mb-2">
-                  {format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN })} 暂无学习记录
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  请先在工作台添加学习记录
-                </p>
+            {/* 6. Teacher Comment */}
+            <section>
+              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、老师寄语" />
+              <div className="bg-gradient-to-br from-violet-50 via-white to-indigo-50 rounded-xl p-5 border border-violet-100">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{teacherComment}</p>
+                <p className="text-right text-sm text-muted-foreground mt-4">—— 编程老师</p>
               </div>
-            )}
-          </div>
+            </section>
 
-          {/* Footer */}
-          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 px-10 py-4 text-center text-xs text-muted-foreground border-t border-purple-50">
-            CodeTracker 少儿编程学习追踪系统 | 报告生成时间：{format(new Date(), 'yyyy-MM-dd HH:mm')}
+            {/* 7. Next Month Goals */}
+            <section>
+              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月目标" />
+              <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-2">
+                {nextMonthGoal.split('\n').map((line, i) => (
+                  <p key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </section>
+
+            {/* Footer */}
+            <div className="text-center pt-6 border-t border-gray-100">
+              <p className="text-xs text-muted-foreground">
+                CodeTracker · 少儿编程学习追踪系统 | 报告生成时间：{format(new Date(), 'yyyy年M月d日')}
+              </p>
+            </div>
           </div>
         </div>
       </main>
@@ -752,33 +769,11 @@ export default function ReportPage() {
   );
 }
 
-// ===== Sub-components =====
-
-function SectionTitle({ month, title, color }: { month: string; title: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    violet: 'from-violet-500 to-purple-500',
-    blue: 'from-blue-500 to-indigo-500',
-    emerald: 'from-emerald-500 to-teal-500',
-    pink: 'from-pink-500 to-rose-500',
-    amber: 'from-amber-500 to-orange-500',
-    indigo: 'from-indigo-500 to-blue-500',
-  };
-  const gradient = colorMap[color] || colorMap.violet;
-
+function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-      <span className={`w-1 h-6 rounded-full bg-gradient-to-b ${gradient}`} />
-      <span className="text-muted-foreground font-normal text-sm mr-1">{month}</span>
+    <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <span className="text-violet-500">{icon}</span>
       {title}
     </h3>
-  );
-}
-
-function MetricCard({ label, value, positive }: { label: string; value: string; positive: boolean }) {
-  return (
-    <div className="bg-white rounded-lg p-3 border border-gray-100 text-center">
-      <p className={`text-lg font-bold ${positive ? 'text-emerald-600' : 'text-red-500'}`}>{value}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-    </div>
   );
 }

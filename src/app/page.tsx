@@ -75,7 +75,20 @@ import {
   getTypingByStudent,
   getRetryByStudent,
   getHomeworkByStudent,
+  getKnowledgeByStudent,
 } from '@/lib/store';
+import {
+  type AutoTag,
+  generateAutoTags,
+  calcTypingSummary,
+  calcRetrySummary,
+  calcHomeworkSummary,
+  calcKnowledgeMastery,
+  getWeakKnowledgePoints,
+  getMonthRange,
+  getPreviousMonthRange,
+  getRecordsInPeriod,
+} from '@/lib/analytics';
 
 type RecordTab = 'typing' | 'retry' | 'homework';
 
@@ -118,6 +131,12 @@ export default function HomePage() {
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [historyRecords, setHistoryRecords] = useState<{ typing: TypingRecord[]; retry: ProblemRetryRecord[]; homework: HomeworkRecord[] }>({ typing: [], retry: [], homework: [] });
 
+  // Tag filter
+  const [tagFilter, setTagFilter] = useState<'all' | 'highlight' | 'weakness'>('all');
+
+  // Last record cache for auto-fill hints
+  const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});
+
   const loadData = useCallback(() => {
     const courseList = getCourses();
     setCourses(courseList);
@@ -128,7 +147,46 @@ export default function HomePage() {
 
   const loadStudents = useCallback(() => {
     if (!selectedCourseId) return;
-    setCourseStudents(getStudentsByCourse(selectedCourseId));
+    const students = getStudentsByCourse(selectedCourseId);
+    setCourseStudents(students);
+
+    // Compute auto-tags and last record hints for each student
+    const hints: Record<string, { lastSpeed?: number; lastAccuracy?: number }> = {};
+    const month = format(new Date(), 'yyyy-MM');
+    const curRange = getMonthRange(month);
+    const prevRange = getPreviousMonthRange(month);
+    const course = getCourses().find((c) => c.id === selectedCourseId);
+
+    students.forEach((s) => {
+      const typing = getTypingByStudent(s.id);
+      const retry = getRetryByStudent(s.id);
+      const homework = getHomeworkByStudent(s.id);
+      const knowledge = getKnowledgeByStudent(s.id);
+
+      // Last typing record hint
+      const lastTyping = typing.sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (lastTyping) {
+        hints[s.id] = { lastSpeed: lastTyping.speed, lastAccuracy: lastTyping.accuracy };
+      }
+
+      // Compute tags for filtering
+      const curTypingRecs = getRecordsInPeriod(typing, curRange.start, curRange.end);
+      const prevTypingRecs = getRecordsInPeriod(typing, prevRange.start, prevRange.end);
+      const curRetryRecs = getRecordsInPeriod(retry, curRange.start, curRange.end);
+      const prevRetryRecs = getRecordsInPeriod(retry, prevRange.start, prevRange.end);
+      const curHomeworkRecs = getRecordsInPeriod(homework, curRange.start, curRange.end);
+
+      const curTypingSum = calcTypingSummary(curTypingRecs);
+      const prevTypingSum = calcTypingSummary(prevTypingRecs);
+      const curRetrySum = calcRetrySummary(curRetryRecs, course || undefined);
+      const prevRetrySum = calcRetrySummary(prevRetryRecs, course || undefined);
+      const curHomeworkSum = calcHomeworkSummary(curHomeworkRecs);
+      const mastery = calcKnowledgeMastery(knowledge, retry, course || undefined);
+
+      const tags = generateAutoTags(curTypingSum, prevTypingSum, curRetrySum, prevRetrySum, curHomeworkSum, mastery);
+      (s as Student & { _autoTags?: AutoTag[] })._autoTags = tags;
+    });
+    setLastRecordHints(hints);
   }, [selectedCourseId]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -318,11 +376,17 @@ export default function HomePage() {
     });
   };
 
-  const filteredStudents = courseStudents.filter(
-    (s) =>
+  const filteredStudents = courseStudents.filter((s) => {
+    const matchSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
-      (s.className || '').toLowerCase().includes(search.toLowerCase())
-  );
+      (s.className || '').toLowerCase().includes(search.toLowerCase());
+    if (!matchSearch) return false;
+    if (tagFilter === 'all') return true;
+    const tags = (s as Student & { _autoTags?: AutoTag[] })._autoTags || [];
+    if (tagFilter === 'highlight') return tags.some((t) => t.type === 'highlight');
+    if (tagFilter === 'weakness') return tags.some((t) => t.type === 'weakness');
+    return true;
+  });
 
   const selectedStudents = courseStudents.filter((s) => selectedStudentIds.includes(s.id));
 
@@ -397,6 +461,25 @@ export default function HomePage() {
                       className="pl-8 h-8 text-sm"
                     />
                   </div>
+                  <div className="flex items-center gap-1 mt-2">
+                    {([['all', '全部'], ['highlight', '亮点'], ['weakness', '薄弱']] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        onClick={() => setTagFilter(val)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                          tagFilter === val
+                            ? val === 'highlight'
+                              ? 'bg-green-100 text-green-700'
+                              : val === 'weakness'
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-violet-100 text-violet-700'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="p-1 border-b">
                   <Button
@@ -431,6 +514,22 @@ export default function HomePage() {
                             <p className="text-sm font-medium truncate">{student.name}</p>
                             {student.className && (
                               <p className="text-xs text-muted-foreground truncate">{student.className}</p>
+                            )}
+                            {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).slice(0, 3).map((tag: AutoTag, i: number) => (
+                                  <span
+                                    key={i}
+                                    className={`px-1 py-0 rounded text-[10px] leading-tight ${
+                                      tag.type === 'highlight'
+                                        ? 'bg-green-50 text-green-600'
+                                        : 'bg-orange-50 text-orange-600'
+                                    }`}
+                                  >
+                                    {tag.label}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -600,7 +699,7 @@ export default function HomePage() {
                               <Label className="text-xs text-muted-foreground shrink-0">打字速度</Label>
                               <Input
                                 type="number"
-                                placeholder="字/分"
+                                placeholder={lastRecordHints[student.id]?.lastSpeed ? `上次${lastRecordHints[student.id].lastSpeed}` : '字/分'}
                                 value={getTypingForm(student.id).speed}
                                 onChange={(e) => updateTypingForm(student.id, 'speed', e.target.value)}
                                 className="w-24 h-8 text-sm"
@@ -610,7 +709,7 @@ export default function HomePage() {
                               <Label className="text-xs text-muted-foreground shrink-0">正确率</Label>
                               <Input
                                 type="number"
-                                placeholder="%"
+                                placeholder={lastRecordHints[student.id]?.lastAccuracy ? `上次${lastRecordHints[student.id].lastAccuracy}%` : '%'}
                                 min={0}
                                 max={100}
                                 value={getTypingForm(student.id).accuracy}
@@ -618,6 +717,11 @@ export default function HomePage() {
                                 className="w-20 h-8 text-sm"
                               />
                             </div>
+                            {lastRecordHints[student.id]?.lastSpeed && (
+                              <span className="text-[10px] text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded">
+                                上次 {lastRecordHints[student.id].lastSpeed}字/分 / {lastRecordHints[student.id].lastAccuracy}%
+                              </span>
+                            )}
                           </div>
                         )}
 

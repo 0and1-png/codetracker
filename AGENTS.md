@@ -39,6 +39,7 @@
 │   │   └── tag-selector.tsx # 标签选择器组件（含自定义标签）
 │   ├── hooks/              # 自定义 Hooks
 │   ├── lib/
+│   │   ├── analytics.ts    # 自动计算与标签生成（周期汇总/趋势/掌握度/评语推荐）
 │   │   ├── constants.ts    # 预设课程/标签/知识点/颜色配置
 │   │   ├── store.ts        # localStorage 数据存取层
 │   │   ├── types.ts        # TypeScript 类型定义

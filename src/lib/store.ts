@@ -1,5 +1,6 @@
 import type {
   Course,
+  CurriculumNode,
   Student,
   TypingRecord,
   ProblemRetryRecord,
@@ -37,6 +38,24 @@ function setItem<T>(key: string, data: T): void {
 }
 
 // ============ Courses ============
+
+/** Migrate old flat teachingContent to structured curriculum tree */
+function migrateToCurriculum(course: Course): Course {
+  if (course.curriculum && course.curriculum.length > 0) return course;
+  // If has legacy teachingContent, convert to single chapter node
+  if (course.teachingContent && course.teachingContent.trim()) {
+    const rootNode: CurriculumNode = {
+      id: `migrated_${course.id}_${Date.now()}`,
+      title: '备课内容（已迁移）',
+      type: 'chapter',
+      content: course.teachingContent,
+      order: 0,
+    };
+    return { ...course, curriculum: [rootNode] };
+  }
+  return { ...course, curriculum: course.curriculum || [] };
+}
+
 export function getCourses(): Course[] {
   const courses = getItem<Course[]>(COURSES_KEY, []);
   if (courses.length === 0) {
@@ -51,7 +70,7 @@ export function getCourses(): Course[] {
       return {
         id: preset.id,
         name: preset.name,
-        teachingContent: '',
+        curriculum: [],
         knowledgePoints: kpNames.map((name, idx) => ({
           id: `${preset.id}_kp_${idx}`,
           name,
@@ -62,14 +81,15 @@ export function getCourses(): Course[] {
     setItem(COURSES_KEY, defaults);
     return defaults;
   }
-  // Migrate old courses missing teachingContent
-  const migrated = courses.map((c) => ({
-    ...c,
-    teachingContent: c.teachingContent ?? '',
-  }));
-  if (migrated.some((c, i) => c.teachingContent !== courses[i].teachingContent)) {
-    setItem(COURSES_KEY, migrated);
-  }
+  // Migrate old courses: ensure curriculum field exists
+  let needsSave = false;
+  const migrated = courses.map((c) => {
+    const withContent = { ...c, teachingContent: c.teachingContent ?? '' };
+    const withCurriculum = migrateToCurriculum(withContent);
+    if (withCurriculum.curriculum !== c.curriculum) needsSave = true;
+    return withCurriculum;
+  });
+  if (needsSave) setItem(COURSES_KEY, migrated);
   return migrated;
 }
 

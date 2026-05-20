@@ -1,4 +1,27 @@
 // ============ Course ============
+
+/** Curriculum node in the teaching tree */
+export type CurriculumNodeType = 'chapter' | 'section' | 'topic';
+
+export interface CodeBlock {
+  id: string;
+  language: string;
+  code: string;
+  description?: string;
+}
+
+export interface CurriculumNode {
+  id: string;
+  title: string;
+  type: CurriculumNodeType;
+  content?: string;            // Rich text / markdown description
+  codeBlocks?: CodeBlock[];    // Code examples
+  knowledgePointId?: string;   // Link to knowledge point
+  problemIds?: string[];       // Linked practice problems
+  children?: CurriculumNode[];
+  order: number;
+}
+
 export interface KnowledgePointDef {
   id: string;
   name: string;
@@ -14,7 +37,8 @@ export interface ProblemDef {
 export interface Course {
   id: string;
   name: string;
-  teachingContent: string; // Markdown-style teaching plan content
+  curriculum: CurriculumNode[]; // Structured teaching tree (replaces teachingContent)
+  teachingContent?: string;     // Legacy field, kept for migration
   knowledgePoints: KnowledgePointDef[];
   problems: ProblemDef[];
 }

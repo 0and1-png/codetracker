@@ -3,10 +3,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'CodeTracker - 少儿编程学习追踪',
-    template: '%s | CodeTracker',
+    default: '仙码录 - 少儿编程修炼追踪',
+    template: '%s | 仙码录',
   },
-  description: '记录少儿编程学生学习情况，生成月度学习报告',
+  description: '记录弟子编程修炼历程，生成宗门月度飞剑传书',
 };
 
 export default function RootLayout({

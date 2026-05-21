@@ -4,20 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  FileText,
+  ScrollText,
   Trash2,
-  Clock,
-  Zap,
-  Target,
-  Keyboard,
-  RotateCcw,
+  Hourglass,
+  Flame,
+  Crosshair,
+  Sword,
+  RefreshCw,
   BookOpen,
   TrendingUp,
   TrendingDown,
-  Star,
+  Sparkles,
   AlertTriangle,
   Calendar,
-  ChevronDown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -79,7 +78,6 @@ import {
 } from '@/lib/store';
 import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
 import {
-  type PeriodType,
   type AutoTag,
   type KnowledgeMastery,
   getMonthRange,
@@ -133,8 +131,8 @@ export default function StudentDetailPage() {
 
   if (!student) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">学生不存在</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
+        <p className="text-[#8b949e]">弟子档案未找到...</p>
       </div>
     );
   }
@@ -190,7 +188,7 @@ export default function StudentDetailPage() {
     loadData();
   };
 
-  // Chart data: typing speed over time (filtered by selected month)
+  // Chart data
   const typingChartData = monthTyping
     .filter((r) => r.speed > 0)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -200,10 +198,8 @@ export default function StudentDetailPage() {
       accuracy: r.accuracy,
     }));
 
-  // Weekly typing data
   const weeklyTypingData = getTypingWeeklyData(typingRecords, selectedMonth);
 
-  // Problem trend data
   const problemNames = [...new Set(monthRetry.map((r) => r.problemName))];
   const problemTrendData = problemNames.map((name) => {
     const attempts = monthRetry
@@ -212,7 +208,7 @@ export default function StudentDetailPage() {
     return { problemName: name, attempts };
   });
 
-  // Combined timeline (filtered by selected month)
+  // Timeline
   type TimelineItem =
     | { type: 'typing'; data: TypingRecord }
     | { type: 'retry'; data: ProblemRetryRecord }
@@ -227,28 +223,28 @@ export default function StudentDetailPage() {
   const monthLabel = format(new Date(selectedMonth + '-01'), 'M月', { locale: zhCN });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#0d1117]">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+      <header className="sticky top-0 z-50 bg-[#161b22]/90 backdrop-blur-md border-b border-[#d4a853]/20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => router.push('/')}
-              className="h-9 w-9"
+              className="h-9 w-9 text-[#8b949e] hover:text-[#d4a853] hover:bg-[#d4a853]/10"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white font-bold shadow-md">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#d4a853] to-[#b8860b] flex items-center justify-center text-[#0d1117] font-bold shadow-lg shadow-[#d4a853]/20">
               {student.name.charAt(0)}
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">{student.name}</h1>
-              <div className="flex gap-2 text-xs text-muted-foreground">
+              <h1 className="text-lg font-bold text-[#e6edf3]">{student.name}</h1>
+              <div className="flex gap-2 text-xs text-[#8b949e]">
                 {student.className && <span>{student.className}</span>}
                 {course && (
-                  <span className="bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full">
+                  <span className="bg-[#d4a853]/10 text-[#d4a853] px-2 py-0.5 rounded-full border border-[#d4a853]/20">
                     {course.name}
                   </span>
                 )}
@@ -257,13 +253,13 @@ export default function StudentDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-32 h-9 text-sm">
-                <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
+              <SelectTrigger className="w-32 h-9 text-sm bg-[#1c2128] border-[#d4a853]/20 text-[#e6edf3]">
+                <Calendar className="h-4 w-4 mr-1 text-[#d4a853]" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1c2128] border-[#d4a853]/20">
                 {availableMonths.map((m) => (
-                  <SelectItem key={m} value={m}>
+                  <SelectItem key={m} value={m} className="text-[#e6edf3] focus:bg-[#d4a853]/10 focus:text-[#d4a853]">
                     {format(new Date(m + '-01'), 'yyyy年M月', { locale: zhCN })}
                   </SelectItem>
                 ))}
@@ -271,12 +267,11 @@ export default function StudentDetailPage() {
             </Select>
             <Button
               size="sm"
-              variant="outline"
-              className="border-violet-200 text-violet-600"
+              className="bg-gradient-to-r from-[#d4a853] to-[#b8860b] text-[#0d1117] hover:from-[#e0b96a] hover:to-[#c9971f] shadow-lg shadow-[#d4a853]/20"
               onClick={() => router.push(`/reports/${student.id}?month=${selectedMonth}`)}
             >
-              <FileText className="h-4 w-4 mr-1" />
-              生成报告
+              <ScrollText className="h-4 w-4 mr-1" />
+              飞剑传书
             </Button>
           </div>
         </div>
@@ -286,17 +281,17 @@ export default function StudentDetailPage() {
         {/* ===== Auto Tags ===== */}
         {autoTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {autoTags.map((tag, i) => (
+            {autoTags.map((tag: AutoTag, i: number) => (
               <Badge
                 key={i}
-                className={`text-xs px-3 py-1 border-0 ${
+                className={`text-xs px-3 py-1 border ${
                   tag.type === 'highlight'
-                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                    ? 'bg-[#d4a853]/10 text-[#d4a853] border-[#d4a853]/20 hover:bg-[#d4a853]/20'
+                    : 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20 hover:bg-[#ef4444]/20'
                 }`}
               >
                 {tag.type === 'highlight' ? (
-                  <Star className="h-3 w-3 mr-1" />
+                  <Sparkles className="h-3 w-3 mr-1" />
                 ) : (
                   <AlertTriangle className="h-3 w-3 mr-1" />
                 )}
@@ -306,19 +301,19 @@ export default function StudentDetailPage() {
           </div>
         )}
 
-        {/* ===== Summary Cards with Comparison ===== */}
+        {/* ===== Summary Cards ===== */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <SummaryCard
-            icon={<Keyboard className="h-4 w-4" />}
-            label="平均打字速度"
+          <XianxiaCard
+            icon={<Sword className="h-4 w-4" />}
+            label="指力均值"
             value={`${curTypingSummary.avgSpeed}`}
             unit="字/分"
             improvement={speedImprove}
-            color="violet"
+            color="gold"
           />
-          <SummaryCard
-            icon={<Zap className="h-4 w-4" />}
-            label="平均正确率"
+          <XianxiaCard
+            icon={<Sparkles className="h-4 w-4" />}
+            label="悟性均值"
             value={`${curTypingSummary.avgAccuracy}`}
             unit="%"
             improvement={
@@ -326,60 +321,63 @@ export default function StudentDetailPage() {
                 ? curTypingSummary.avgAccuracy - prevTypingSummary.avgAccuracy
                 : 0
             }
-            color="emerald"
+            color="jade"
           />
-          <SummaryCard
-            icon={<RotateCcw className="h-4 w-4" />}
-            label="三刷记录"
+          <XianxiaCard
+            icon={<RefreshCw className="h-4 w-4" />}
+            label="炼题记录"
             value={`${curRetrySummary.count}`}
             unit="次"
             improvement={curRetrySummary.avgImprovement}
-            color="amber"
+            color="fire"
           />
-          <SummaryCard
+          <XianxiaCard
             icon={<BookOpen className="h-4 w-4" />}
-            label="作业完成"
+            label="修炼日志"
             value={`${curHomeworkSummary.count}`}
-            unit="次"
-            color="blue"
+            unit="篇"
+            color="sky"
           />
         </div>
 
         {/* ===== Knowledge Mastery Bar ===== */}
         {mastery.length > 0 && (
-          <Card className="border-purple-50">
+          <Card className="bg-[#161b22] border-[#d4a853]/15">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-foreground">知识点掌握总览</h3>
-                <span className="text-xs text-muted-foreground">
-                  {mastery.filter((m) => m.masteryPercent >= 80).length}/{mastery.length} 达标
+                <h3 className="text-sm font-semibold text-[#d4a853] flex items-center gap-2">
+                  <Flame className="h-4 w-4" />
+                  心法修炼总览
+                </h3>
+                <span className="text-xs text-[#8b949e]">
+                  <span className="text-[#4ade80]">{mastery.filter((m) => m.masteryPercent >= 80).length}</span>/{mastery.length} 圆满
                   {weakKPs.length > 0 && (
-                    <span className="text-amber-600 ml-2">
-                      {weakKPs.length}个薄弱
+                    <span className="text-[#ef4444] ml-2">
+                      {weakKPs.length}个待突破
                     </span>
                   )}
                 </span>
               </div>
-              <div className="flex gap-1 h-6 items-end">
+              <div className="flex gap-1 h-8 items-end">
                 {mastery
                   .sort((a, b) => b.masteryPercent - a.masteryPercent)
-                  .map((m) => (
+                  .map((m: KnowledgeMastery) => (
                     <div
                       key={m.knowledgePointId}
-                      className="flex-1 rounded-t relative group cursor-default"
+                      className="flex-1 rounded-t relative group cursor-default transition-all duration-200 hover:opacity-80"
                       style={{
                         height: `${Math.max(m.masteryPercent, 5)}%`,
                         backgroundColor:
                           m.masteryPercent >= 80
-                            ? '#10b981'
+                            ? '#4ade80'
                             : m.masteryPercent >= 40
-                            ? '#f59e0b'
+                            ? '#d4a853'
                             : m.masteryPercent > 0
                             ? '#ef4444'
-                            : '#e5e7eb',
+                            : '#30363d',
                       }}
                     >
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-[#0d1117] text-[#e6edf3] text-[10px] px-2 py-1 rounded border border-[#d4a853]/30 whitespace-nowrap z-10">
                         {m.knowledgePointName} {m.masteryPercent}%
                       </div>
                     </div>
@@ -390,79 +388,85 @@ export default function StudentDetailPage() {
         )}
 
         <Tabs defaultValue="timeline" className="space-y-6">
-          <TabsList className="bg-violet-50">
-            <TabsTrigger value="timeline">学习时间线</TabsTrigger>
-            <TabsTrigger value="charts">数据图表</TabsTrigger>
-            <TabsTrigger value="knowledge">知识点进度</TabsTrigger>
+          <TabsList className="bg-[#161b22] border border-[#30363d]">
+            <TabsTrigger value="timeline" className="data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-[#8b949e]">
+              修炼纪事
+            </TabsTrigger>
+            <TabsTrigger value="charts" className="data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-[#8b949e]">
+              境界图谱
+            </TabsTrigger>
+            <TabsTrigger value="knowledge" className="data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-[#8b949e]">
+              心法进度
+            </TabsTrigger>
           </TabsList>
 
           {/* Timeline Tab */}
           <TabsContent value="timeline" className="space-y-4">
             {timelineItems.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mx-auto mb-4">
-                  <Clock className="h-8 w-8 text-violet-300" />
+                <div className="w-16 h-16 rounded-full bg-[#d4a853]/10 flex items-center justify-center mx-auto mb-4 border border-[#d4a853]/20">
+                  <Hourglass className="h-8 w-8 text-[#d4a853]/40" />
                 </div>
-                <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                  {monthLabel}暂无学习记录
+                <h3 className="text-lg font-medium text-[#8b949e] mb-2">
+                  {monthLabel}尚无修炼记录
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  返回首页工作台添加学习记录
+                <p className="text-sm text-[#484f58]">
+                  返回修炼台录入修炼纪事
                 </p>
               </div>
             ) : (
               <div className="relative">
-                <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-violet-100" />
+                <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-[#d4a853]/15" />
                 {timelineItems.map((item, idx) => (
                   <div key={`${item.type}-${item.data.id}-${idx}`} className="relative pl-12 pb-6">
                     <div
                       className={`absolute left-3 top-1 w-5 h-5 rounded-full border-4 ${
                         item.type === 'typing'
-                          ? 'bg-violet-500 border-violet-100'
+                          ? 'bg-[#d4a853] border-[#d4a853]/20'
                           : item.type === 'retry'
-                          ? 'bg-amber-500 border-amber-100'
-                          : 'bg-emerald-500 border-emerald-100'
+                          ? 'bg-[#ef4444] border-[#ef4444]/20'
+                          : 'bg-[#4ade80] border-[#4ade80]/20'
                       }`}
                     />
-                    <Card className="border-purple-50 shadow-sm">
+                    <Card className="bg-[#161b22] border-[#30363d] hover:border-[#d4a853]/20 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground">
+                            <span className="text-sm font-medium text-[#e6edf3]">
                               {item.data.date}
                             </span>
                             {item.type === 'typing' && (
-                              <Badge className="bg-violet-50 text-violet-700 border-0 text-xs">
-                                <Keyboard className="h-3 w-3 mr-1" />
-                                打字
+                              <Badge className="bg-[#d4a853]/10 text-[#d4a853] border-[#d4a853]/20 text-xs">
+                                <Sword className="h-3 w-3 mr-1" />
+                                指力
                               </Badge>
                             )}
                             {item.type === 'retry' && (
-                              <Badge className="bg-amber-50 text-amber-700 border-0 text-xs">
-                                <RotateCcw className="h-3 w-3 mr-1" />
-                                三刷
+                              <Badge className="bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20 text-xs">
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                炼题
                               </Badge>
                             )}
                             {item.type === 'homework' && (
-                              <Badge className="bg-emerald-50 text-emerald-700 border-0 text-xs">
+                              <Badge className="bg-[#4ade80]/10 text-[#4ade80] border-[#4ade80]/20 text-xs">
                                 <BookOpen className="h-3 w-3 mr-1" />
-                                作业
+                                修炼日志
                               </Badge>
                             )}
                           </div>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-[#484f58] hover:text-[#ef4444]">
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="bg-[#161b22] border-[#30363d]">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>确认删除</AlertDialogTitle>
-                                <AlertDialogDescription>确定要删除该条记录吗？</AlertDialogDescription>
+                                <AlertDialogTitle className="text-[#e6edf3]">确认删除</AlertDialogTitle>
+                                <AlertDialogDescription className="text-[#8b949e]">确定要删除该条修炼记录吗？此操作不可逆。</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>取消</AlertDialogCancel>
+                                <AlertDialogCancel className="bg-[#21262d] text-[#e6edf3] border-[#30363d]">取消</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => {
                                     if (item.type === 'typing') deleteTypingRecord(item.data.id);
@@ -470,7 +474,7 @@ export default function StudentDetailPage() {
                                     else deleteHomeworkRecord(item.data.id);
                                     loadData();
                                   }}
-                                  className="bg-red-500 hover:bg-red-600"
+                                  className="bg-[#ef4444] hover:bg-[#dc2626] text-white"
                                 >
                                   删除
                                 </AlertDialogAction>
@@ -481,13 +485,13 @@ export default function StudentDetailPage() {
 
                         {item.type === 'typing' && (
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-violet-50 rounded-lg p-2 text-center">
-                              <p className="text-lg font-bold text-violet-600">{item.data.speed}</p>
-                              <p className="text-xs text-muted-foreground">字/分钟</p>
+                            <div className="bg-[#d4a853]/5 rounded-lg p-2 text-center border border-[#d4a853]/10">
+                              <p className="text-lg font-bold text-[#d4a853]">{item.data.speed}</p>
+                              <p className="text-xs text-[#8b949e]">字/分钟</p>
                             </div>
-                            <div className="bg-emerald-50 rounded-lg p-2 text-center">
-                              <p className="text-lg font-bold text-emerald-600">{item.data.accuracy}%</p>
-                              <p className="text-xs text-muted-foreground">正确率</p>
+                            <div className="bg-[#4ade80]/5 rounded-lg p-2 text-center border border-[#4ade80]/10">
+                              <p className="text-lg font-bold text-[#4ade80]">{item.data.accuracy}%</p>
+                              <p className="text-xs text-[#8b949e]">悟性（正确率）</p>
                             </div>
                           </div>
                         )}
@@ -495,10 +499,10 @@ export default function StudentDetailPage() {
                         {item.type === 'retry' && (
                           <div className="space-y-2">
                             <div className="flex items-center gap-2 text-sm">
-                              <Target className="h-4 w-4 text-amber-500" />
-                              <span className="font-medium">{item.data.problemName}</span>
-                              <span className="text-muted-foreground">第{item.data.attempt}次</span>
-                              <span className="font-medium">{item.data.timeSpent}分钟</span>
+                              <Crosshair className="h-4 w-4 text-[#ef4444]" />
+                              <span className="font-medium text-[#e6edf3]">{item.data.problemName}</span>
+                              <span className="text-[#8b949e]">第{item.data.attempt}次炼化</span>
+                              <span className="font-medium text-[#d4a853]">{item.data.timeSpent}分钟</span>
                             </div>
                             {item.data.attempt > 1 &&
                               (() => {
@@ -515,11 +519,11 @@ export default function StudentDetailPage() {
                                   );
                                   return (
                                     <div className="flex items-center gap-1 text-sm">
-                                      <TrendingUp className="h-4 w-4" />
-                                      <span className={imp > 0 ? 'text-emerald-600' : 'text-red-500'}>
+                                      <TrendingUp className="h-4 w-4 text-[#4ade80]" />
+                                      <span className={imp > 0 ? 'text-[#4ade80]' : 'text-[#ef4444]'}>
                                         比上次{imp > 0 ? '快' : '慢'}了{Math.abs(imp)}%
                                       </span>
-                                      <span className="text-muted-foreground">
+                                      <span className="text-[#484f58]">
                                         （上次{prevAttempt.timeSpent}分钟）
                                       </span>
                                     </div>
@@ -528,7 +532,7 @@ export default function StudentDetailPage() {
                                 return null;
                               })()}
                             {item.data.notes && (
-                              <p className="text-sm text-muted-foreground bg-gray-50 rounded p-2">
+                              <p className="text-sm text-[#8b949e] bg-[#0d1117] rounded p-2 border border-[#30363d]">
                                 {item.data.notes}
                               </p>
                             )}
@@ -537,18 +541,18 @@ export default function StudentDetailPage() {
 
                         {item.type === 'homework' && (
                           <div className="space-y-2">
-                            <p className="font-medium text-sm">{item.data.title}</p>
+                            <p className="font-medium text-sm text-[#e6edf3]">{item.data.title}</p>
                             {item.data.content && (
-                              <p className="text-sm text-muted-foreground">{item.data.content}</p>
+                              <p className="text-sm text-[#8b949e]">{item.data.content}</p>
                             )}
                             <div className="flex gap-3">
                               {item.data.score != null && (
-                                <Badge className="bg-blue-50 text-blue-700 border-0">
+                                <Badge className="bg-[#60a5fa]/10 text-[#60a5fa] border-[#60a5fa]/20">
                                   评分：{item.data.score}
                                 </Badge>
                               )}
                               {item.data.comment && (
-                                <span className="text-sm text-muted-foreground italic">
+                                <span className="text-sm text-[#8b949e] italic">
                                   &ldquo;{item.data.comment}&rdquo;
                                 </span>
                               )}
@@ -556,8 +560,8 @@ export default function StudentDetailPage() {
                             {item.data.imageUrl && (
                               <img
                                 src={item.data.imageUrl}
-                                alt="作业"
-                                className="max-w-full max-h-40 rounded-lg shadow-sm mt-2"
+                                alt="修炼成果"
+                                className="max-w-full max-h-40 rounded-lg border border-[#30363d] mt-2"
                               />
                             )}
                           </div>
@@ -572,43 +576,42 @@ export default function StudentDetailPage() {
 
           {/* Charts Tab */}
           <TabsContent value="charts" className="space-y-6">
-            {/* Typing Speed Chart */}
-            <Card className="border-purple-50">
+            <Card className="bg-[#161b22] border-[#30363d]">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-violet-500" />
-                  {monthLabel}打字速度进步曲线
+                <CardTitle className="text-base flex items-center gap-2 text-[#d4a853]">
+                  <Flame className="h-4 w-4" />
+                  {monthLabel}指力进阶图谱
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {typingChartData.length < 2 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    至少需要2条打字记录才能生成曲线图
+                  <p className="text-sm text-[#484f58] text-center py-8">
+                    至少需要2条指力记录方可绘制图谱
                   </p>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={typingChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0e6ff" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+                      <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#8b949e' }} />
+                      <YAxis tick={{ fontSize: 12, fill: '#8b949e' }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: 8 }} />
                       <Line
                         type="monotone"
                         dataKey="speed"
-                        stroke="#7c3aed"
+                        stroke="#d4a853"
                         strokeWidth={2}
-                        dot={{ fill: '#7c3aed', r: 4 }}
-                        name="打字速度(字/分)"
+                        dot={{ fill: '#d4a853', r: 4 }}
+                        name="指力(字/分)"
                       />
                       <Line
                         type="monotone"
                         dataKey="accuracy"
-                        stroke="#10b981"
+                        stroke="#4ade80"
                         strokeWidth={2}
-                        dot={{ fill: '#10b981', r: 4 }}
-                        name="正确率(%)"
+                        dot={{ fill: '#4ade80', r: 4 }}
+                        name="悟性(%)"
                       />
-                      <Legend />
+                      <Legend wrapperStyle={{ color: '#8b949e' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -617,37 +620,37 @@ export default function StudentDetailPage() {
 
             {/* Weekly Typing Summary */}
             {weeklyTypingData.some((w) => w.count > 0) && (
-              <Card className="border-purple-50">
+              <Card className="bg-[#161b22] border-[#30363d]">
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-violet-500" />
-                    {monthLabel}打字周报
+                  <CardTitle className="text-base flex items-center gap-2 text-[#d4a853]">
+                    <Calendar className="h-4 w-4" />
+                    {monthLabel}指力周报
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-hidden rounded-lg border border-violet-100">
+                  <div className="overflow-hidden rounded-lg border border-[#30363d]">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-violet-50/60">
-                          <th className="px-4 py-2 text-left text-violet-800 font-medium">周次</th>
-                          <th className="px-4 py-2 text-center text-violet-800 font-medium">平均速度</th>
-                          <th className="px-4 py-2 text-center text-violet-800 font-medium">平均正确率</th>
-                          <th className="px-4 py-2 text-center text-violet-800 font-medium">测试次数</th>
+                        <tr className="bg-[#d4a853]/5">
+                          <th className="px-4 py-2 text-left text-[#d4a853] font-medium">周次</th>
+                          <th className="px-4 py-2 text-center text-[#d4a853] font-medium">平均指力</th>
+                          <th className="px-4 py-2 text-center text-[#d4a853] font-medium">平均悟性</th>
+                          <th className="px-4 py-2 text-center text-[#d4a853] font-medium">修炼次数</th>
                         </tr>
                       </thead>
                       <tbody>
                         {weeklyTypingData.map((w) =>
                           w.count > 0 ? (
-                            <tr key={w.week} className="border-t border-violet-50">
-                              <td className="px-4 py-2 font-medium">{w.week}</td>
+                            <tr key={w.week} className="border-t border-[#21262d]">
+                              <td className="px-4 py-2 font-medium text-[#e6edf3]">{w.week}</td>
                               <td className="px-4 py-2 text-center">
-                                <span className="font-bold text-violet-600">{w.avgSpeed}</span>
-                                <span className="text-muted-foreground text-xs ml-1">字/分</span>
+                                <span className="font-bold text-[#d4a853]">{w.avgSpeed}</span>
+                                <span className="text-[#484f58] text-xs ml-1">字/分</span>
                               </td>
                               <td className="px-4 py-2 text-center">
-                                <span className="font-bold text-emerald-600">{w.avgAccuracy}%</span>
+                                <span className="font-bold text-[#4ade80]">{w.avgAccuracy}%</span>
                               </td>
-                              <td className="px-4 py-2 text-center text-muted-foreground">{w.count}次</td>
+                              <td className="px-4 py-2 text-center text-[#8b949e]">{w.count}次</td>
                             </tr>
                           ) : null
                         )}
@@ -659,17 +662,17 @@ export default function StudentDetailPage() {
             )}
 
             {/* Problem Trend Chart */}
-            <Card className="border-purple-50">
+            <Card className="bg-[#161b22] border-[#30363d]">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Target className="h-4 w-4 text-amber-500" />
-                  {monthLabel}三刷时间趋势
+                <CardTitle className="text-base flex items-center gap-2 text-[#ef4444]">
+                  <Crosshair className="h-4 w-4" />
+                  {monthLabel}炼题时间趋势
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {problemTrendData.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {monthLabel}暂无三刷记录
+                  <p className="text-sm text-[#484f58] text-center py-8">
+                    {monthLabel}暂无炼题记录
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -680,14 +683,14 @@ export default function StudentDetailPage() {
                       }));
                       return (
                         <div key={pt.problemName}>
-                          <h4 className="text-sm font-medium mb-2">{pt.problemName}</h4>
+                          <h4 className="text-sm font-medium mb-2 text-[#e6edf3]">{pt.problemName}</h4>
                           <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={chartData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0e6ff" />
-                              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                              <YAxis tick={{ fontSize: 12 }} />
-                              <Tooltip />
-                              <Bar dataKey="耗时" fill="#7c3aed" radius={[4, 4, 0, 0]} name="耗时(分钟)" />
+                              <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+                              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#8b949e' }} />
+                              <YAxis tick={{ fontSize: 12, fill: '#8b949e' }} />
+                              <Tooltip contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: 8 }} />
+                              <Bar dataKey="耗时" fill="#d4a853" radius={[4, 4, 0, 0]} name="耗时(分钟)" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -702,14 +705,14 @@ export default function StudentDetailPage() {
           {/* Knowledge Tab */}
           <TabsContent value="knowledge" className="space-y-4">
             {weakKPs.length > 0 && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
-                <h4 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
+              <div className="bg-[#ef4444]/5 border border-[#ef4444]/15 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-[#ef4444] mb-2 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  薄弱知识点（{weakKPs.length}个）
+                  待突破心法（{weakKPs.length}个）
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {weakKPs.map((kp) => (
-                    <Badge key={kp.knowledgePointId} className="bg-white text-amber-700 border border-amber-200 text-xs">
+                  {weakKPs.map((kp: KnowledgeMastery) => (
+                    <Badge key={kp.knowledgePointId} className="bg-[#161b22] text-[#ef4444] border border-[#ef4444]/20 text-xs">
                       {kp.knowledgePointName} {kp.masteryPercent}%
                     </Badge>
                   ))}
@@ -719,16 +722,16 @@ export default function StudentDetailPage() {
 
             <div className="flex items-center gap-4 mb-4 text-sm">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-gray-200" />
-                <span className="text-muted-foreground">未开始</span>
+                <div className="w-3 h-3 rounded-full bg-[#30363d]" />
+                <span className="text-[#484f58]">未修炼</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <span className="text-muted-foreground">学习中</span>
+                <div className="w-3 h-3 rounded-full bg-[#d4a853]" />
+                <span className="text-[#484f58]">修炼中</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                <span className="text-muted-foreground">已掌握</span>
+                <div className="w-3 h-3 rounded-full bg-[#4ade80]" />
+                <span className="text-[#484f58]">已圆满</span>
               </div>
             </div>
 
@@ -741,22 +744,22 @@ export default function StudentDetailPage() {
                 return (
                   <Card
                     key={point.id}
-                    className={`border-purple-50 ${
-                      masteryItem?.isWeak ? 'ring-1 ring-amber-200' : ''
-                    }`}
+                    className={`bg-[#161b22] border-[#30363d] ${
+                      masteryItem?.isWeak ? 'ring-1 ring-[#ef4444]/30' : ''
+                    } hover:border-[#d4a853]/20 transition-colors`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm">{point.knowledgePointName}</h4>
+                        <h4 className="font-medium text-sm text-[#e6edf3]">{point.knowledgePointName}</h4>
                         <span
                           className={`text-xs font-bold ${
                             masteryPercent >= 80
-                              ? 'text-emerald-600'
+                              ? 'text-[#4ade80]'
                               : masteryPercent >= 40
-                              ? 'text-amber-600'
+                              ? 'text-[#d4a853]'
                               : masteryPercent > 0
-                              ? 'text-red-500'
-                              : 'text-gray-400'
+                              ? 'text-[#ef4444]'
+                              : 'text-[#484f58]'
                           }`}
                         >
                           {masteryPercent}%
@@ -764,16 +767,16 @@ export default function StudentDetailPage() {
                       </div>
 
                       {/* Mastery progress bar */}
-                      <div className="h-1.5 bg-gray-100 rounded-full mb-2 overflow-hidden">
+                      <div className="h-1.5 bg-[#21262d] rounded-full mb-2 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-300"
                           style={{
                             width: `${masteryPercent}%`,
                             backgroundColor:
                               masteryPercent >= 80
-                                ? '#10b981'
+                                ? '#4ade80'
                                 : masteryPercent >= 40
-                                ? '#f59e0b'
+                                ? '#d4a853'
                                 : '#ef4444',
                           }}
                         />
@@ -789,7 +792,7 @@ export default function StudentDetailPage() {
                               className={`text-xs h-7 ${
                                 point.status === status
                                   ? KNOWLEDGE_STATUS_COLORS[status]
-                                  : 'bg-white text-gray-400 border-gray-200'
+                                  : 'bg-[#0d1117] text-[#484f58] border-[#30363d]'
                               }`}
                               onClick={() => handleKnowledgeStatusChange(point, status)}
                             >
@@ -801,15 +804,15 @@ export default function StudentDetailPage() {
                       {point.status !== 'not_started' && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground w-8">评分</span>
+                            <span className="text-xs text-[#484f58] w-8">评分</span>
                             <div className="flex gap-0.5">
                               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                                 <button
                                   key={n}
                                   className={`w-4 h-4 rounded-sm text-[8px] font-bold transition-colors ${
                                     point.score && n <= point.score
-                                      ? 'bg-violet-500 text-white'
-                                      : 'bg-gray-100 text-gray-300 hover:bg-violet-100'
+                                      ? 'bg-[#d4a853] text-[#0d1117]'
+                                      : 'bg-[#21262d] text-[#484f58] hover:bg-[#d4a853]/20'
                                   }`}
                                   onClick={() =>
                                     handleKnowledgeScoreChange(point, n, point.description)
@@ -821,8 +824,8 @@ export default function StudentDetailPage() {
                             </div>
                           </div>
                           <textarea
-                            className="w-full text-xs border rounded p-1.5 min-h-[40px] resize-y bg-gray-50 border-gray-200 focus:border-violet-300 focus:bg-white"
-                            placeholder="掌握情况描述（会显示在报告中）"
+                            className="w-full text-xs border rounded p-1.5 min-h-[40px] resize-y bg-[#0d1117] border-[#30363d] text-[#e6edf3] focus:border-[#d4a853]/40 focus:bg-[#161b22] placeholder:text-[#484f58]"
+                            placeholder="掌握情况描述（将呈于传书之中）"
                             value={point.description || ''}
                             onChange={(e) =>
                               handleKnowledgeScoreChange(
@@ -846,9 +849,9 @@ export default function StudentDetailPage() {
   );
 }
 
-// ===== Sub-components =====
+// ===== Sub-component: Xianxia Summary Card =====
 
-function SummaryCard({
+function XianxiaCard({
   icon,
   label,
   value,
@@ -863,28 +866,29 @@ function SummaryCard({
   improvement?: number;
   color: string;
 }) {
-  const colorMap: Record<string, string> = {
-    violet: 'text-violet-600',
-    emerald: 'text-emerald-600',
-    amber: 'text-amber-600',
-    blue: 'text-blue-600',
+  const colorMap: Record<string, { text: string; bg: string; glow: string }> = {
+    gold: { text: 'text-[#d4a853]', bg: 'bg-[#d4a853]/5', glow: 'shadow-[#d4a853]/5' },
+    jade: { text: 'text-[#4ade80]', bg: 'bg-[#4ade80]/5', glow: 'shadow-[#4ade80]/5' },
+    fire: { text: 'text-[#ef4444]', bg: 'bg-[#ef4444]/5', glow: 'shadow-[#ef4444]/5' },
+    sky: { text: 'text-[#60a5fa]', bg: 'bg-[#60a5fa]/5', glow: 'shadow-[#60a5fa]/5' },
   };
+  const c = colorMap[color] || colorMap.gold;
   return (
-    <Card className="border-purple-50">
+    <Card className={`bg-[#161b22] border-[#30363d] hover:border-[#d4a853]/20 transition-colors`}>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className={colorMap[color] || 'text-gray-600'}>{icon}</span>
-          <span className="text-xs text-muted-foreground">{label}</span>
+          <span className={c.text}>{icon}</span>
+          <span className="text-xs text-[#8b949e]">{label}</span>
         </div>
         <div className="flex items-baseline gap-1">
-          <span className={`text-2xl font-bold ${colorMap[color] || 'text-gray-600'}`}>
+          <span className={`text-2xl font-bold ${c.text}`}>
             {value}
           </span>
-          <span className="text-xs text-muted-foreground">{unit}</span>
+          <span className="text-xs text-[#484f58]">{unit}</span>
           {improvement !== undefined && improvement !== 0 && (
             <span
               className={`ml-2 text-xs font-medium flex items-center gap-0.5 ${
-                improvement > 0 ? 'text-emerald-600' : 'text-red-500'
+                improvement > 0 ? 'text-[#4ade80]' : 'text-[#ef4444]'
               }`}
             >
               {improvement > 0 ? (

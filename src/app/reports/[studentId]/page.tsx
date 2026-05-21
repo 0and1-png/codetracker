@@ -1,101 +1,47 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Download,
-  Printer,
-  CheckCircle,
-  Star,
-  AlertTriangle,
-  Zap,
-  Target,
-  BookOpen,
-  Keyboard,
-  TrendingUp,
-  RotateCcw,
-  MessageSquare,
-  Calendar,
-  FileText,
-  Users,
-  ChevronDown,
-} from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  ArrowLeft, Calendar, Download, Users, Star, AlertTriangle,
+  BookOpen, Zap, Keyboard, RotateCcw, TrendingUp, MessageSquare, Target,
+  CheckCircle, Scroll, Flame, Shield, Sparkles, Swords
+} from 'lucide-react';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import type {
-  Student,
-  Course,
-  TypingRecord,
-  ProblemRetryRecord,
-  HomeworkRecord,
-  KnowledgeProgress,
-} from '@/lib/types';
 import {
-  getStudents,
-  getCourse,
-  getTypingByStudent,
-  getRetryByStudent,
-  getHomeworkByStudent,
-  getKnowledgeByStudent,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import {
+  getStudents, getCourse, getTypingByStudent, getRetryByStudent,
+  getHomeworkByStudent, getKnowledgeByStudent,
 } from '@/lib/store';
 import {
-  getMonthRange,
-  getPreviousMonthRange,
-  getRecordsInPeriod,
-  calcTypingSummary,
-  calcTypingImprovement,
-  calcRetrySummary,
-  calcHomeworkSummary,
-  calcKnowledgeMastery,
-  getWeakKnowledgePoints,
-  getStrongKnowledgePoints,
-  generateAutoTags,
-  generateGrowthDescription,
-  generateStudySuggestions,
-  getTypingWeeklyData,
-  recommendCommentTemplate,
-  COMMENT_TEMPLATES,
-  type AutoTag,
-  type CommentTemplate,
+  calcTypingSummary, calcRetrySummary, calcHomeworkSummary,
+  calcKnowledgeMastery, getWeakKnowledgePoints, getStrongKnowledgePoints,
+  generateAutoTags, calcTypingImprovement, getTypingWeeklyData,
+  generateGrowthDescription, generateStudySuggestions, recommendCommentTemplate,
+  getMonthRange, getPreviousMonthRange, getRecordsInPeriod,
 } from '@/lib/analytics';
-import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
+import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
+import type {
+  Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress,
+} from '@/lib/types';
 
 export default function ReportPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const studentId = params.studentId as string;
-  const urlMonth = searchParams.get('month');
 
   const [student, setStudent] = useState<Student | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(urlMonth || format(new Date(), 'yyyy-MM'));
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [teacherComment, setTeacherComment] = useState('');
   const [nextMonthGoal, setNextMonthGoal] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -105,7 +51,7 @@ export default function ReportPage() {
   const [batchStudentIds, setBatchStudentIds] = useState<string[]>([]);
   const [batchCurrentIdx, setBatchCurrentIdx] = useState(0);
 
-  // Report data (computed per current student)
+  // Report data
   const [typingRecords, setTypingRecords] = useState<TypingRecord[]>([]);
   const [retryRecords, setRetryRecords] = useState<ProblemRetryRecord[]>([]);
   const [homeworkRecords, setHomeworkRecords] = useState<HomeworkRecord[]>([]);
@@ -160,14 +106,7 @@ export default function ReportPage() {
   const mastery = calcKnowledgeMastery(knowledge, retryRecords, course || undefined);
   const weakKPs = getWeakKnowledgePoints(mastery);
   const strongKPs = getStrongKnowledgePoints(mastery);
-  const autoTags = generateAutoTags(
-    curTyping,
-    prevTyping,
-    curRetry,
-    prevRetry,
-    curHomework,
-    mastery
-  );
+  const autoTags = generateAutoTags(curTyping, prevTyping, curRetry, prevRetry, curHomework, mastery);
   const speedImprove = calcTypingImprovement(curTyping, prevTyping);
 
   // Auto-fill on first load
@@ -190,23 +129,15 @@ export default function ReportPage() {
 
   // Chart data
   const weeklyTypingData = getTypingWeeklyData(typingRecords, selectedMonth);
-
-  // Problem retry comparison for report
   const retryProblems = curRetry.problems;
-
-  // Best homework
   const bestHomework =
     monthHomework.length > 0
       ? monthHomework.reduce((a, b) => ((a.score ?? 0) >= (b.score ?? 0) ? a : b))
       : null;
 
-  // Growth description
   const growthDesc = student
     ? generateGrowthDescription(student.name, curTyping, prevTyping, curRetry, mastery, monthLabel)
     : '';
-
-  // Study suggestions
-  const suggestions = generateStudySuggestions(weakKPs, curRetry, curTyping);
 
   // ===== PDF Export =====
   const exportPDF = async () => {
@@ -220,6 +151,7 @@ export default function ReportPage() {
         scale: 2,
         useCORS: true,
         logging: false,
+        backgroundColor: '#0f0f1a',
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -242,11 +174,9 @@ export default function ReportPage() {
         heightLeft -= pdfHeight;
       }
 
-      pdf.save(
-        `${student?.name || '学员'}_${fullMonthLabel}学习报告.pdf`
-      );
+      pdf.save(`${student?.name || '弟子'}_${fullMonthLabel}修炼月报.pdf`);
     } catch (err) {
-      console.error('PDF导出失败:', err);
+      console.error('飞剑传书失败:', err);
     } finally {
       setIsExporting(false);
     }
@@ -276,7 +206,7 @@ export default function ReportPage() {
   if (!student) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">学生不存在</p>
+        <p className="text-amber-300/60">此弟子不在此宗门...</p>
       </div>
     );
   }
@@ -287,32 +217,32 @@ export default function ReportPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+      <header className="sticky top-0 z-50 bg-[#0f0f1a]/90 backdrop-blur-md border-b border-amber-900/30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => router.back()}
-              className="h-9 w-9"
+              className="h-9 w-9 text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">
+            <h1 className="text-lg font-bold text-amber-300">
               {batchMode
-                ? `批量报告 (${batchCurrentIdx + 1}/${batchStudentIds.length})`
-                : '月度学习报告'}
+                ? `批量传书 (${batchCurrentIdx + 1}/${batchStudentIds.length})`
+                : '修炼月报 · 飞剑传书'}
             </h1>
           </div>
           <div className="flex items-center gap-2">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-36 h-9 text-sm">
+              <SelectTrigger className="w-36 h-9 text-sm bg-[#1a1a2e] border-amber-900/40 text-amber-300">
                 <Calendar className="h-4 w-4 mr-1" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1a1a2e] border-amber-900/40">
                 {availableMonths.map((m) => (
-                  <SelectItem key={m} value={m}>
+                  <SelectItem key={m} value={m} className="text-amber-300 focus:bg-amber-900/30 focus:text-amber-200">
                     {format(new Date(m + '-01'), 'yyyy年M月', { locale: zhCN })}
                   </SelectItem>
                 ))}
@@ -322,145 +252,155 @@ export default function ReportPage() {
               <Button
                 size="sm"
                 variant="outline"
-                className="border-violet-200 text-violet-600"
+                className="border-amber-900/40 text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
                 onClick={handleBatchMode}
               >
                 <Users className="h-4 w-4 mr-1" />
-                批量生成
+                批量传书
               </Button>
             )}
             {batchMode && batchCurrentIdx < batchStudentIds.length - 1 && (
               <Button
                 size="sm"
                 variant="outline"
-                className="border-violet-200 text-violet-600"
+                className="border-amber-900/40 text-amber-400 hover:bg-amber-900/20"
                 onClick={handleBatchNext}
               >
-                下一位
+                下一位弟子
               </Button>
             )}
             <Button
               size="sm"
-              className="bg-gradient-to-r from-violet-500 to-indigo-500"
+              className="bg-gradient-to-r from-amber-600 to-yellow-500 text-[#0f0f1a] font-bold hover:from-amber-500 hover:to-yellow-400"
               onClick={exportPDF}
               disabled={isExporting}
             >
               <Download className="h-4 w-4 mr-1" />
-              {isExporting ? '导出中...' : '导出PDF'}
+              {isExporting ? '修炼中...' : '飞剑传书'}
             </Button>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* ===== Edit Panel (above report) ===== */}
-        <Card className="border-violet-100">
-          <CardContent className="p-4 space-y-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-violet-500" />
-              报告内容编辑
-            </h3>
+        {/* ===== Edit Panel ===== */}
+        <div className="bg-[#1a1a2e]/80 border border-amber-900/30 rounded-xl p-4 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2 text-amber-300">
+            <Scroll className="h-4 w-4" />
+            师尊批注
+          </h3>
 
-            {/* Comment Templates */}
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">
-                老师寄语（系统推荐模板，可修改）
-              </label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {COMMENT_TEMPLATES.map((tmpl) => (
-                  <Button
-                    key={tmpl.id}
-                    size="sm"
-                    variant="outline"
-                    className={`text-xs h-7 ${
-                      teacherComment === tmpl.content
-                        ? 'bg-violet-50 border-violet-300 text-violet-700'
-                        : 'text-gray-500'
-                    }`}
-                    onClick={() => setTeacherComment(tmpl.content)}
-                  >
-                    {tmpl.label}
-                  </Button>
-                ))}
-              </div>
-              <Textarea
-                value={teacherComment}
-                onChange={(e) => setTeacherComment(e.target.value)}
-                className="min-h-[80px] text-sm"
-                placeholder="输入老师寄语..."
-              />
+          {/* Comment Templates */}
+          <div>
+            <label className="text-xs text-amber-400/60 mb-1.5 block">
+              师尊寄语（系统推荐修炼评语，可修改）
+            </label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {COMMENT_TEMPLATES.map((tmpl) => (
+                <Button
+                  key={tmpl.id}
+                  size="sm"
+                  variant="outline"
+                  className={`text-xs h-7 ${
+                    teacherComment === tmpl.content
+                      ? 'bg-amber-900/30 border-amber-500/50 text-amber-300'
+                      : 'border-amber-900/30 text-amber-400/50 hover:text-amber-300 hover:bg-amber-900/20'
+                  }`}
+                  onClick={() => setTeacherComment(tmpl.content)}
+                >
+                  {tmpl.name}
+                </Button>
+              ))}
             </div>
+            <Textarea
+              value={teacherComment}
+              onChange={(e) => setTeacherComment(e.target.value)}
+              className="min-h-[80px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
+              placeholder="输入师尊寄语..."
+            />
+          </div>
 
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">
-                下月目标建议
-              </label>
-              <Textarea
-                value={nextMonthGoal}
-                onChange={(e) => setNextMonthGoal(e.target.value)}
-                className="min-h-[60px] text-sm"
-                placeholder="输入下月目标..."
-              />
-            </div>
-          </CardContent>
-        </Card>
+          <div>
+            <label className="text-xs text-amber-400/60 mb-1.5 block">
+              下月修炼目标
+            </label>
+            <Textarea
+              value={nextMonthGoal}
+              onChange={(e) => setNextMonthGoal(e.target.value)}
+              className="min-h-[60px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
+              placeholder="输入下月修炼目标..."
+            />
+          </div>
+        </div>
 
         {/* ===== Report Preview ===== */}
-        <div ref={reportRef} className="bg-white rounded-2xl shadow-sm border border-purple-50 overflow-hidden">
-          {/* Report Header */}
-          <div className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-8 py-8">
-            <div className="flex items-center justify-between">
+        <div ref={reportRef} className="bg-[#0f0f1a] rounded-2xl border border-amber-900/30 overflow-hidden">
+          {/* Report Header - Scroll/Book Style */}
+          <div className="relative bg-gradient-to-b from-[#2a1810] via-[#1a1a2e] to-[#0f0f1a] text-amber-200 px-8 py-8 overflow-hidden">
+            {/* Decorative border pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+            </div>
+
+            <div className="relative flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">{student.name} · {fullMonthLabel}学习报告</h2>
-                <p className="text-violet-100 text-sm">
-                  {course?.name || '编程课程'} | 编程学习月度反馈
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-5 w-5 text-yellow-400" />
+                  <span className="text-xs text-amber-400/60 tracking-widest">修 炼 月 报</span>
+                </div>
+                <h2 className="text-2xl font-bold text-amber-300 mb-1" style={{ textShadow: '0 0 20px rgba(212,168,83,0.3)' }}>
+                  {student.name} · {fullMonthLabel}修炼纪要
+                </h2>
+                <p className="text-amber-400/50 text-sm">
+                  {course?.name || '修炼功法'} | 宗门月度修炼反馈
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-violet-100">报告日期</p>
-                <p className="text-lg font-semibold">{format(new Date(), 'yyyy.M.d')}</p>
+                <p className="text-xs text-amber-400/40">传书日期</p>
+                <p className="text-lg font-semibold text-amber-300">{format(new Date(), 'yyyy.M.d')}</p>
               </div>
             </div>
           </div>
 
           <div className="px-8 py-6 space-y-8">
-            {/* 1. Knowledge Mastery Table */}
+            {/* 1. Knowledge Mastery - 心法修炼 */}
             <section>
-              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、知识点及掌握情况" />
-              <div className="overflow-hidden rounded-lg border border-gray-100">
+              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、心法修炼 · 知识点掌握" />
+              <div className="overflow-hidden rounded-lg border border-amber-900/30">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-violet-50/60">
-                      <th className="px-4 py-2.5 text-left text-violet-800 font-medium w-1/4">知识点</th>
-                      <th className="px-4 py-2.5 text-left text-violet-800 font-medium w-2/5">掌握情况</th>
-                      <th className="px-4 py-2.5 text-center text-violet-800 font-medium w-1/4">掌握度</th>
-                      <th className="px-4 py-2.5 text-center text-violet-800 font-medium w-1/6">评分</th>
+                    <tr className="bg-amber-900/20">
+                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-1/4">心法</th>
+                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-2/5">修炼心得</th>
+                      <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/4">掌握度</th>
+                      <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/6">评分</th>
                     </tr>
                   </thead>
                   <tbody>
                     {mastery.map((m, idx) => (
                       <tr
                         key={m.knowledgePointId}
-                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} ${
-                          m.isWeak ? 'bg-amber-50/50' : ''
+                        className={`${idx % 2 === 0 ? 'bg-[#0f0f1a]' : 'bg-[#1a1a2e]/50'} ${
+                          m.isWeak ? 'bg-red-900/10' : ''
                         }`}
                       >
-                        <td className="px-4 py-2.5 font-medium">{m.knowledgePointName}</td>
-                        <td className="px-4 py-2.5 text-muted-foreground text-xs">
+                        <td className="px-4 py-2.5 font-medium text-amber-200">{m.knowledgePointName}</td>
+                        <td className="px-4 py-2.5 text-amber-400/50 text-xs">
                           {knowledge.find((k) => k.knowledgePointId === m.knowledgePointId)?.description || KNOWLEDGE_STATUS_LABELS[m.status as keyof typeof KNOWLEDGE_STATUS_LABELS] || '-'}
                         </td>
                         <td className="px-4 py-2.5 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="w-20 h-2 bg-amber-900/20 rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full"
                                 style={{
                                   width: `${m.masteryPercent}%`,
                                   backgroundColor:
                                     m.masteryPercent >= 80
-                                      ? '#10b981'
+                                      ? '#4ade80'
                                       : m.masteryPercent >= 40
-                                      ? '#f59e0b'
+                                      ? '#d4a853'
                                       : '#ef4444',
                                 }}
                               />
@@ -468,17 +408,17 @@ export default function ReportPage() {
                             <span
                               className={`text-xs font-bold ${
                                 m.masteryPercent >= 80
-                                  ? 'text-emerald-600'
+                                  ? 'text-green-400'
                                   : m.masteryPercent >= 40
-                                  ? 'text-amber-600'
-                                  : 'text-red-500'
+                                  ? 'text-amber-400'
+                                  : 'text-red-400'
                               }`}
                             >
                               {m.masteryPercent}%
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-center font-bold">{m.score || '-'}</td>
+                        <td className="px-4 py-2.5 text-center font-bold text-amber-300">{m.score || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -486,61 +426,61 @@ export default function ReportPage() {
               </div>
             </section>
 
-            {/* 2. Ability Testing */}
+            {/* 2. Ability Testing - 功力测试 */}
             <section>
-              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、能力测试情况" />
+              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、功力测试 · 能力修炼" />
 
-              {/* Typing Test */}
+              {/* Typing Test - 指力测试 */}
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Keyboard className="h-4 w-4 text-violet-500" />
-                  打字测试
+                <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
+                  <Keyboard className="h-4 w-4 text-amber-400" />
+                  指力测试（打字）
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-violet-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-bold text-violet-600">{curTyping.avgSpeed}</p>
-                    <p className="text-xs text-muted-foreground mt-1">平均速度(字/分)</p>
+                  <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-bold text-amber-300">{curTyping.avgSpeed}</p>
+                    <p className="text-xs text-amber-400/50 mt-1">平均指力(字/分)</p>
                     {speedImprove !== 0 && (
                       <p
                         className={`text-xs font-medium mt-1 ${
-                          speedImprove > 0 ? 'text-emerald-600' : 'text-red-500'
+                          speedImprove > 0 ? 'text-green-400' : 'text-red-400'
                         }`}
                       >
-                        {speedImprove > 0 ? '↑' : '↓'} 较上月{speedImprove > 0 ? '提升' : '下降'}
+                        {speedImprove > 0 ? '↑' : '↓'} 较上月{speedImprove > 0 ? '精进' : '退步'}
                         {Math.abs(speedImprove)}%
                       </p>
                     )}
                   </div>
-                  <div className="bg-emerald-50 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-bold text-emerald-600">{curTyping.avgAccuracy}%</p>
-                    <p className="text-xs text-muted-foreground mt-1">平均正确率</p>
+                  <div className="bg-green-900/15 border border-green-900/20 rounded-xl p-4 text-center">
+                    <p className="text-3xl font-bold text-green-400">{curTyping.avgAccuracy}%</p>
+                    <p className="text-xs text-green-400/50 mt-1">心神专注（正确率）</p>
                   </div>
                 </div>
 
                 {/* Weekly Summary Table */}
                 {weeklyTypingData.some((w) => w.count > 0) && (
-                  <div className="overflow-hidden rounded-lg border border-gray-100 mb-4">
+                  <div className="overflow-hidden rounded-lg border border-amber-900/30 mb-4">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-gray-50">
-                          <th className="px-3 py-2 text-left font-medium">周次</th>
-                          <th className="px-3 py-2 text-center font-medium">平均速度</th>
-                          <th className="px-3 py-2 text-center font-medium">平均正确率</th>
-                          <th className="px-3 py-2 text-center font-medium">测试次数</th>
+                        <tr className="bg-amber-900/15">
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">修炼周次</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">平均指力</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">心神专注</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">修炼次数</th>
                         </tr>
                       </thead>
                       <tbody>
                         {weeklyTypingData.map((w) =>
                           w.count > 0 ? (
-                            <tr key={w.week} className="border-t border-gray-50">
-                              <td className="px-3 py-2 font-medium">{w.week}</td>
-                              <td className="px-3 py-2 text-center font-bold text-violet-600">
+                            <tr key={w.week} className="border-t border-amber-900/15">
+                              <td className="px-3 py-2 font-medium text-amber-200">{w.week}</td>
+                              <td className="px-3 py-2 text-center font-bold text-amber-300">
                                 {w.avgSpeed}
                               </td>
-                              <td className="px-3 py-2 text-center font-bold text-emerald-600">
+                              <td className="px-3 py-2 text-center font-bold text-green-400">
                                 {w.avgAccuracy}%
                               </td>
-                              <td className="px-3 py-2 text-center text-muted-foreground">{w.count}次</td>
+                              <td className="px-3 py-2 text-center text-amber-400/50">{w.count}次</td>
                             </tr>
                           ) : null
                         )}
@@ -561,55 +501,62 @@ export default function ReportPage() {
                           accuracy: r.accuracy,
                         }))}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0e6ff" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="speed" stroke="#7c3aed" strokeWidth={2} name="速度" />
-                      <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={2} name="正确率" />
-                      <Legend />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#3a2a1a" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#d4a853' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#d4a853' }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1a1a2e',
+                          border: '1px solid #8b6914',
+                          borderRadius: '8px',
+                          color: '#d4a853',
+                        }}
+                      />
+                      <Line type="monotone" dataKey="speed" stroke="#d4a853" strokeWidth={2} name="指力" />
+                      <Line type="monotone" dataKey="accuracy" stroke="#4ade80" strokeWidth={2} name="心神专注" />
+                      <Legend wrapperStyle={{ color: '#d4a853' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
               </div>
 
-              {/* Retry Test */}
+              {/* Retry Test - 炼题 */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4 text-amber-500" />
-                  三刷测试
+                <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-amber-400" />
+                  三刷炼题
                 </h4>
                 {retryProblems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{monthLabel}暂无三刷记录</p>
+                  <p className="text-sm text-amber-400/40">{monthLabel}暂无炼题记录</p>
                 ) : (
-                  <div className="overflow-hidden rounded-lg border border-gray-100">
+                  <div className="overflow-hidden rounded-lg border border-amber-900/30">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-amber-50/60">
-                          <th className="px-3 py-2 text-left font-medium">测试题</th>
-                          <th className="px-3 py-2 text-center font-medium">首次用时</th>
-                          <th className="px-3 py-2 text-center font-medium">最新用时</th>
-                          <th className="px-3 py-2 text-center font-medium">提升</th>
-                          <th className="px-3 py-2 text-left font-medium">关联知识点</th>
+                        <tr className="bg-amber-900/15">
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">炼题</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">首次耗时</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">最新耗时</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">精进</th>
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">关联心法</th>
                         </tr>
                       </thead>
                       <tbody>
                         {retryProblems.map((p, idx) => (
-                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
-                            <td className="px-3 py-2 font-medium">{p.problemName}</td>
-                            <td className="px-3 py-2 text-center text-muted-foreground">{p.firstTime}分钟</td>
-                            <td className="px-3 py-2 text-center font-bold">{p.lastTime}分钟</td>
+                          <tr key={idx} className={`${idx % 2 === 0 ? 'bg-[#0f0f1a]' : 'bg-[#1a1a2e]/30'}`}>
+                            <td className="px-3 py-2 font-medium text-amber-200">{p.problemName}</td>
+                            <td className="px-3 py-2 text-center text-amber-400/50">{p.firstTime}分钟</td>
+                            <td className="px-3 py-2 text-center font-bold text-amber-300">{p.lastTime}分钟</td>
                             <td className="px-3 py-2 text-center">
                               <span
                                 className={`font-bold ${
-                                  p.improvement > 0 ? 'text-emerald-600' : 'text-red-500'
+                                  p.improvement > 0 ? 'text-green-400' : 'text-red-400'
                                 }`}
                               >
                                 {p.improvement > 0 ? '+' : ''}
                                 {p.improvement}%
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-muted-foreground">{p.knowledgePoint || '-'}</td>
+                            <td className="px-3 py-2 text-amber-400/50">{p.knowledgePoint || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -619,47 +566,47 @@ export default function ReportPage() {
               </div>
             </section>
 
-            {/* 3. Growth Trajectory */}
+            {/* 3. Growth Trajectory - 修炼蜕变 */}
             <section>
-              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、差异化成长轨迹" />
+              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、修炼蜕变 · 成长轨迹" />
 
               {/* Key Indicators */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <div className="bg-violet-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-violet-600">{curTyping.count}</p>
-                  <p className="text-xs text-muted-foreground">打字测试次数</p>
+                <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-amber-300">{curTyping.count}</p>
+                  <p className="text-xs text-amber-400/50">指力修炼次数</p>
                 </div>
-                <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-emerald-600">{curRetry.count}</p>
-                  <p className="text-xs text-muted-foreground">三刷测试次数</p>
+                <div className="bg-green-900/15 border border-green-900/20 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-green-400">{curRetry.count}</p>
+                  <p className="text-xs text-green-400/50">炼题次数</p>
                 </div>
-                <div className="bg-amber-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-amber-600">{curHomework.count}</p>
-                  <p className="text-xs text-muted-foreground">作业完成次数</p>
+                <div className="bg-purple-900/15 border border-purple-900/20 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-purple-400">{curHomework.count}</p>
+                  <p className="text-xs text-purple-400/50">修炼日志</p>
                 </div>
-                <div className="bg-blue-50 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-blue-600">
+                <div className="bg-blue-900/15 border border-blue-900/20 rounded-xl p-3 text-center">
+                  <p className="text-xl font-bold text-blue-400">
                     {strongKPs.length}/{mastery.length}
                   </p>
-                  <p className="text-xs text-muted-foreground">知识点达标</p>
+                  <p className="text-xs text-blue-400/50">心法通达</p>
                 </div>
               </div>
 
               {/* Auto-generated description */}
-              <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl p-4 mb-4">
-                <p className="text-sm text-gray-700 leading-relaxed">{growthDesc}</p>
+              <div className="bg-gradient-to-r from-amber-900/10 to-purple-900/10 border border-amber-900/20 rounded-xl p-4 mb-4">
+                <p className="text-sm text-amber-200/80 leading-relaxed">{growthDesc}</p>
               </div>
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2">
                 {highlightTags.map((tag, i) => (
-                  <Badge key={i} className="bg-emerald-50 text-emerald-700 border-0 text-xs px-3 py-1">
+                  <Badge key={i} className="bg-green-900/30 text-green-400 border-green-800/30 text-xs px-3 py-1">
                     <Star className="h-3 w-3 mr-1" />
                     {tag.label}
                   </Badge>
                 ))}
                 {weaknessTags.map((tag, i) => (
-                  <Badge key={i} className="bg-amber-50 text-amber-700 border-0 text-xs px-3 py-1">
+                  <Badge key={i} className="bg-amber-900/30 text-amber-400 border-amber-800/30 text-xs px-3 py-1">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     {tag.label}
                   </Badge>
@@ -667,65 +614,77 @@ export default function ReportPage() {
               </div>
             </section>
 
-            {/* 4. Home-School Co-education */}
+            {/* 4. Home-School Co-education - 家宗共育 */}
             <section>
-              <SectionTitle icon={<Users className="h-5 w-5" />} title="四、家校共育" />
+              <SectionTitle icon={<Shield className="h-5 w-5" />} title="四、家宗共育 · 携手修行" />
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-violet-50 rounded-xl p-4">
-                  <h5 className="font-semibold text-violet-800 text-sm mb-2">陪伴创新</h5>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    鼓励家长陪伴孩子探索编程项目，在创意实现中培养逻辑思维和创新能力
+                <div className="bg-amber-900/10 border border-amber-900/20 rounded-xl p-4">
+                  <h5 className="font-semibold text-amber-300 text-sm mb-2 flex items-center gap-1.5">
+                    <Flame className="h-4 w-4" />
+                    陪伴悟道
+                  </h5>
+                  <p className="text-xs text-amber-400/50 leading-relaxed">
+                    鼓励家长陪伴弟子探索编程之道，在创意修炼中培养逻辑思维与悟性
                   </p>
                 </div>
-                <div className="bg-emerald-50 rounded-xl p-4">
-                  <h5 className="font-semibold text-emerald-800 text-sm mb-2">学业跟进</h5>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    关注孩子每周的打字速度和做题进步情况，及时给予肯定和鼓励
+                <div className="bg-green-900/10 border border-green-900/20 rounded-xl p-4">
+                  <h5 className="font-semibold text-green-400 text-sm mb-2 flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4" />
+                    修炼跟进
+                  </h5>
+                  <p className="text-xs text-green-400/50 leading-relaxed">
+                    关注弟子每周的指力精进和炼题提升，及时给予肯定和鼓励
                   </p>
                 </div>
-                <div className="bg-amber-50 rounded-xl p-4">
-                  <h5 className="font-semibold text-amber-800 text-sm mb-2">成果互动</h5>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    与孩子一起回顾编程作品和作业成果，让孩子讲解实现思路，巩固学习效果
+                <div className="bg-purple-900/10 border border-purple-900/20 rounded-xl p-4">
+                  <h5 className="font-semibold text-purple-400 text-sm mb-2 flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4" />
+                    成果切磋
+                  </h5>
+                  <p className="text-xs text-purple-400/50 leading-relaxed">
+                    与弟子一起回顾修炼成果，让弟子讲解实现思路，巩固修行效果
                   </p>
                 </div>
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <h5 className="font-semibold text-blue-800 text-sm mb-2">引导表达</h5>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    引导孩子用语言描述编程思路，把抽象代码转化为可表达的逻辑，提升理解深度
+                <div className="bg-blue-900/10 border border-blue-900/20 rounded-xl p-4">
+                  <h5 className="font-semibold text-blue-400 text-sm mb-2 flex items-center gap-1.5">
+                    <Swords className="h-4 w-4" />
+                    引导论道
+                  </h5>
+                  <p className="text-xs text-blue-400/50 leading-relaxed">
+                    引导弟子用语言描述编程思路，将抽象代码化为可论之道，提升领悟深度
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* 5. Best Work */}
+            {/* 5. Best Work - 本月佳作 */}
             {bestHomework && (
               <section>
-                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月最佳作品" />
-                <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl p-5">
+                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月佳作 · 修炼结晶" />
+                <div className="bg-gradient-to-r from-amber-900/10 to-purple-900/10 border border-amber-900/20 rounded-xl p-5">
                   <div className="flex items-start gap-4">
                     {bestHomework.imageUrl && (
                       <img
                         src={bestHomework.imageUrl}
                         alt="作品"
-                        className="w-32 h-32 object-cover rounded-lg shadow-sm"
+                        className="w-32 h-32 object-cover rounded-lg border border-amber-900/30"
                       />
                     )}
                     <div className="flex-1">
-                      <h5 className="font-semibold text-gray-800 mb-1">
+                      <h5 className="font-semibold text-amber-200 mb-1">
                         {bestHomework.title}
                         {bestHomework.score != null && (
-                          <span className="ml-2 text-sm text-violet-600 font-normal">
+                          <span className="ml-2 text-sm text-amber-400 font-normal">
                             评分：{bestHomework.score}
                           </span>
                         )}
                       </h5>
                       {bestHomework.content && (
-                        <p className="text-sm text-muted-foreground mb-2">{bestHomework.content}</p>
+                        <p className="text-sm text-amber-400/50 mb-2">{bestHomework.content}</p>
                       )}
                       {bestHomework.comment && (
-                        <p className="text-sm text-gray-600 italic bg-white/50 rounded-lg px-3 py-2">
-                          老师点评：&ldquo;{bestHomework.comment}&rdquo;
+                        <p className="text-sm text-amber-200/70 italic bg-amber-900/10 rounded-lg px-3 py-2 border border-amber-900/15">
+                          师尊点评：&ldquo;{bestHomework.comment}&rdquo;
                         </p>
                       )}
                     </div>
@@ -734,22 +693,22 @@ export default function ReportPage() {
               </section>
             )}
 
-            {/* 6. Teacher Comment */}
+            {/* 6. Teacher Comment - 师尊寄语 */}
             <section>
-              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、老师寄语" />
-              <div className="bg-gradient-to-br from-violet-50 via-white to-indigo-50 rounded-xl p-5 border border-violet-100">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{teacherComment}</p>
-                <p className="text-right text-sm text-muted-foreground mt-4">—— 编程老师</p>
+              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、师尊寄语" />
+              <div className="bg-gradient-to-br from-amber-900/10 via-[#1a1a2e]/50 to-purple-900/10 rounded-xl p-5 border border-amber-900/20">
+                <p className="text-amber-200/80 leading-relaxed whitespace-pre-wrap">{teacherComment}</p>
+                <p className="text-right text-sm text-amber-400/40 mt-4">—— 修行导师</p>
               </div>
             </section>
 
-            {/* 7. Next Month Goals */}
+            {/* 7. Next Month Goals - 下月修炼 */}
             <section>
-              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月目标" />
-              <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-2">
+              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月修炼 · 目标指引" />
+              <div className="bg-[#1a1a2e]/50 border border-amber-900/20 rounded-xl p-5 space-y-2">
                 {nextMonthGoal.split('\n').map((line, i) => (
-                  <p key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
+                  <p key={i} className="text-sm text-amber-200/70 flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
                     {line}
                   </p>
                 ))}
@@ -757,9 +716,9 @@ export default function ReportPage() {
             </section>
 
             {/* Footer */}
-            <div className="text-center pt-6 border-t border-gray-100">
-              <p className="text-xs text-muted-foreground">
-                CodeTracker · 少儿编程学习追踪系统 | 报告生成时间：{format(new Date(), 'yyyy年M月d日')}
+            <div className="text-center pt-6 border-t border-amber-900/20">
+              <p className="text-xs text-amber-400/30">
+                修仙编程录 · 少儿编程修炼追踪系统 | 飞剑传书时间：{format(new Date(), 'yyyy年M月d日')}
               </p>
             </div>
           </div>
@@ -771,8 +730,8 @@ export default function ReportPage() {
 
 function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <h3 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-      <span className="text-violet-500">{icon}</span>
+    <h3 className="text-base font-bold text-amber-200 mb-4 flex items-center gap-2">
+      <span className="text-amber-400">{icon}</span>
       {title}
     </h3>
   );

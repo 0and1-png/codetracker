@@ -4,23 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Plus,
-  Upload,
-  Search,
-  Trash2,
-  FileText,
-  Code2,
-  Settings,
-  Users,
-  Check,
-  Keyboard,
-  RotateCcw,
-  BookOpen,
-  Save,
-  X,
-  TrendingUp,
-  ChevronDown,
-  History,
+  Plus, Upload, Search, Trash2, FileText, Code2, Settings,
+  Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
+  TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -33,62 +19,31 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord } from '@/lib/types';
 import {
-  getCourses,
-  getStudentsByCourse,
-  addStudent,
-  deleteStudent,
-  addTypingRecord,
-  addRetryRecord,
-  addHomeworkRecord,
-  getRetryRecords,
-  getTypingByStudent,
-  getRetryByStudent,
-  getHomeworkByStudent,
-  getKnowledgeByStudent,
+  getCourses, getStudentsByCourse, addStudent, deleteStudent,
+  addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
+  getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
 } from '@/lib/store';
 import {
-  type AutoTag,
-  generateAutoTags,
-  calcTypingSummary,
-  calcRetrySummary,
-  calcHomeworkSummary,
-  calcKnowledgeMastery,
-  getWeakKnowledgePoints,
-  getMonthRange,
-  getPreviousMonthRange,
+  type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
+  calcHomeworkSummary, calcKnowledgeMastery, getMonthRange, getPreviousMonthRange,
   getRecordsInPeriod,
 } from '@/lib/analytics';
+import { XIAN, COURSE_COLORS } from '@/lib/constants';
 
 type RecordTab = 'typing' | 'retry' | 'homework';
 
@@ -105,36 +60,27 @@ export default function HomePage() {
   const [studentPopoverOpen, setStudentPopoverOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Dialogs
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
-  // Add student form
   const [newName, setNewName] = useState('');
   const [newClassName, setNewClassName] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [importText, setImportText] = useState('');
 
-  // Record tab
   const [activeTab, setActiveTab] = useState<RecordTab>('typing');
   const [recordDate, setRecordDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
 
-  // Per-student form data
   const [typingForms, setTypingForms] = useState<Record<string, TypingForm>>({});
   const [retryForms, setRetryForms] = useState<Record<string, RetryForm>>({});
   const [homeworkForms, setHomeworkForms] = useState<Record<string, HomeworkForm>>({});
 
-  // Save states per student
   const [savedStudents, setSavedStudents] = useState<Set<string>>(new Set());
 
-  // History view
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [historyRecords, setHistoryRecords] = useState<{ typing: TypingRecord[]; retry: ProblemRetryRecord[]; homework: HomeworkRecord[] }>({ typing: [], retry: [], homework: [] });
 
-  // Tag filter
   const [tagFilter, setTagFilter] = useState<'all' | 'highlight' | 'weakness'>('all');
-
-  // Last record cache for auto-fill hints
   const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});
 
   const loadData = useCallback(() => {
@@ -150,7 +96,6 @@ export default function HomePage() {
     const students = getStudentsByCourse(selectedCourseId);
     setCourseStudents(students);
 
-    // Compute auto-tags and last record hints for each student
     const hints: Record<string, { lastSpeed?: number; lastAccuracy?: number }> = {};
     const month = format(new Date(), 'yyyy-MM');
     const curRange = getMonthRange(month);
@@ -163,13 +108,11 @@ export default function HomePage() {
       const homework = getHomeworkByStudent(s.id);
       const knowledge = getKnowledgeByStudent(s.id);
 
-      // Last typing record hint
       const lastTyping = typing.sort((a, b) => b.date.localeCompare(a.date))[0];
       if (lastTyping) {
         hints[s.id] = { lastSpeed: lastTyping.speed, lastAccuracy: lastTyping.accuracy };
       }
 
-      // Compute tags for filtering
       const curTypingRecs = getRecordsInPeriod(typing, curRange.start, curRange.end);
       const prevTypingRecs = getRecordsInPeriod(typing, prevRange.start, prevRange.end);
       const curRetryRecs = getRecordsInPeriod(retry, curRange.start, curRange.end);
@@ -202,11 +145,9 @@ export default function HomePage() {
 
   const activeCourse = courses.find((c) => c.id === selectedCourseId);
 
-  // Student selection
   const toggleStudent = (id: string) => {
     setSelectedStudentIds((prev) => {
       const next = prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id];
-      // Clean up form data for removed students
       if (!next.includes(id)) {
         setTypingForms((f) => { const nf = { ...f }; delete nf[id]; return nf; });
         setRetryForms((f) => { const nf = { ...f }; delete nf[id]; return nf; });
@@ -224,7 +165,6 @@ export default function HomePage() {
     }
   };
 
-  // Form helpers
   const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', accuracy: '' };
   const getRetryForm = (id: string): RetryForm => retryForms[id] || { problemId: '', attempt: '1', timeSpent: '', notes: '' };
   const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { title: '', content: '', score: '', comment: '', imageUrl: '' };
@@ -239,25 +179,17 @@ export default function HomePage() {
     setHomeworkForms((prev) => ({ ...prev, [id]: { ...getHomeworkForm(id), [field]: value } }));
   };
 
-  // Add student
   const handleAddStudent = () => {
     if (!newName.trim() || !selectedCourseId) return;
     addStudent({
-      id: uuidv4(),
-      name: newName.trim(),
-      courseId: selectedCourseId,
-      className: newClassName.trim() || undefined,
-      notes: newNotes.trim() || undefined,
+      id: uuidv4(), name: newName.trim(), courseId: selectedCourseId,
+      className: newClassName.trim() || undefined, notes: newNotes.trim() || undefined,
       createdAt: new Date().toISOString(),
     });
-    setNewName('');
-    setNewClassName('');
-    setNewNotes('');
-    setAddStudentOpen(false);
-    loadStudents();
+    setNewName(''); setNewClassName(''); setNewNotes('');
+    setAddStudentOpen(false); loadStudents();
   };
 
-  // Import students
   const handleImport = () => {
     if (!importText.trim() || !selectedCourseId) return;
     const result = Papa.parse(importText.trim(), { header: false, skipEmptyLines: true });
@@ -266,108 +198,71 @@ export default function HomePage() {
       const name = (row[0] || '').trim();
       if (!name) continue;
       addStudent({
-        id: uuidv4(),
-        name,
-        courseId: selectedCourseId,
+        id: uuidv4(), name, courseId: selectedCourseId,
         className: (row[1] || '').trim() || undefined,
         notes: (row[2] || '').trim() || undefined,
         createdAt: new Date().toISOString(),
       });
     }
-    setImportText('');
-    setImportOpen(false);
-    loadStudents();
+    setImportText(''); setImportOpen(false); loadStudents();
   };
 
-  // Delete student
   const handleDelete = (id: string) => {
     deleteStudent(id);
     setSelectedStudentIds((prev) => prev.filter((sid) => sid !== id));
     loadStudents();
   };
 
-  // Save record for a single student
   const handleSaveStudent = (studentId: string) => {
     if (activeTab === 'typing') {
       const form = getTypingForm(studentId);
       if (!form.speed) return;
-      const record: TypingRecord = {
-        id: uuidv4(),
-        studentId,
-        courseId: selectedCourseId,
-        date: recordDate,
-        speed: Number(form.speed),
-        accuracy: Number(form.accuracy) || 0,
-      };
-      addTypingRecord(record);
+      addTypingRecord({
+        id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+        speed: Number(form.speed), accuracy: Number(form.accuracy) || 0,
+      });
     } else if (activeTab === 'retry') {
       const form = getRetryForm(studentId);
       if (!form.problemId || !form.timeSpent) return;
       const problem = activeCourse?.problems.find((p) => p.id === form.problemId);
-      const record: ProblemRetryRecord = {
-        id: uuidv4(),
-        studentId,
-        courseId: selectedCourseId,
-        date: recordDate,
-        problemId: form.problemId,
-        problemName: problem?.name || '',
-        attempt: Number(form.attempt) || 1,
-        timeSpent: Number(form.timeSpent),
+      addRetryRecord({
+        id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+        problemId: form.problemId, problemName: problem?.name || '',
+        attempt: Number(form.attempt) || 1, timeSpent: Number(form.timeSpent),
         notes: form.notes.trim() || undefined,
-      };
-      addRetryRecord(record);
+      });
     } else if (activeTab === 'homework') {
       const form = getHomeworkForm(studentId);
       if (!form.title.trim()) return;
-      const record: HomeworkRecord = {
-        id: uuidv4(),
-        studentId,
-        courseId: selectedCourseId,
-        date: recordDate,
-        title: form.title.trim(),
-        content: form.content.trim(),
+      addHomeworkRecord({
+        id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+        title: form.title.trim(), content: form.content.trim(),
         score: form.score ? Number(form.score) : undefined,
         comment: form.comment.trim() || undefined,
         imageUrl: form.imageUrl.trim() || undefined,
-      };
-      addHomeworkRecord(record);
+      });
     }
-
     setSavedStudents((prev) => new Set(prev).add(studentId));
     setTimeout(() => {
-      setSavedStudents((prev) => {
-        const next = new Set(prev);
-        next.delete(studentId);
-        return next;
-      });
+      setSavedStudents((prev) => { const next = new Set(prev); next.delete(studentId); return next; });
     }, 2000);
   };
 
-  // Save all students
   const handleSaveAll = () => {
     for (const studentId of selectedStudentIds) {
       handleSaveStudent(studentId);
     }
   };
 
-  // Calculate retry improvement
   const getRetryImprovement = (problemId: string, attempt: number, currentTime: number): number | null => {
     const allRetries = getRetryRecords();
-    const prev = allRetries.find(
-      (r) => r.problemId === problemId && r.attempt === attempt - 1
-    );
-    if (prev) {
-      return Math.round(((prev.timeSpent - currentTime) / prev.timeSpent) * 100);
-    }
+    const prev = allRetries.find((r) => r.problemId === problemId && r.attempt === attempt - 1);
+    if (prev) return Math.round(((prev.timeSpent - currentTime) / prev.timeSpent) * 100);
     return null;
   };
 
-  // Load history for a student
   const loadHistory = (studentId: string) => {
-    if (historyStudentId === studentId) {
-      setHistoryStudentId(null);
-      return;
-    }
+    if (historyStudentId === studentId) { setHistoryStudentId(null); return; }
     setHistoryStudentId(studentId);
     setHistoryRecords({
       typing: getTypingByStudent(studentId).slice(-5).reverse(),
@@ -377,8 +272,7 @@ export default function HomePage() {
   };
 
   const filteredStudents = courseStudents.filter((s) => {
-    const matchSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
+    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
       (s.className || '').toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
     if (tagFilter === 'all') return true;
@@ -390,90 +284,87 @@ export default function HomePage() {
 
   const selectedStudents = courseStudents.filter((s) => selectedStudentIds.includes(s.id));
 
+  const courseColor = COURSE_COLORS[selectedCourseId] || COURSE_COLORS.course_cpp;
+
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+      {/* Header - 修仙风 */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-xianjin/20" style={{ background: 'rgba(12, 14, 26, 0.9)' }}>
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-200">
-              <Code2 className="h-5 w-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-900/30">
+              <Sparkles className="h-5 w-5 text-amber-950" />
             </div>
             <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                CodeTracker
+              <h1 className="text-lg font-bold xian-text-gold font-serif">
+                {XIAN.app}
               </h1>
+              <p className="text-[10px] text-amber-600/60 -mt-0.5">修仙编程录</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Select value={selectedCourseId} onValueChange={handleCourseChange}>
-              <SelectTrigger className="w-36 h-9">
-                <SelectValue placeholder="选择课程" />
+              <SelectTrigger className="w-36 h-9 bg-anye/60 border-xianjin/20 text-amber-200">
+                <SelectValue placeholder="选择功法" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-anye border-xianjin/20">
                 {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id} className="text-amber-200 focus:bg-xianjin/10 focus:text-amber-100">{COURSE_COLORS[c.id]?.icon || ''} {c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             <Link href="/courses">
-              <Button size="sm" variant="outline" className="border-violet-200 text-violet-600">
-                <Settings className="h-4 w-4 mr-1" />课程管理
+              <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300">
+                <Scroll className="h-4 w-4 mr-1" />{XIAN.courses}
               </Button>
             </Link>
-            <Button size="sm" variant="outline" className="border-violet-200 text-violet-600" onClick={() => setAddStudentOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />添加学生
+            <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300" onClick={() => setAddStudentOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />{XIAN.addStudent}
             </Button>
-            <Button size="sm" variant="outline" className="border-violet-200 text-violet-600" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-1" />批量导入
+            <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-1" />{XIAN.importCSV}
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Toolbar: Student selector + Date + Tab */}
-      <div className="sticky top-[57px] z-40 bg-white border-b border-purple-100 px-4 sm:px-6 py-3">
+      {/* Toolbar */}
+      <div className="sticky top-[57px] z-40 backdrop-blur-xl border-b border-xianjin/15 px-4 sm:px-6 py-3" style={{ background: 'rgba(21, 24, 41, 0.9)' }}>
         <div className="flex items-center gap-4 flex-wrap">
-          {/* Student multi-select dropdown */}
+          {/* Student multi-select */}
           <div className="flex items-center gap-2">
-            <Label className="text-sm shrink-0 text-foreground font-medium">学生</Label>
+            <Label className="text-sm shrink-0 text-amber-300 font-medium">{XIAN.student}</Label>
             <Popover open={studentPopoverOpen} onOpenChange={setStudentPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[200px] justify-between h-9 border-violet-200">
+                <Button variant="outline" className="min-w-[200px] justify-between h-9 border-xianjin/20 text-amber-200 hover:bg-xianjin/10">
                   <span className="truncate">
                     {selectedStudentIds.length === 0
-                      ? '点击选择学生...'
-                      : `已选 ${selectedStudentIds.length} 名学生`}
+                      ? `点击选择${XIAN.student}...`
+                      : `已选 ${selectedStudentIds.length} 名${XIAN.student}`}
                   </span>
                   <ChevronDown className="h-4 w-4 shrink-0 ml-2 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-0" align="start">
-                <div className="p-2 border-b">
+              <PopoverContent className="w-72 p-0 bg-anye border-xianjin/20" align="start">
+                <div className="p-2 border-b border-xianjin/10">
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-amber-600" />
                     <Input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="搜索学生..."
-                      className="pl-8 h-8 text-sm"
+                      value={search} onChange={(e) => setSearch(e.target.value)}
+                      placeholder={`搜索${XIAN.student}...`}
+                      className="pl-8 h-8 text-sm xian-input"
                     />
                   </div>
                   <div className="flex items-center gap-1 mt-2">
-                    {([['all', '全部'], ['highlight', '亮点'], ['weakness', '薄弱']] as const).map(([val, label]) => (
+                    {([['all', '全部'], ['highlight', '悟道'], ['weakness', '瓶颈']] as const).map(([val, label]) => (
                       <button
-                        key={val}
-                        onClick={() => setTagFilter(val)}
+                        key={val} onClick={() => setTagFilter(val)}
                         className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
                           tagFilter === val
-                            ? val === 'highlight'
-                              ? 'bg-green-100 text-green-700'
-                              : val === 'weakness'
-                              ? 'bg-orange-100 text-orange-700'
-                              : 'bg-violet-100 text-violet-700'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            ? val === 'highlight' ? 'xian-tag-biyu' : val === 'weakness' ? 'xian-tag-zhusa' : 'xian-tag-xianjin'
+                            : 'bg-anye/60 text-amber-700 hover:bg-anye'
                         }`}
                       >
                         {label}
@@ -481,19 +372,14 @@ export default function HomePage() {
                     ))}
                   </div>
                 </div>
-                <div className="p-1 border-b">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs text-violet-600 justify-start"
-                    onClick={selectAllStudents}
-                  >
+                <div className="p-1 border-b border-xianjin/10">
+                  <Button variant="ghost" size="sm" className="w-full text-xs text-amber-400 justify-start hover:bg-xianjin/10" onClick={selectAllStudents}>
                     {selectedStudentIds.length === courseStudents.length ? '取消全选' : '全选'}
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto py-1">
                   {filteredStudents.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">暂无学生</div>
+                    <div className="p-4 text-center text-sm text-amber-700">尚无{XIAN.student}</div>
                   ) : (
                     filteredStudents.map((student) => {
                       const isSelected = selectedStudentIds.includes(student.id);
@@ -501,31 +387,24 @@ export default function HomePage() {
                         <div
                           key={student.id}
                           className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors rounded-md mx-1 ${
-                            isSelected ? 'bg-violet-50' : 'hover:bg-gray-50'
+                            isSelected ? 'bg-xianjin/15' : 'hover:bg-anye/80'
                           }`}
                           onClick={() => toggleStudent(student.id)}
                         >
                           <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-violet-500 border-violet-500' : 'border-gray-300'
+                            isSelected ? 'bg-amber-500 border-amber-500' : 'border-amber-800'
                           }`}>
-                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                            {isSelected && <Check className="h-3 w-3 text-amber-950" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{student.name}</p>
-                            {student.className && (
-                              <p className="text-xs text-muted-foreground truncate">{student.className}</p>
-                            )}
+                            <p className="text-sm font-medium text-amber-200 truncate">{student.name}</p>
+                            {student.className && <p className="text-xs text-amber-700 truncate">{student.className}</p>}
                             {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).length > 0 && (
                               <div className="flex flex-wrap gap-0.5 mt-0.5">
                                 {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).slice(0, 3).map((tag: AutoTag, i: number) => (
-                                  <span
-                                    key={i}
-                                    className={`px-1 py-0 rounded text-[10px] leading-tight ${
-                                      tag.type === 'highlight'
-                                        ? 'bg-green-50 text-green-600'
-                                        : 'bg-orange-50 text-orange-600'
-                                    }`}
-                                  >
+                                  <span key={i} className={`px-1 py-0 rounded text-[10px] leading-tight ${
+                                    tag.type === 'highlight' ? 'xian-tag-biyu' : 'xian-tag-zhusa'
+                                  }`}>
                                     {tag.label}
                                   </span>
                                 ))}
@@ -533,32 +412,25 @@ export default function HomePage() {
                             )}
                           </div>
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => router.push(`/students/${student.id}`)}
-                            >
-                              <FileText className="h-3 w-3 text-violet-500" />
+                            <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-xianjin/10" onClick={() => router.push(`/students/${student.id}`)}>
+                              <FileText className="h-3 w-3 text-amber-500" />
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-red-900/20">
                                   <Trash2 className="h-3 w-3 text-red-400" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="bg-anye border-xianjin/20">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>确认删除</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    确定要删除学生「{student.name}」吗？所有相关记录也将被删除。
+                                  <AlertDialogTitle className="text-amber-200">确认逐出门派</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-amber-600">
+                                    确定要将{XIAN.student}「{student.name}」逐出门派吗？所有修炼记录也将被清除。
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>取消</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(student.id)} className="bg-red-500 hover:bg-red-600">
-                                    删除
-                                  </AlertDialogAction>
+                                  <AlertDialogCancel className="border-xianjin/20 text-amber-400">取消</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(student.id)} className="bg-red-600 hover:bg-red-700">逐出</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -573,76 +445,52 @@ export default function HomePage() {
             {selectedStudentIds.length > 0 && (
               <div className="flex items-center gap-1 flex-wrap">
                 {selectedStudents.slice(0, 4).map((s) => (
-                  <Badge key={s.id} className="bg-violet-100 text-violet-700 border-0 gap-1 pr-1">
+                  <Badge key={s.id} className="xian-tag-xianjin gap-1 pr-1 border-0">
                     {s.name}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-red-500"
-                      onClick={() => toggleStudent(s.id)}
-                    />
+                    <X className="h-3 w-3 cursor-pointer hover:text-red-400" onClick={() => toggleStudent(s.id)} />
                   </Badge>
                 ))}
                 {selectedStudents.length > 4 && (
-                  <Badge className="bg-violet-50 text-violet-500 border-0">
-                    +{selectedStudents.length - 4}
-                  </Badge>
+                  <Badge className="xian-tag-zixia border-0">+{selectedStudents.length - 4}</Badge>
                 )}
               </div>
             )}
           </div>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
 
-          {/* Date */}
           <div className="flex items-center gap-2">
-            <Label className="text-sm shrink-0">日期</Label>
-            <Input
-              type="date"
-              value={recordDate}
-              onChange={(e) => setRecordDate(e.target.value)}
-              className="w-36 h-9"
-            />
+            <Label className="text-sm shrink-0 text-amber-300">日期</Label>
+            <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
+              className="w-36 h-9 xian-input" />
           </div>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
 
           {/* Record type tabs */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-            <Button
-              size="sm"
-              variant={activeTab === 'typing' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'typing' ? 'bg-violet-500 hover:bg-violet-600' : 'hover:bg-gray-200'}`}
-              onClick={() => setActiveTab('typing')}
-            >
-              <Keyboard className="h-3.5 w-3.5" />
-              打字记录
+          <div className="flex items-center gap-1 bg-anye/60 rounded-lg p-0.5 border border-xianjin/10">
+            <Button size="sm" variant={activeTab === 'typing' ? 'default' : 'ghost'}
+              className={`h-8 text-xs gap-1 ${activeTab === 'typing' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
+              onClick={() => setActiveTab('typing')}>
+              <Keyboard className="h-3.5 w-3.5" />{XIAN.typing}
             </Button>
-            <Button
-              size="sm"
-              variant={activeTab === 'retry' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'retry' ? 'bg-amber-500 hover:bg-amber-600' : 'hover:bg-gray-200'}`}
-              onClick={() => setActiveTab('retry')}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              三刷记录
+            <Button size="sm" variant={activeTab === 'retry' ? 'default' : 'ghost'}
+              className={`h-8 text-xs gap-1 ${activeTab === 'retry' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
+              onClick={() => setActiveTab('retry')}>
+              <Swords className="h-3.5 w-3.5" />{XIAN.retry}
             </Button>
-            <Button
-              size="sm"
-              variant={activeTab === 'homework' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'homework' ? 'bg-emerald-500 hover:bg-emerald-600' : 'hover:bg-gray-200'}`}
-              onClick={() => setActiveTab('homework')}
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              作业记录
+            <Button size="sm" variant={activeTab === 'homework' ? 'default' : 'ghost'}
+              className={`h-8 text-xs gap-1 ${activeTab === 'homework' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
+              onClick={() => setActiveTab('homework')}>
+              <BookOpen className="h-3.5 w-3.5" />{XIAN.homework}
             </Button>
           </div>
 
-          {/* Save all */}
           {selectedStudentIds.length > 0 && (
             <>
-              <Separator orientation="vertical" className="h-6" />
-              <Button size="sm" className="bg-violet-600 hover:bg-violet-700 h-8" onClick={handleSaveAll}>
-                <Save className="h-3.5 w-3.5 mr-1" />
-                全部保存
+              <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
+              <Button size="sm" className="xian-btn-gold h-8" onClick={handleSaveAll}>
+                <Save className="h-3.5 w-3.5 mr-1" />全部{XIAN.save}
               </Button>
             </>
           )}
@@ -650,15 +498,15 @@ export default function HomePage() {
       </div>
 
       {/* Main content: Student rows */}
-      <div className="flex-1 overflow-y-auto bg-gray-50/50">
+      <div className="flex-1 overflow-y-auto">
         {selectedStudentIds.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-violet-300" />
+            <div className="text-center xian-animate-in">
+              <div className="w-16 h-16 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-xianjin/20">
+                <Users className="h-8 w-8 text-amber-700" />
               </div>
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">请先选择学生</h3>
-              <p className="text-sm text-muted-foreground">点击上方「学生」下拉框选择一个或多个学生</p>
+              <h3 className="text-lg font-medium text-amber-500 font-serif">请先选择{XIAN.student}</h3>
+              <p className="text-sm text-amber-700 mt-2">点击上方「{XIAN.student}」下拉框选择一名或多名{XIAN.student}</p>
             </div>
           </div>
         ) : (
@@ -668,57 +516,45 @@ export default function HomePage() {
               const isHistoryOpen = historyStudentId === student.id;
 
               return (
-                <Card key={student.id} className={`border transition-colors ${
-                  activeTab === 'typing' ? 'border-purple-100' :
-                  activeTab === 'retry' ? 'border-amber-100' :
-                  'border-emerald-100'
-                }`}>
-                  <CardContent className="p-4">
-                    {/* Student row: Name + Fields + Actions */}
+                <div key={student.id} className="xian-card rounded-xl xian-animate-in">
+                  <div className="p-4">
                     <div className="flex items-start gap-4">
-                      {/* Student name column */}
+                      {/* Student name */}
                       <div className="w-20 shrink-0 pt-1">
                         <button
-                          className="text-sm font-semibold text-violet-700 hover:text-violet-900 hover:underline cursor-pointer text-left"
+                          className="text-sm font-semibold text-amber-300 hover:text-amber-200 hover:underline cursor-pointer text-left font-serif"
                           onClick={() => router.push(`/students/${student.id}`)}
                         >
                           {student.name}
                         </button>
-                        {student.className && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{student.className}</p>
-                        )}
+                        {student.className && <p className="text-xs text-amber-700 mt-0.5">{student.className}</p>}
                       </div>
 
-                      <Separator orientation="vertical" className="h-12 shrink-0" />
+                      <Separator orientation="vertical" className="h-12 shrink-0 bg-xianjin/15" />
 
-                      {/* Form fields - based on active tab */}
+                      {/* Form fields */}
                       <div className="flex-1 min-w-0">
                         {activeTab === 'typing' && (
                           <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">打字速度</Label>
-                              <Input
-                                type="number"
+                              <Label className="text-xs text-amber-500 shrink-0">{XIAN.speed}</Label>
+                              <Input type="number"
                                 placeholder={lastRecordHints[student.id]?.lastSpeed ? `上次${lastRecordHints[student.id].lastSpeed}` : '字/分'}
                                 value={getTypingForm(student.id).speed}
                                 onChange={(e) => updateTypingForm(student.id, 'speed', e.target.value)}
-                                className="w-24 h-8 text-sm"
-                              />
+                                className="w-24 h-8 text-sm xian-input" />
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">正确率</Label>
-                              <Input
-                                type="number"
+                              <Label className="text-xs text-amber-500 shrink-0">{XIAN.accuracy}</Label>
+                              <Input type="number"
                                 placeholder={lastRecordHints[student.id]?.lastAccuracy ? `上次${lastRecordHints[student.id].lastAccuracy}%` : '%'}
-                                min={0}
-                                max={100}
+                                min={0} max={100}
                                 value={getTypingForm(student.id).accuracy}
                                 onChange={(e) => updateTypingForm(student.id, 'accuracy', e.target.value)}
-                                className="w-20 h-8 text-sm"
-                              />
+                                className="w-20 h-8 text-sm xian-input" />
                             </div>
                             {lastRecordHints[student.id]?.lastSpeed && (
-                              <span className="text-[10px] text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] xian-tag-xianjin px-1.5 py-0.5 rounded">
                                 上次 {lastRecordHints[student.id].lastSpeed}字/分 / {lastRecordHints[student.id].lastAccuracy}%
                               </span>
                             )}
@@ -728,20 +564,18 @@ export default function HomePage() {
                         {activeTab === 'retry' && (
                           <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">题目</Label>
+                              <Label className="text-xs text-amber-500 shrink-0">题目</Label>
                               {activeCourse && activeCourse.problems.length > 0 ? (
-                                <Select
-                                  value={getRetryForm(student.id).problemId}
-                                  onValueChange={(v) => updateRetryForm(student.id, 'problemId', v)}
-                                >
-                                  <SelectTrigger className="w-40 h-8 text-sm">
+                                <Select value={getRetryForm(student.id).problemId}
+                                  onValueChange={(v) => updateRetryForm(student.id, 'problemId', v)}>
+                                  <SelectTrigger className="w-40 h-8 text-sm xian-input">
                                     <SelectValue placeholder="选择题目" />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent className="bg-anye border-xianjin/20">
                                     {activeCourse.problems.map((p) => {
                                       const kp = activeCourse.knowledgePoints.find((k) => k.id === p.knowledgePointId);
                                       return (
-                                        <SelectItem key={p.id} value={p.id}>
+                                        <SelectItem key={p.id} value={p.id} className="text-amber-200 focus:bg-xianjin/10">
                                           {p.name}{kp ? ` (${kp.name})` : ''}
                                         </SelectItem>
                                       );
@@ -749,47 +583,37 @@ export default function HomePage() {
                                   </SelectContent>
                                 </Select>
                               ) : (
-                                <span className="text-xs text-muted-foreground">请先添加题目</span>
+                                <span className="text-xs text-amber-700">请先添加题目</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">第几次</Label>
-                              <Select
-                                value={getRetryForm(student.id).attempt}
-                                onValueChange={(v) => updateRetryForm(student.id, 'attempt', v)}
-                              >
-                                <SelectTrigger className="w-20 h-8 text-sm">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="1">第1次</SelectItem>
-                                  <SelectItem value="2">第2次</SelectItem>
-                                  <SelectItem value="3">第3次</SelectItem>
-                                  <SelectItem value="4">第4次</SelectItem>
-                                  <SelectItem value="5">第5次</SelectItem>
+                              <Label className="text-xs text-amber-500 shrink-0">第几次</Label>
+                              <Select value={getRetryForm(student.id).attempt}
+                                onValueChange={(v) => updateRetryForm(student.id, 'attempt', v)}>
+                                <SelectTrigger className="w-20 h-8 text-sm xian-input"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-anye border-xianjin/20">
+                                  {[1,2,3,4,5].map((n) => (
+                                    <SelectItem key={n} value={String(n)} className="text-amber-200 focus:bg-xianjin/10">第{n}次</SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">耗时</Label>
-                              <Input
-                                type="number"
-                                placeholder="分钟"
+                              <Label className="text-xs text-amber-500 shrink-0">耗时</Label>
+                              <Input type="number" placeholder="分钟"
                                 value={getRetryForm(student.id).timeSpent}
                                 onChange={(e) => updateRetryForm(student.id, 'timeSpent', e.target.value)}
-                                className="w-20 h-8 text-sm"
-                              />
+                                className="w-20 h-8 text-sm xian-input" />
                             </div>
-                            {/* Improvement indicator */}
                             {(() => {
                               const form = getRetryForm(student.id);
                               if (form.problemId && form.timeSpent && Number(form.attempt) > 1) {
                                 const improvement = getRetryImprovement(form.problemId, Number(form.attempt), Number(form.timeSpent));
                                 if (improvement !== null) {
                                   return (
-                                    <Badge className={`text-xs ${improvement > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'} border-0`}>
+                                    <Badge className={`text-xs border-0 ${improvement > 0 ? 'xian-tag-biyu' : 'xian-tag-zhusa'}`}>
                                       <TrendingUp className="h-3 w-3 mr-1" />
-                                      {improvement > 0 ? '快' : '慢'} {Math.abs(improvement)}%
+                                      {improvement > 0 ? '提升' : '延缓'} {Math.abs(improvement)}%
                                     </Badge>
                                   );
                                 }
@@ -802,123 +626,87 @@ export default function HomePage() {
                         {activeTab === 'homework' && (
                           <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">标题</Label>
-                              <Input
-                                value={getHomeworkForm(student.id).title}
+                              <Label className="text-xs text-amber-500 shrink-0">标题</Label>
+                              <Input value={getHomeworkForm(student.id).title}
                                 onChange={(e) => updateHomeworkForm(student.id, 'title', e.target.value)}
-                                placeholder="作业标题"
-                                className="w-32 h-8 text-sm"
-                              />
+                                placeholder="修炼日志标题" className="w-32 h-8 text-sm xian-input" />
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">内容</Label>
-                              <Input
-                                value={getHomeworkForm(student.id).content}
+                              <Label className="text-xs text-amber-500 shrink-0">内容</Label>
+                              <Input value={getHomeworkForm(student.id).content}
                                 onChange={(e) => updateHomeworkForm(student.id, 'content', e.target.value)}
-                                placeholder="完成情况"
-                                className="w-36 h-8 text-sm"
-                              />
+                                placeholder="完成情况" className="w-36 h-8 text-sm xian-input" />
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">评分</Label>
-                              <Input
-                                type="number"
-                                placeholder="分"
+                              <Label className="text-xs text-amber-500 shrink-0">评分</Label>
+                              <Input type="number" placeholder="分"
                                 value={getHomeworkForm(student.id).score}
                                 onChange={(e) => updateHomeworkForm(student.id, 'score', e.target.value)}
-                                className="w-16 h-8 text-sm"
-                              />
+                                className="w-16 h-8 text-sm xian-input" />
                             </div>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground shrink-0">点评</Label>
-                              <Input
-                                value={getHomeworkForm(student.id).comment}
+                              <Label className="text-xs text-amber-500 shrink-0">点评</Label>
+                              <Input value={getHomeworkForm(student.id).comment}
                                 onChange={(e) => updateHomeworkForm(student.id, 'comment', e.target.value)}
-                                placeholder="教师点评"
-                                className="w-36 h-8 text-sm"
-                              />
+                                placeholder="师尊点评" className="w-28 h-8 text-sm xian-input" />
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Actions column */}
+                      {/* Actions */}
                       <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => loadHistory(student.id)}
-                          title="查看历史"
-                        >
-                          <History className={`h-4 w-4 ${isHistoryOpen ? 'text-violet-600' : 'text-muted-foreground'}`} />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:bg-xianjin/10"
+                          onClick={() => loadHistory(student.id)}>
+                          <History className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          className={`h-8 text-xs ${
-                            isSaved
-                              ? 'bg-emerald-500 hover:bg-emerald-500'
-                              : activeTab === 'typing' ? 'bg-violet-600 hover:bg-violet-700' :
-                                activeTab === 'retry' ? 'bg-amber-500 hover:bg-amber-600' :
-                                'bg-emerald-500 hover:bg-emerald-600'
-                          }`}
-                          onClick={() => handleSaveStudent(student.id)}
-                          disabled={isSaved}
-                        >
-                          {isSaved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+                        <Button size="sm" className={`h-8 ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'xian-btn-gold'}`}
+                          onClick={() => handleSaveStudent(student.id)}>
+                          {isSaved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                          {isSaved ? '已铭刻' : XIAN.save}
                         </Button>
                       </div>
                     </div>
 
-                    {/* History section (expandable) */}
+                    {/* History panel */}
                     {isHistoryOpen && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">最近记录</p>
-                        {historyRecords.typing.length === 0 && historyRecords.retry.length === 0 && historyRecords.homework.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">暂无记录</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {historyRecords.typing.map((r) => (
-                              <div key={r.id} className="flex items-center gap-3 text-xs bg-violet-50 rounded-lg px-3 py-2">
-                                <Badge className="bg-violet-100 text-violet-700 border-0 text-[10px]">打字</Badge>
-                                <span>{r.date}</span>
-                                <span>速度 {r.speed}字/分</span>
-                                <span>正确率 {r.accuracy}%</span>
-                              </div>
-                            ))}
-                            {historyRecords.retry.map((r) => (
-                              <div key={r.id} className="flex items-center gap-3 text-xs bg-amber-50 rounded-lg px-3 py-2">
-                                <Badge className="bg-amber-100 text-amber-700 border-0 text-[10px]">三刷</Badge>
-                                <span>{r.date}</span>
-                                <span>{r.problemName}</span>
-                                <span>第{r.attempt}次</span>
-                                <span>{r.timeSpent}分钟</span>
-                                {r.attempt > 1 && (() => {
-                                  const imp = getRetryImprovement(r.problemId, r.attempt, r.timeSpent);
-                                  if (imp === null) return null;
-                                  return (
-                                    <span className={imp > 0 ? 'text-emerald-600' : 'text-red-500'}>
-                                      {imp > 0 ? '↑' : '↓'}{Math.abs(imp)}%
-                                    </span>
-                                  );
-                                })()}
-                              </div>
-                            ))}
-                            {historyRecords.homework.map((r) => (
-                              <div key={r.id} className="flex items-center gap-3 text-xs bg-emerald-50 rounded-lg px-3 py-2">
-                                <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">作业</Badge>
-                                <span>{r.date}</span>
-                                <span>{r.title}</span>
-                                {r.score !== undefined && <span>{r.score}分</span>}
-                                {r.comment && <span className="text-muted-foreground truncate max-w-32">{r.comment}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                      <div className="mt-3 pt-3 border-t border-xianjin/10">
+                        <h4 className="text-xs font-medium text-amber-400 mb-2">{XIAN.history}</h4>
+                        <div className="space-y-1.5">
+                          {historyRecords.typing.length === 0 && historyRecords.retry.length === 0 && historyRecords.homework.length === 0 ? (
+                            <p className="text-xs text-amber-700">暂无修炼记录</p>
+                          ) : (
+                            <>
+                              {historyRecords.typing.map((r) => (
+                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
+                                  <span className="xian-tag-xianjin px-1 rounded text-[10px]">指力</span>
+                                  <span>{r.date}</span>
+                                  <span>{r.speed}字/分</span>
+                                  <span>{r.accuracy}%</span>
+                                </div>
+                              ))}
+                              {historyRecords.retry.map((r) => (
+                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
+                                  <span className="xian-tag-liuli px-1 rounded text-[10px]">炼题</span>
+                                  <span>{r.date}</span>
+                                  <span>{r.problemName}</span>
+                                  <span>第{r.attempt}次 {r.timeSpent}分</span>
+                                </div>
+                              ))}
+                              {historyRecords.homework.map((r) => (
+                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
+                                  <span className="xian-tag-zixia px-1 rounded text-[10px]">日志</span>
+                                  <span>{r.date}</span>
+                                  <span>{r.title}{r.score ? ` (${r.score}分)` : ''}</span>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -927,54 +715,33 @@ export default function HomePage() {
 
       {/* Add Student Dialog */}
       <Dialog open={addStudentOpen} onOpenChange={setAddStudentOpen}>
-        <DialogContent>
+        <DialogContent className="bg-anye border-xianjin/20">
           <DialogHeader>
-            <DialogTitle>添加学生</DialogTitle>
-            <DialogDescription>添加学生到当前课程「{activeCourse?.name}」</DialogDescription>
+            <DialogTitle className="xian-text-gold font-serif">{XIAN.addStudent}</DialogTitle>
+            <DialogDescription className="text-amber-600">收入新{XIAN.student}入门下</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>姓名 *</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="学生姓名" />
-            </div>
-            <div>
-              <Label>班级</Label>
-              <Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="如：三年级A班" />
-            </div>
-            <div>
-              <Label>备注</Label>
-              <Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="其他备注信息" rows={2} />
-            </div>
-            <Button onClick={handleAddStudent} className="w-full bg-violet-600 hover:bg-violet-700">确认添加</Button>
+          <div className="space-y-3">
+            <div><Label className="text-amber-300">{XIAN.student}姓名</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="输入姓名" className="xian-input mt-1" /></div>
+            <div><Label className="text-amber-300">班级/门派</Label><Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="如：入门班" className="xian-input mt-1" /></div>
+            <div><Label className="text-amber-300">备注</Label><Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="备注信息" className="xian-input mt-1" /></div>
+            <Button className="w-full xian-btn-gold" onClick={handleAddStudent} disabled={!newName.trim()}>确认收入门下</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
+        <DialogContent className="bg-anye border-xianjin/20">
           <DialogHeader>
-            <DialogTitle>批量导入学生</DialogTitle>
-            <DialogDescription>导入学生到当前课程「{activeCourse?.name}」</DialogDescription>
+            <DialogTitle className="xian-text-gold font-serif">{XIAN.importCSV}</DialogTitle>
+            <DialogDescription className="text-amber-600">每行一名{XIAN.student}，格式：姓名,班级,备注</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>粘贴学生名单</Label>
-              <p className="text-xs text-muted-foreground mb-2">
-                每行一个学生，格式：姓名,班级,备注（逗号分隔，班级/备注可选）
-              </p>
-              <Textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                placeholder={`张小明,三年级A班\n李小红,三年级B班\n王大伟,,转学新生`}
-                rows={8}
-              />
-            </div>
-            <Button onClick={handleImport} className="w-full bg-violet-600 hover:bg-violet-700">导入</Button>
+          <div className="space-y-3">
+            <Textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder={'张三,入门班\n李四,进阶班\n王五'} className="xian-input min-h-[120px]" />
+            <Button className="w-full xian-btn-gold" onClick={handleImport} disabled={!importText.trim()}>确认收入</Button>
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

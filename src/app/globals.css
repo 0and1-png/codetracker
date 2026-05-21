@@ -52,75 +52,173 @@
   --font-serif:
     'Noto Serif SC', 'Songti SC', 'SimSun', ui-serif, Georgia, Cambria,
     'Times New Roman', Times, serif;
+  /* 修仙主题色 */
+  --color-xianjin: #d4a853;
+  --color-xianjin-light: #f0d78c;
+  --color-biyu: #4ade80;
+  --color-zhusa: #ef4444;
+  --color-zixia: #a78bfa;
+  --color-tianqing: #60a5fa;
+  --color-liuli: #fb923c;
+  --color-moye: #0c0e1a;
+  --color-anye: #151829;
 }
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.98 0.005 260);
-  --foreground: oklch(0.18 0.02 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 260);
-  --primary: oklch(0.55 0.2 270);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.95 0.02 270);
-  --secondary-foreground: oklch(0.25 0.05 270);
-  --muted: oklch(0.95 0.01 260);
-  --muted-foreground: oklch(0.5 0.02 260);
-  --accent: oklch(0.92 0.05 270);
-  --accent-foreground: oklch(0.25 0.05 270);
+  /* 修仙主题 - 深色底 + 金色点缀 */
+  --background: oklch(0.13 0.015 270);
+  --foreground: oklch(0.9 0.03 80);
+  --card: oklch(0.17 0.02 270);
+  --card-foreground: oklch(0.9 0.03 80);
+  --popover: oklch(0.17 0.02 270);
+  --popover-foreground: oklch(0.9 0.03 80);
+  --primary: oklch(0.75 0.13 80);
+  --primary-foreground: oklch(0.13 0.02 270);
+  --secondary: oklch(0.22 0.025 270);
+  --secondary-foreground: oklch(0.85 0.03 80);
+  --muted: oklch(0.22 0.02 270);
+  --muted-foreground: oklch(0.6 0.03 80);
+  --accent: oklch(0.25 0.04 270);
+  --accent-foreground: oklch(0.9 0.03 80);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.02 270);
-  --input: oklch(0.9 0.02 270);
-  --ring: oklch(0.55 0.2 270);
-  --chart-1: oklch(0.6 0.2 270);
-  --chart-2: oklch(0.65 0.18 160);
-  --chart-3: oklch(0.7 0.15 50);
-  --chart-4: oklch(0.6 0.2 330);
-  --chart-5: oklch(0.65 0.18 200);
-  --sidebar: oklch(0.97 0.01 270);
-  --sidebar-foreground: oklch(0.18 0.02 260);
-  --sidebar-primary: oklch(0.55 0.2 270);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.92 0.05 270);
-  --sidebar-accent-foreground: oklch(0.25 0.05 270);
-  --sidebar-border: oklch(0.9 0.02 270);
-  --sidebar-ring: oklch(0.55 0.2 270);
+  --border: oklch(0.3 0.04 270);
+  --input: oklch(0.25 0.03 270);
+  --ring: oklch(0.75 0.13 80);
+  --chart-1: oklch(0.75 0.13 80);
+  --chart-2: oklch(0.72 0.18 155);
+  --chart-3: oklch(0.65 0.2 330);
+  --chart-4: oklch(0.7 0.15 230);
+  --chart-5: oklch(0.7 0.18 50);
+  --sidebar: oklch(0.14 0.02 270);
+  --sidebar-foreground: oklch(0.9 0.03 80);
+  --sidebar-primary: oklch(0.75 0.13 80);
+  --sidebar-primary-foreground: oklch(0.13 0.02 270);
+  --sidebar-accent: oklch(0.25 0.04 270);
+  --sidebar-accent-foreground: oklch(0.9 0.03 80);
+  --sidebar-border: oklch(0.3 0.04 270);
+  --sidebar-ring: oklch(0.75 0.13 80);
 }
 
 body {
   font-family: var(--font-sans);
+  background: linear-gradient(135deg, #0c0e1a 0%, #151829 50%, #0f1225 100%);
+  background-attachment: fixed;
+  color: #f0e6d3;
 }
 
-/* Custom scrollbar */
+/* 修仙主题卡片 */
+.xian-card {
+  background: rgba(25, 30, 55, 0.85);
+  border: 1px solid rgba(212, 168, 83, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 168, 83, 0.08);
+  transition: all 0.3s ease;
+}
+.xian-card:hover {
+  border-color: rgba(212, 168, 83, 0.4);
+  box-shadow: 0 8px 40px rgba(212, 168, 83, 0.12), inset 0 1px 0 rgba(212, 168, 83, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 金色按钮 */
+.xian-btn-gold {
+  background: linear-gradient(135deg, #d4a853, #c4943f);
+  color: #0c0e1a;
+  font-weight: 600;
+  border: none;
+  transition: all 0.2s ease;
+}
+.xian-btn-gold:hover {
+  background: linear-gradient(135deg, #f0d78c, #d4a853);
+  box-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
+}
+
+/* 金色文字渐变 */
+.xian-text-gold {
+  background: linear-gradient(135deg, #f0d78c, #d4a853, #c4943f);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 标签样式 - 修仙 */
+.xian-tag-biyu {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+.xian-tag-zhusa {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.xian-tag-zixia {
+  background: rgba(167, 139, 250, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+.xian-tag-tianqing {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+.xian-tag-liuli {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+.xian-tag-xianjin {
+  background: rgba(212, 168, 83, 0.15);
+  color: #f0d78c;
+  border: 1px solid rgba(212, 168, 83, 0.3);
+}
+
+/* 分隔线 */
+.xian-divider {
+  border-color: rgba(212, 168, 83, 0.15);
+}
+
+/* Custom scrollbar - 修仙风 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(15, 18, 37, 0.5);
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.8 0.05 270);
+  background: rgba(212, 168, 83, 0.3);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.7 0.1 270);
+  background: rgba(212, 168, 83, 0.5);
 }
 
-/* Tag animation */
-.tag-pop {
-  animation: tagPop 0.2s ease-out;
+/* 动画 */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-@keyframes tagPop {
-  0% { transform: scale(0.9); opacity: 0.7; }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); opacity: 1; }
+.xian-animate-in {
+  animation: fadeInUp 0.4s ease-out;
 }
 
-/* Print styles for PDF */
-@media print {
-  .no-print { display: none !important; }
-  body { background: white !important; }
+/* 选中标签激活态 */
+.xian-tag-active {
+  box-shadow: 0 0 12px rgba(212, 168, 83, 0.4);
+}
+
+/* 输入框 */
+.xian-input {
+  background: rgba(15, 18, 37, 0.6);
+  border: 1px solid rgba(212, 168, 83, 0.2);
+  color: #f0e6d3;
+}
+.xian-input:focus {
+  border-color: rgba(212, 168, 83, 0.5);
+  box-shadow: 0 0 12px rgba(212, 168, 83, 0.15);
+  outline: none;
+}
+.xian-input::placeholder {
+  color: rgba(160, 140, 120, 0.5);
 }

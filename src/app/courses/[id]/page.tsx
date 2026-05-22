@@ -492,7 +492,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div>
-          <label className="text-xs font-medium text-amber-500 mb-1.5 block">心法要义</label>
+          <label className="text-xs font-medium text-amber-500 mb-1.5 block">知识点描述</label>
           <Textarea
             value={selectedNode.content || ''}
             onChange={(e) => updateNodeField(selectedNode.id, 'content', e.target.value)}
@@ -594,7 +594,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div>
-          <label className="text-xs font-medium text-amber-500 mb-1.5 block">试炼题目</label>
+          <label className="text-xs font-medium text-amber-500 mb-1.5 block">练习题目</label>
           {linkedProblems.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {linkedProblems.map((p) => (
@@ -612,7 +612,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           {unlinkedProblems.length > 0 ? (
             <Select onValueChange={(val) => toggleProblemLink(selectedNode.id, val)}>
               <SelectTrigger className="h-7 w-48 text-xs border-dashed border-emerald-700 bg-xian-input text-amber-200">
-                <SelectValue placeholder="关联试炼题..." />
+                <SelectValue placeholder="关联题目..." />
               </SelectTrigger>
               <SelectContent>
                 {unlinkedProblems.map((p) => (
@@ -788,7 +788,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 <Input
                                   value={newProblemName}
                                   onChange={(e) => setNewProblemName(e.target.value)}
-                                  placeholder="添加试炼题..."
+                                  placeholder="添加练习题..."
                                   className="flex-1 h-8 text-sm bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addProblem(kp.id); } }}
                                 />

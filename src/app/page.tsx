@@ -358,7 +358,7 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="flex items-center gap-1 mt-2">
-                    {([['all', '全部'], ['highlight', '悟道'], ['weakness', '瓶颈']] as const).map(([val, label]) => (
+                    {([['all', '全部'], ['highlight', '亮点'], ['weakness', '薄弱']] as const).map(([val, label]) => (
                       <button
                         key={val} onClick={() => setTagFilter(val)}
                         className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
@@ -629,7 +629,7 @@ export default function HomePage() {
                               <Label className="text-xs text-amber-500 shrink-0">标题</Label>
                               <Input value={getHomeworkForm(student.id).title}
                                 onChange={(e) => updateHomeworkForm(student.id, 'title', e.target.value)}
-                                placeholder="修炼日志标题" className="w-32 h-8 text-sm xian-input" />
+                                placeholder="作业标题" className="w-32 h-8 text-sm xian-input" />
                             </div>
                             <div className="flex items-center gap-2">
                               <Label className="text-xs text-amber-500 shrink-0">内容</Label>
@@ -648,7 +648,7 @@ export default function HomePage() {
                               <Label className="text-xs text-amber-500 shrink-0">点评</Label>
                               <Input value={getHomeworkForm(student.id).comment}
                                 onChange={(e) => updateHomeworkForm(student.id, 'comment', e.target.value)}
-                                placeholder="师尊点评" className="w-28 h-8 text-sm xian-input" />
+                                placeholder="老师点评" className="w-28 h-8 text-sm xian-input" />
                             </div>
                           </div>
                         )}
@@ -663,7 +663,7 @@ export default function HomePage() {
                         <Button size="sm" className={`h-8 ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'xian-btn-gold'}`}
                           onClick={() => handleSaveStudent(student.id)}>
                           {isSaved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                          {isSaved ? '已铭刻' : XIAN.save}
+                          {isSaved ? '已保存' : XIAN.save}
                         </Button>
                       </div>
                     </div>
@@ -679,7 +679,7 @@ export default function HomePage() {
                             <>
                               {historyRecords.typing.map((r) => (
                                 <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
-                                  <span className="xian-tag-xianjin px-1 rounded text-[10px]">指力</span>
+                                  <span className="xian-tag-xianjin px-1 rounded text-[10px]">速度</span>
                                   <span>{r.date}</span>
                                   <span>{r.speed}字/分</span>
                                   <span>{r.accuracy}%</span>
@@ -687,7 +687,7 @@ export default function HomePage() {
                               ))}
                               {historyRecords.retry.map((r) => (
                                 <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
-                                  <span className="xian-tag-liuli px-1 rounded text-[10px]">炼题</span>
+                                  <span className="xian-tag-liuli px-1 rounded text-[10px]">三刷</span>
                                   <span>{r.date}</span>
                                   <span>{r.problemName}</span>
                                   <span>第{r.attempt}次 {r.timeSpent}分</span>

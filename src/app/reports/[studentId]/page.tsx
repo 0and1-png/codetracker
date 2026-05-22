@@ -174,9 +174,9 @@ export default function ReportPage() {
         heightLeft -= pdfHeight;
       }
 
-      pdf.save(`${student?.name || '弟子'}_${fullMonthLabel}修炼月报.pdf`);
+      pdf.save(`${student?.name || '学生'}_${fullMonthLabel}学习月报.pdf`);
     } catch (err) {
-      console.error('飞剑传书失败:', err);
+      console.error('导出PDF失败:', err);
     } finally {
       setIsExporting(false);
     }
@@ -206,7 +206,7 @@ export default function ReportPage() {
   if (!student) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-amber-300/60">此弟子不在此宗门...</p>
+        <p className="text-amber-300/60">未找到该学生信息...</p>
       </div>
     );
   }
@@ -231,7 +231,7 @@ export default function ReportPage() {
             <h1 className="text-lg font-bold text-amber-300">
               {batchMode
                 ? `批量传书 (${batchCurrentIdx + 1}/${batchStudentIds.length})`
-                : '修炼月报 · 飞剑传书'}
+                : '学习月报'}
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -266,7 +266,7 @@ export default function ReportPage() {
                 className="border-amber-900/40 text-amber-400 hover:bg-amber-900/20"
                 onClick={handleBatchNext}
               >
-                下一位弟子
+                下一位学生
               </Button>
             )}
             <Button
@@ -276,7 +276,7 @@ export default function ReportPage() {
               disabled={isExporting}
             >
               <Download className="h-4 w-4 mr-1" />
-              {isExporting ? '修炼中...' : '飞剑传书'}
+              {isExporting ? '生成中...' : '导出PDF'}
             </Button>
           </div>
         </div>
@@ -287,13 +287,13 @@ export default function ReportPage() {
         <div className="bg-[#1a1a2e]/80 border border-amber-900/30 rounded-xl p-4 space-y-4">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-amber-300">
             <Scroll className="h-4 w-4" />
-            师尊批注
+            老师批注
           </h3>
 
           {/* Comment Templates */}
           <div>
             <label className="text-xs text-amber-400/60 mb-1.5 block">
-              师尊寄语（系统推荐修炼评语，可修改）
+              老师寄语（系统推荐评语，可修改）
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {COMMENT_TEMPLATES.map((tmpl) => (
@@ -316,19 +316,19 @@ export default function ReportPage() {
               value={teacherComment}
               onChange={(e) => setTeacherComment(e.target.value)}
               className="min-h-[80px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
-              placeholder="输入师尊寄语..."
+              placeholder="输入老师寄语..."
             />
           </div>
 
           <div>
             <label className="text-xs text-amber-400/60 mb-1.5 block">
-              下月修炼目标
+              下月学习目标
             </label>
             <Textarea
               value={nextMonthGoal}
               onChange={(e) => setNextMonthGoal(e.target.value)}
               className="min-h-[60px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
-              placeholder="输入下月修炼目标..."
+              placeholder="输入下月学习目标..."
             />
           </div>
         </div>
@@ -350,10 +350,10 @@ export default function ReportPage() {
                   <span className="text-xs text-amber-400/60 tracking-widest">修 炼 月 报</span>
                 </div>
                 <h2 className="text-2xl font-bold text-amber-300 mb-1" style={{ textShadow: '0 0 20px rgba(212,168,83,0.3)' }}>
-                  {student.name} · {fullMonthLabel}修炼纪要
+                  {student.name} · {fullMonthLabel}学习纪要
                 </h2>
                 <p className="text-amber-400/50 text-sm">
-                  {course?.name || '修炼功法'} | 宗门月度修炼反馈
+                  {course?.name || '编程课程'} | 月度学习反馈
                 </p>
               </div>
               <div className="text-right">
@@ -364,15 +364,15 @@ export default function ReportPage() {
           </div>
 
           <div className="px-8 py-6 space-y-8">
-            {/* 1. Knowledge Mastery - 心法修炼 */}
+            {/* 1. Knowledge Mastery - 知识点掌握 */}
             <section>
-              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、心法修炼 · 知识点掌握" />
+              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、知识点掌握" />
               <div className="overflow-hidden rounded-lg border border-amber-900/30">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-amber-900/20">
-                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-1/4">心法</th>
-                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-2/5">修炼心得</th>
+                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-1/4">知识点</th>
+                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-2/5">学习心得</th>
                       <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/4">掌握度</th>
                       <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/6">评分</th>
                     </tr>
@@ -428,18 +428,18 @@ export default function ReportPage() {
 
             {/* 2. Ability Testing - 功力测试 */}
             <section>
-              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、功力测试 · 能力修炼" />
+              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、能力测试 · 学习成果" />
 
-              {/* Typing Test - 指力测试 */}
+              {/* Typing Test - 速度练习 */}
               <div className="mb-6">
                 <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
                   <Keyboard className="h-4 w-4 text-amber-400" />
-                  指力测试（打字）
+                  速度练习（打字）
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-4 text-center">
                     <p className="text-3xl font-bold text-amber-300">{curTyping.avgSpeed}</p>
-                    <p className="text-xs text-amber-400/50 mt-1">平均指力(字/分)</p>
+                    <p className="text-xs text-amber-400/50 mt-1">平均速度(字/分)</p>
                     {speedImprove !== 0 && (
                       <p
                         className={`text-xs font-medium mt-1 ${
@@ -463,10 +463,10 @@ export default function ReportPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-amber-900/15">
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">修炼周次</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">平均指力</th>
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">周次</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">平均速度</th>
                           <th className="px-3 py-2 text-center font-medium text-amber-400">心神专注</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">修炼次数</th>
+                          <th className="px-3 py-2 text-center font-medium text-amber-400">练习次数</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -512,7 +512,7 @@ export default function ReportPage() {
                           color: '#d4a853',
                         }}
                       />
-                      <Line type="monotone" dataKey="speed" stroke="#d4a853" strokeWidth={2} name="指力" />
+                      <Line type="monotone" dataKey="speed" stroke="#d4a853" strokeWidth={2} name="速度" />
                       <Line type="monotone" dataKey="accuracy" stroke="#4ade80" strokeWidth={2} name="心神专注" />
                       <Legend wrapperStyle={{ color: '#d4a853' }} />
                     </LineChart>
@@ -520,24 +520,24 @@ export default function ReportPage() {
                 )}
               </div>
 
-              {/* Retry Test - 炼题 */}
+              {/* Retry Test - 三刷 */}
               <div>
                 <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
                   <RotateCcw className="h-4 w-4 text-amber-400" />
-                  三刷炼题
+                  三刷练习
                 </h4>
                 {retryProblems.length === 0 ? (
-                  <p className="text-sm text-amber-400/40">{monthLabel}暂无炼题记录</p>
+                  <p className="text-sm text-amber-400/40">{monthLabel}暂无三刷记录</p>
                 ) : (
                   <div className="overflow-hidden rounded-lg border border-amber-900/30">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-amber-900/15">
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">炼题</th>
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">题目</th>
                           <th className="px-3 py-2 text-center font-medium text-amber-400">首次耗时</th>
                           <th className="px-3 py-2 text-center font-medium text-amber-400">最新耗时</th>
                           <th className="px-3 py-2 text-center font-medium text-amber-400">精进</th>
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">关联心法</th>
+                          <th className="px-3 py-2 text-left font-medium text-amber-400">关联知识点</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -568,27 +568,27 @@ export default function ReportPage() {
 
             {/* 3. Growth Trajectory - 修炼蜕变 */}
             <section>
-              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、修炼蜕变 · 成长轨迹" />
+              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、成长蜕变 · 进步轨迹" />
 
               {/* Key Indicators */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-3 text-center">
                   <p className="text-xl font-bold text-amber-300">{curTyping.count}</p>
-                  <p className="text-xs text-amber-400/50">指力修炼次数</p>
+                  <p className="text-xs text-amber-400/50">速度练习次数</p>
                 </div>
                 <div className="bg-green-900/15 border border-green-900/20 rounded-xl p-3 text-center">
                   <p className="text-xl font-bold text-green-400">{curRetry.count}</p>
-                  <p className="text-xs text-green-400/50">炼题次数</p>
+                  <p className="text-xs text-green-400/50">三刷次数</p>
                 </div>
                 <div className="bg-purple-900/15 border border-purple-900/20 rounded-xl p-3 text-center">
                   <p className="text-xl font-bold text-purple-400">{curHomework.count}</p>
-                  <p className="text-xs text-purple-400/50">修炼日志</p>
+                  <p className="text-xs text-purple-400/50">作业</p>
                 </div>
                 <div className="bg-blue-900/15 border border-blue-900/20 rounded-xl p-3 text-center">
                   <p className="text-xl font-bold text-blue-400">
                     {strongKPs.length}/{mastery.length}
                   </p>
-                  <p className="text-xs text-blue-400/50">心法通达</p>
+                  <p className="text-xs text-blue-400/50">知识点掌握</p>
                 </div>
               </div>
 
@@ -621,19 +621,19 @@ export default function ReportPage() {
                 <div className="bg-amber-900/10 border border-amber-900/20 rounded-xl p-4">
                   <h5 className="font-semibold text-amber-300 text-sm mb-2 flex items-center gap-1.5">
                     <Flame className="h-4 w-4" />
-                    陪伴悟道
+                    陪伴学习
                   </h5>
                   <p className="text-xs text-amber-400/50 leading-relaxed">
-                    鼓励家长陪伴弟子探索编程之道，在创意修炼中培养逻辑思维与悟性
+                    鼓励家长陪伴孩子探索编程世界，在创意实践中培养逻辑思维与创新能力
                   </p>
                 </div>
                 <div className="bg-green-900/10 border border-green-900/20 rounded-xl p-4">
                   <h5 className="font-semibold text-green-400 text-sm mb-2 flex items-center gap-1.5">
                     <TrendingUp className="h-4 w-4" />
-                    修炼跟进
+                    学习跟进
                   </h5>
                   <p className="text-xs text-green-400/50 leading-relaxed">
-                    关注弟子每周的指力精进和炼题提升，及时给予肯定和鼓励
+                    关注孩子每周的打字速度和三刷进步，及时给予肯定和鼓励
                   </p>
                 </div>
                 <div className="bg-purple-900/10 border border-purple-900/20 rounded-xl p-4">
@@ -642,7 +642,7 @@ export default function ReportPage() {
                     成果切磋
                   </h5>
                   <p className="text-xs text-purple-400/50 leading-relaxed">
-                    与弟子一起回顾修炼成果，让弟子讲解实现思路，巩固修行效果
+                    与孩子一起回顾学习成果，让孩子讲解实现思路，巩固学习效果
                   </p>
                 </div>
                 <div className="bg-blue-900/10 border border-blue-900/20 rounded-xl p-4">
@@ -651,7 +651,7 @@ export default function ReportPage() {
                     引导论道
                   </h5>
                   <p className="text-xs text-blue-400/50 leading-relaxed">
-                    引导弟子用语言描述编程思路，将抽象代码化为可论之道，提升领悟深度
+                    引导孩子用语言描述编程思路，将抽象代码化为可表达的想法，提升理解深度
                   </p>
                 </div>
               </div>
@@ -660,7 +660,7 @@ export default function ReportPage() {
             {/* 5. Best Work - 本月佳作 */}
             {bestHomework && (
               <section>
-                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月佳作 · 修炼结晶" />
+                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月佳作 · 学习成果" />
                 <div className="bg-gradient-to-r from-amber-900/10 to-purple-900/10 border border-amber-900/20 rounded-xl p-5">
                   <div className="flex items-start gap-4">
                     {bestHomework.imageUrl && (
@@ -684,7 +684,7 @@ export default function ReportPage() {
                       )}
                       {bestHomework.comment && (
                         <p className="text-sm text-amber-200/70 italic bg-amber-900/10 rounded-lg px-3 py-2 border border-amber-900/15">
-                          师尊点评：&ldquo;{bestHomework.comment}&rdquo;
+                          老师点评：&ldquo;{bestHomework.comment}&rdquo;
                         </p>
                       )}
                     </div>
@@ -693,9 +693,9 @@ export default function ReportPage() {
               </section>
             )}
 
-            {/* 6. Teacher Comment - 师尊寄语 */}
+            {/* 6. Teacher Comment - 老师寄语 */}
             <section>
-              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、师尊寄语" />
+              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、老师寄语" />
               <div className="bg-gradient-to-br from-amber-900/10 via-[#1a1a2e]/50 to-purple-900/10 rounded-xl p-5 border border-amber-900/20">
                 <p className="text-amber-200/80 leading-relaxed whitespace-pre-wrap">{teacherComment}</p>
                 <p className="text-right text-sm text-amber-400/40 mt-4">—— 修行导师</p>
@@ -704,7 +704,7 @@ export default function ReportPage() {
 
             {/* 7. Next Month Goals - 下月修炼 */}
             <section>
-              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月修炼 · 目标指引" />
+              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月目标 · 方向指引" />
               <div className="bg-[#1a1a2e]/50 border border-amber-900/20 rounded-xl p-5 space-y-2">
                 {nextMonthGoal.split('\n').map((line, i) => (
                   <p key={i} className="text-sm text-amber-200/70 flex items-start gap-2">
@@ -718,7 +718,7 @@ export default function ReportPage() {
             {/* Footer */}
             <div className="text-center pt-6 border-t border-amber-900/20">
               <p className="text-xs text-amber-400/30">
-                修仙编程录 · 少儿编程修炼追踪系统 | 飞剑传书时间：{format(new Date(), 'yyyy年M月d日')}
+                仙码录 · 少儿编程学习追踪系统 | 报告生成时间：{format(new Date(), 'yyyy年M月d日')}
               </p>
             </div>
           </div>

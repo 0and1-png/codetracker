@@ -1277,168 +1277,93 @@ export default function ReportPage() {
 
                     return (
                       <div className="space-y-5">
-                        {/* 重点题型 */}
+                        {/* 重点题型 - 每道题独立卡片+迷你图表 */}
                         {keyProblems.length > 0 && (
-                          <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-orange-400">
-                            <h4 className="text-base font-semibold text-orange-600 mb-5 flex items-center gap-2">
+                          <div className="space-y-4">
+                            <h4 className="text-base font-semibold text-orange-600 flex items-center gap-2 px-1">
                               <AlertCircle className="h-5 w-5" /> 重点题型（三刷练习）
                             </h4>
-                            {/* 表格布局 */}
-                            <div className="overflow-hidden rounded-xl border border-orange-100">
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="bg-gradient-to-r from-orange-50 to-amber-50">
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">题目</th>
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">知识点</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">一刷</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">二刷</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">三刷</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {keyProblems.map((p, idx) => {
-                                    const formatDuration = (d: number) => {
-                                      if (!d) return '-';
-                                      const mins = Math.floor(d / 60);
-                                      const secs = d % 60;
-                                      return `${mins}分${secs}秒`;
-                                    };
-                                    return (
-                                    <tr key={p.problemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-orange-50/30'}>
-                                      <td className="py-3 px-4">
-                                        <span className="font-medium text-[#333344] text-sm">{p.problemName}</span>
-                                      </td>
-                                      <td className="py-3 px-4">
-                                        <div className="flex flex-wrap gap-1">
-                                          {p.kpNames.length > 0 ? p.kpNames.map(name => (
-                                            <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
-                                          )) : <span className="text-xs text-[#888]">-</span>}
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-4 text-center">
-                                        <div className="text-xs">
-                                          <div className="text-[#555]">{p.records[0]?.date || '-'}</div>
-                                          <div className="text-orange-500 font-medium">{p.records[0] ? formatDuration(p.records[0].timeSpent) : '-'}</div>
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-4 text-center">
-                                        <div className="text-xs">
-                                          <div className="text-[#555]">{p.records[1]?.date || '-'}</div>
-                                          <div className="text-orange-500 font-medium">{p.records[1] ? formatDuration(p.records[1].timeSpent) : '-'}</div>
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-4 text-center">
-                                        <div className="text-xs">
-                                          <div className="text-[#555]">{p.records[2]?.date || '-'}</div>
-                                          <div className="text-orange-500 font-medium">{p.records[2] ? formatDuration(p.records[2].timeSpent) : '-'}</div>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );})}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
+                            {keyProblems.map((p) => {
+                              const formatDuration = (d: number) => {
+                                if (!d) return '-';
+                                const mins = Math.floor(d / 60);
+                                const secs = d % 60;
+                                return mins > 0 ? `${mins}分${secs}秒` : `${secs}秒`;
+                              };
+                              const firstTime = p.records[0]?.timeSpent || 0;
+                              const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
+                              const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
+                              // Build chart data for this problem
+                              const chartData = p.records.map((rec, idx) => ({
+                                name: ['一刷', '二刷', '三刷', '四刷', '五刷'][idx] || `第${idx+1}次`,
+                                time: Math.round(rec.timeSpent / 60 * 10) / 10,
+                                date: rec.date,
+                              }));
+                              const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899'];
+                              const lineColor = colors[['一刷', '二刷', '三刷', '四刷', '五刷'].indexOf(chartData[0]?.name) % colors.length] || '#f97316';
 
-                        {/* 三刷练习效率趋势图表 */}
-                        {keyProblems.length > 0 && (
-                          <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-blue-400">
-                            <h4 className="text-base font-semibold text-blue-600 mb-5 flex items-center gap-2">
-                              <TrendingUp className="h-5 w-5" /> 三刷练习效率趋势
-                            </h4>
-                            {/* 效率趋势折线图 */}
-                            <div className="h-[280px] mb-4">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <LineChart
-                                  data={(() => {
-                                    // Build chart data: each attempt across all problems
-                                    const allAttempts: { attempt: string; [key: string]: number | string }[] = [];
-                                    const maxAttempts = Math.max(...keyProblems.map(p => p.records.length));
-                                    const attemptLabels = ['一刷', '二刷', '三刷', '四刷', '五刷'];
-                                    for (let i = 0; i < maxAttempts; i++) {
-                                      const row: { attempt: string; [key: string]: number | string } = { attempt: attemptLabels[i] || `第${i+1}次` };
-                                      keyProblems.forEach(p => {
-                                        if (p.records[i]) {
-                                          row[p.problemName.length > 6 ? p.problemName.slice(0, 6) + '..' : p.problemName] = Math.round(p.records[i].timeSpent / 60 * 10) / 10;
-                                        }
-                                      });
-                                      allAttempts.push(row);
-                                    }
-                                    return allAttempts;
-                                  })()}
-                                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                                >
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                  <XAxis dataKey="attempt" tick={{ fontSize: 12, fill: '#666' }} />
-                                  <YAxis tick={{ fontSize: 11, fill: '#888' }} label={{ value: '用时(分钟)', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
-                                  <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                                    formatter={(value: number, name: string) => [`${value} 分钟`, name]}
-                                    labelFormatter={(label) => {
-                                      // Show dates for this attempt
-                                      const idx = ['一刷', '二刷', '三刷', '四刷', '五刷'].indexOf(label as string);
-                                      if (idx < 0) return label;
-                                      const dates = keyProblems.map(p => p.records[idx] ? `${p.problemName.slice(0,4)}: ${p.records[idx].date}` : null).filter(Boolean);
-                                      return `${label}\n${dates.join(' | ')}`;
-                                    }}
-                                  />
-                                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                                  {keyProblems.map((p, idx) => {
-                                    const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4'];
-                                    const shortName = p.problemName.length > 6 ? p.problemName.slice(0, 6) + '..' : p.problemName;
-                                    return <Line key={p.problemId} type="monotone" dataKey={shortName} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4, fill: colors[idx % colors.length] }} activeDot={{ r: 6 }} />;
-                                  })}
-                                </LineChart>
-                              </ResponsiveContainer>
-                            </div>
-                            {/* 效率变化明细表 */}
-                            <div className="overflow-hidden rounded-xl border border-blue-100">
-                              <table className="w-full">
-                                <thead>
-                                  <tr className="bg-gradient-to-r from-blue-50 to-cyan-50">
-                                    <th className="text-left py-2.5 px-4 text-sm font-semibold text-blue-700">题目</th>
-                                    {['一刷', '二刷', '三刷'].map(label => (
-                                      <th key={label} className="text-center py-2.5 px-3 text-sm font-semibold text-blue-700">{label}</th>
-                                    ))}
-                                    <th className="text-center py-2.5 px-3 text-sm font-semibold text-blue-700">效率提升</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {keyProblems.map((p, idx) => {
-                                    const firstTime = p.records[0]?.timeSpent || 0;
-                                    const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
-                                    const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
-                                    return (
-                                      <tr key={p.problemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
-                                        <td className="py-2.5 px-4 text-sm font-medium text-[#333]">{p.problemName}</td>
-                                        {[0, 1, 2].map(i => {
-                                          const rec = p.records[i];
-                                          return (
-                                            <td key={i} className="text-center py-2.5 px-3 text-xs">
-                                              {rec ? (
-                                                <div>
-                                                  <div className="text-[#333] font-medium">{Math.round(rec.timeSpent / 60 * 10) / 10}分钟</div>
-                                                  <div className="text-[#999]">{rec.date}</div>
-                                                </div>
-                                              ) : (
-                                                <span className="text-[#ccc]">-</span>
-                                              )}
-                                            </td>
-                                          );
-                                        })}
-                                        <td className="text-center py-2.5 px-3">
-                                          <span className={`text-sm font-bold ${improvement > 0 ? 'text-green-500' : improvement < 0 ? 'text-red-500' : 'text-[#888]'}`}>
-                                            {improvement > 0 ? `↓${improvement}%` : improvement < 0 ? `↑${Math.abs(improvement)}%` : '-'}
+                              return (
+                                <div key={p.problemId} className="bg-white rounded-2xl p-5 shadow-sm border border-orange-100/50">
+                                  {/* 题目信息行 */}
+                                  <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1.5">
+                                        <span className="font-semibold text-[#333344] text-sm">{p.problemName}</span>
+                                        {improvement !== 0 && (
+                                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${improvement > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                                            {improvement > 0 ? `效率↑${improvement}%` : `效率↓${Math.abs(improvement)}%`}
                                           </span>
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                            <p className="text-xs text-[#888] mt-3 text-center">折线图展示各题用时趋势，表格展示每次刷题的日期与用时，效率提升=（一刷-最新刷）/一刷</p>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                          <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                        )) : <span className="text-xs text-[#888]">暂无知识点</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* 迷你折线图 + 刷次明细并排 */}
+                                  <div className="flex gap-4">
+                                    {/* 左侧：迷你折线图 */}
+                                    <div className="flex-1 h-[120px] bg-gradient-to-br from-orange-50/30 to-amber-50/20 rounded-xl p-2">
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+                                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+                                          <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} unit="分" />
+                                          <Tooltip
+                                            contentStyle={{ borderRadius: '8px', border: '1px solid #f0f0f0', fontSize: '11px', padding: '6px 10px' }}
+                                            formatter={(value: number, _name: string, props: { payload?: { date?: string } }) => [`${value}分钟`, props.payload?.date || '']}
+                                          />
+                                          <Line type="monotone" dataKey="time" stroke={lineColor} strokeWidth={2.5} dot={{ r: 5, fill: lineColor, stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} />
+                                        </LineChart>
+                                      </ResponsiveContainer>
+                                    </div>
+
+                                    {/* 右侧：刷次明细 */}
+                                    <div className="w-[200px] flex flex-col gap-1.5">
+                                      {['一刷', '二刷', '三刷'].map((label, i) => {
+                                        const rec = p.records[i];
+                                        return (
+                                          <div key={label} className={`flex items-center justify-between py-1.5 px-3 rounded-lg ${rec ? 'bg-[#F7F8FC]' : 'bg-gray-50'}`}>
+                                            <span className="text-xs font-medium text-[#888] w-8">{label}</span>
+                                            {rec ? (
+                                              <div className="text-right">
+                                                <span className="text-xs font-semibold text-orange-600">{formatDuration(rec.timeSpent)}</span>
+                                                <span className="text-[10px] text-[#aaa] ml-1.5">{rec.date.slice(5)}</span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-xs text-[#ccc]">无记录</span>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
 

@@ -1,738 +1,573 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
-import {
-  ArrowLeft, Calendar, Download, Users, Star, AlertTriangle,
-  BookOpen, Zap, Keyboard, RotateCcw, TrendingUp, MessageSquare, Target,
-  CheckCircle, Scroll, Flame, Shield, Sparkles, Swords
-} from 'lucide-react';
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User } from 'lucide-react';
 import {
-  getStudents, getCourse, getTypingByStudent, getRetryByStudent,
-  getHomeworkByStudent, getKnowledgeByStudent,
+  getStudents,
+  getTypingByStudent,
+  getRetryByStudent,
+  getHomeworkByStudent,
+  getKnowledgeByStudent,
+  getCourses,
 } from '@/lib/store';
-import {
-  calcTypingSummary, calcRetrySummary, calcHomeworkSummary,
-  calcKnowledgeMastery, getWeakKnowledgePoints, getStrongKnowledgePoints,
-  generateAutoTags, calcTypingImprovement, getTypingWeeklyData,
-  generateGrowthDescription, generateStudySuggestions, recommendCommentTemplate,
-  getMonthRange, getPreviousMonthRange, getRecordsInPeriod,
-} from '@/lib/analytics';
+import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course } from '@/lib/types';
+import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints } from '@/lib/analytics';
 import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
-import type {
-  Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress,
-} from '@/lib/types';
+
+type PeriodType = 'week' | 'month' | 'custom';
 
 export default function ReportPage() {
   const params = useParams();
-  const router = useRouter();
   const studentId = params.studentId as string;
 
   const [student, setStudent] = useState<Student | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
-  const [teacherComment, setTeacherComment] = useState('');
-  const [nextMonthGoal, setNextMonthGoal] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
-
-  // Batch mode state
-  const [batchMode, setBatchMode] = useState(false);
-  const [batchStudentIds, setBatchStudentIds] = useState<string[]>([]);
-  const [batchCurrentIdx, setBatchCurrentIdx] = useState(0);
-
-  // Report data
-  const [typingRecords, setTypingRecords] = useState<TypingRecord[]>([]);
-  const [retryRecords, setRetryRecords] = useState<ProblemRetryRecord[]>([]);
-  const [homeworkRecords, setHomeworkRecords] = useState<HomeworkRecord[]>([]);
+  const [allTyping, setAllTyping] = useState<TypingRecord[]>([]);
+  const [allRetry, setAllRetry] = useState<ProblemRetryRecord[]>([]);
+  const [allHomework, setAllHomework] = useState<HomeworkRecord[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeProgress[]>([]);
-
+  const [period, setPeriod] = useState<PeriodType>('month');
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [teacherComment, setTeacherComment] = useState('');
+  const [nextGoal, setNextGoal] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const loadStudentData = useCallback(
-    (sid: string) => {
-      const s = getStudents().find((st) => st.id === sid);
-      setStudent(s || null);
-      if (s) {
-        setCourse(getCourse(s.courseId) || null);
-      }
-      setTypingRecords(getTypingByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
-      setRetryRecords(getRetryByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
-      setHomeworkRecords(getHomeworkByStudent(sid).sort((a, b) => a.date.localeCompare(b.date)));
-      setKnowledge(getKnowledgeByStudent(sid));
-    },
-    []
-  );
+  const loadData = useCallback(async () => {
+    const students = await getStudents();
+    const s = students.find(st => st.id === studentId);
+    if (!s) return;
+    setStudent(s);
 
-  useEffect(() => {
-    loadStudentData(studentId);
-  }, [studentId, loadStudentData]);
+    const courses = await getCourses();
+    const c = courses.find(co => co.id === s.courseId);
+    setCourse(c || null);
 
-  // Available months
-  const allDates = [
-    ...typingRecords.map((r) => r.date),
-    ...retryRecords.map((r) => r.date),
-    ...homeworkRecords.map((r) => r.date),
-  ];
-  const availableMonths = [...new Set(allDates.map((d) => d.substring(0, 7)))].sort().reverse();
-  if (availableMonths.length === 0) availableMonths.push(format(new Date(), 'yyyy-MM'));
+    const typing = await getTypingByStudent(studentId);
+    const retry = await getRetryByStudent(studentId);
+    const homework = await getHomeworkByStudent(studentId);
+    const know = await getKnowledgeByStudent(studentId);
 
-  // Period filtering
-  const currentRange = getMonthRange(selectedMonth);
-  const prevRange = getPreviousMonthRange(selectedMonth);
+    setAllTyping(typing);
+    setAllRetry(retry);
+    setAllHomework(homework);
+    setKnowledge(know);
+  }, [studentId]);
 
-  const monthTyping = getRecordsInPeriod(typingRecords, currentRange.start, currentRange.end);
-  const monthRetry = getRecordsInPeriod(retryRecords, currentRange.start, currentRange.end);
-  const monthHomework = getRecordsInPeriod(homeworkRecords, currentRange.start, currentRange.end);
-  const prevTypingRecs = getRecordsInPeriod(typingRecords, prevRange.start, prevRange.end);
-  const prevRetryRecs = getRecordsInPeriod(retryRecords, prevRange.start, prevRange.end);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  // Computed analytics
+  const getPeriodDates = () => {
+    if (period === 'custom') {
+      return { start: customStart, end: customEnd };
+    }
+    const now = new Date();
+    if (period === 'week') {
+      const start = new Date(now);
+      start.setDate(start.getDate() - start.getDay());
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+    }
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  };
+
+  const { start: periodStart, end: periodEnd } = getPeriodDates();
+
+  const filterByPeriod = <T extends { date: string }>(records: T[]) =>
+    records.filter(r => r.date >= periodStart && r.date <= periodEnd);
+
+  const monthTyping = filterByPeriod(allTyping);
+  const monthRetry = filterByPeriod(allRetry);
+  const monthHomework = filterByPeriod(allHomework);
+
+  const prevPeriodStart = (() => {
+    const start = new Date(periodStart);
+    const end = new Date(periodEnd);
+    const diff = end.getTime() - start.getTime();
+    const prevEnd = new Date(start.getTime() - 86400000);
+    const prevStart = new Date(prevEnd.getTime() - diff);
+    return prevStart.toISOString().split('T')[0];
+  })();
+  const prevPeriodEnd = (() => {
+    const start = new Date(periodStart);
+    return new Date(start.getTime() - 86400000).toISOString().split('T')[0];
+  })();
+
+  const prevTyping = allTyping.filter(r => r.date >= prevPeriodStart && r.date <= prevPeriodEnd);
+  const prevRetry = allRetry.filter(r => r.date >= prevPeriodStart && r.date <= prevPeriodEnd);
+
   const curTyping = calcTypingSummary(monthTyping);
-  const prevTyping = calcTypingSummary(prevTypingRecs);
+  const prevTypingSummary = calcTypingSummary(prevTyping);
   const curRetry = calcRetrySummary(monthRetry, course || undefined);
-  const prevRetry = calcRetrySummary(prevRetryRecs, course || undefined);
-  const curHomework = calcHomeworkSummary(monthHomework);
-  const mastery = calcKnowledgeMastery(knowledge, retryRecords, course || undefined);
-  const weakKPs = getWeakKnowledgePoints(mastery);
-  const strongKPs = getStrongKnowledgePoints(mastery);
-  const autoTags = generateAutoTags(curTyping, prevTyping, curRetry, prevRetry, curHomework, mastery);
-  const speedImprove = calcTypingImprovement(curTyping, prevTyping);
+  const typingImprovement = calcTypingImprovement(prevTypingSummary, curTyping);
+  const knowledgeMastery = calcKnowledgeMastery(knowledge, allRetry, course || undefined);
+  const strongPoints = getStrongKnowledgePoints(knowledgeMastery);
+  const weakPoints = getWeakKnowledgePoints(knowledgeMastery);
 
-  // Auto-fill on first load
-  useEffect(() => {
-    if (student && !teacherComment) {
-      const recommended = recommendCommentTemplate(autoTags);
-      setTeacherComment(recommended.content);
-    }
-  }, [student, autoTags, teacherComment]);
+  const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
-  useEffect(() => {
-    if (student && !nextMonthGoal) {
-      const suggestions = generateStudySuggestions(weakKPs, curRetry, curTyping);
-      setNextMonthGoal(suggestions.slice(0, 2).join('\n'));
-    }
-  }, [student, weakKPs, curRetry, curTyping, nextMonthGoal]);
-
-  const monthLabel = format(new Date(selectedMonth + '-01'), 'M月', { locale: zhCN });
-  const fullMonthLabel = format(new Date(selectedMonth + '-01'), 'yyyy年M月', { locale: zhCN });
-
-  // Chart data
-  const weeklyTypingData = getTypingWeeklyData(typingRecords, selectedMonth);
-  const retryProblems = curRetry.problems;
-  const bestHomework =
-    monthHomework.length > 0
-      ? monthHomework.reduce((a, b) => ((a.score ?? 0) >= (b.score ?? 0) ? a : b))
-      : null;
-
-  const growthDesc = student
-    ? generateGrowthDescription(student.name, curTyping, prevTyping, curRetry, mastery, monthLabel)
-    : '';
-
-  // ===== PDF Export =====
   const exportPDF = async () => {
-    if (!reportRef.current) return;
-    setIsExporting(true);
+    if (!reportRef.current || !student) return;
+    setExporting(true);
     try {
       const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#0f0f1a',
-      });
-
+      const { jsPDF } = await import('jspdf');
+      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = -(imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-
-      pdf.save(`${student?.name || '学生'}_${fullMonthLabel}学习月报.pdf`);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const width = imgWidth * ratio;
+      const height = imgHeight * ratio;
+      const x = (pdfWidth - width) / 2;
+      pdf.addImage(imgData, 'PNG', x, 0, width, height);
+      const fileName = `${student.name}_${selectedMonth.replace('-', '年')}月_成长档案.pdf`;
+      pdf.save(fileName);
     } catch (err) {
       console.error('导出PDF失败:', err);
+      alert('导出PDF失败，请重试');
     } finally {
-      setIsExporting(false);
-    }
-  };
-
-  // ===== Batch mode =====
-  const handleBatchMode = () => {
-    const allStudents = getStudents();
-    setBatchStudentIds(allStudents.map((s) => s.id));
-    setBatchCurrentIdx(0);
-    setBatchMode(true);
-    if (allStudents.length > 0) {
-      loadStudentData(allStudents[0].id);
-    }
-  };
-
-  const handleBatchNext = () => {
-    const nextIdx = batchCurrentIdx + 1;
-    if (nextIdx < batchStudentIds.length) {
-      setBatchCurrentIdx(nextIdx);
-      loadStudentData(batchStudentIds[nextIdx]);
-      setTeacherComment('');
-      setNextMonthGoal('');
+      setExporting(false);
     }
   };
 
   if (!student) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-amber-300/60">未找到该学生信息...</p>
-      </div>
-    );
+    return <div className="flex h-screen items-center justify-center"><div className="text-muted-foreground">加载中...</div></div>;
   }
 
-  const highlightTags = autoTags.filter((t) => t.type === 'highlight');
-  const weaknessTags = autoTags.filter((t) => t.type === 'weakness');
+  const getWeeklyTyping = () => {
+    const weeks: { [key: string]: { speeds: number[]; accuracies: number[] } } = {};
+    monthTyping.forEach(t => {
+      const date = new Date(t.date);
+      const weekNum = Math.ceil(date.getDate() / 7);
+      const weekKey = `第${weekNum}周`;
+      if (!weeks[weekKey]) weeks[weekKey] = { speeds: [], accuracies: [] };
+      weeks[weekKey].speeds.push(t.speed);
+      weeks[weekKey].accuracies.push(t.accuracy);
+    });
+    return Object.entries(weeks).map(([week, data]) => ({
+      week,
+      avgSpeed: Math.round(data.speeds.reduce((a, b) => a + b, 0) / data.speeds.length),
+      avgAccuracy: Math.round(data.accuracies.reduce((a, b) => a + b, 0) / data.accuracies.length),
+    }));
+  };
+
+  const getRetryComparison = () => {
+    const problemStats: { [key: string]: { attempts: ProblemRetryRecord[] } } = {};
+    monthRetry.forEach(r => {
+      if (!problemStats[r.problemName]) problemStats[r.problemName] = { attempts: [] };
+      problemStats[r.problemName].attempts.push(r);
+    });
+    return Object.entries(problemStats).map(([name, data]) => {
+      const sorted = data.attempts.sort((a, b) => a.attempt - b.attempt);
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      const improvement = first && last && first.attempt !== last.attempt
+        ? Math.round(((first.timeSpent - last.timeSpent) / first.timeSpent) * 100)
+        : 0;
+      return { name, firstTime: first?.timeSpent || 0, lastTime: last?.timeSpent || 0, improvement };
+    });
+  };
+
+  const weeklyTyping = getWeeklyTyping();
+  const retryComparison = getRetryComparison();
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0f0f1a]/90 backdrop-blur-md border-b border-amber-900/30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-              className="h-9 w-9 text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-bold text-amber-300">
-              {batchMode
-                ? `批量传书 (${batchCurrentIdx + 1}/${batchStudentIds.length})`
-                : '学习月报'}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-36 h-9 text-sm bg-[#1a1a2e] border-amber-900/40 text-amber-300">
-                <Calendar className="h-4 w-4 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-[#1a1a2e] border-amber-900/40">
-                {availableMonths.map((m) => (
-                  <SelectItem key={m} value={m} className="text-amber-300 focus:bg-amber-900/30 focus:text-amber-200">
-                    {format(new Date(m + '-01'), 'yyyy年M月', { locale: zhCN })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!batchMode && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-900/40 text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
-                onClick={handleBatchMode}
-              >
-                <Users className="h-4 w-4 mr-1" />
-                批量传书
-              </Button>
-            )}
-            {batchMode && batchCurrentIdx < batchStudentIds.length - 1 && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-900/40 text-amber-400 hover:bg-amber-900/20"
-                onClick={handleBatchNext}
-              >
-                下一位学生
-              </Button>
-            )}
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-amber-600 to-yellow-500 text-[#0f0f1a] font-bold hover:from-amber-500 hover:to-yellow-400"
-              onClick={exportPDF}
-              disabled={isExporting}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              {isExporting ? '生成中...' : '导出PDF'}
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* ===== Edit Panel ===== */}
-        <div className="bg-[#1a1a2e]/80 border border-amber-900/30 rounded-xl p-4 space-y-4">
-          <h3 className="text-sm font-semibold flex items-center gap-2 text-amber-300">
-            <Scroll className="h-4 w-4" />
-            老师批注
-          </h3>
-
-          {/* Comment Templates */}
-          <div>
-            <label className="text-xs text-amber-400/60 mb-1.5 block">
-              老师寄语（系统推荐评语，可修改）
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {COMMENT_TEMPLATES.map((tmpl) => (
-                <Button
-                  key={tmpl.id}
-                  size="sm"
-                  variant="outline"
-                  className={`text-xs h-7 ${
-                    teacherComment === tmpl.content
-                      ? 'bg-amber-900/30 border-amber-500/50 text-amber-300'
-                      : 'border-amber-900/30 text-amber-400/50 hover:text-amber-300 hover:bg-amber-900/20'
-                  }`}
-                  onClick={() => setTeacherComment(tmpl.content)}
-                >
-                  {tmpl.name}
-                </Button>
-              ))}
-            </div>
-            <Textarea
-              value={teacherComment}
-              onChange={(e) => setTeacherComment(e.target.value)}
-              className="min-h-[80px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
-              placeholder="输入老师寄语..."
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-amber-400/60 mb-1.5 block">
-              下月学习目标
-            </label>
-            <Textarea
-              value={nextMonthGoal}
-              onChange={(e) => setNextMonthGoal(e.target.value)}
-              className="min-h-[60px] text-sm bg-[#0f0f1a]/60 border-amber-900/30 text-amber-200 placeholder:text-amber-400/30 focus:border-amber-500/50"
-              placeholder="输入下月学习目标..."
-            />
-          </div>
-        </div>
-
-        {/* ===== Report Preview ===== */}
-        <div ref={reportRef} className="bg-[#0f0f1a] rounded-2xl border border-amber-900/30 overflow-hidden">
-          {/* Report Header - Scroll/Book Style */}
-          <div className="relative bg-gradient-to-b from-[#2a1810] via-[#1a1a2e] to-[#0f0f1a] text-amber-200 px-8 py-8 overflow-hidden">
-            {/* Decorative border pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
-            </div>
-
-            <div className="relative flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* 控制栏 */}
+      <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-yellow-400" />
-                  <span className="text-xs text-amber-400/60 tracking-widest">修 炼 月 报</span>
-                </div>
-                <h2 className="text-2xl font-bold text-amber-300 mb-1" style={{ textShadow: '0 0 20px rgba(212,168,83,0.3)' }}>
-                  {student.name} · {fullMonthLabel}学习纪要
-                </h2>
-                <p className="text-amber-400/50 text-sm">
-                  {course?.name || '编程课程'} | 月度学习反馈
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-amber-400/40">传书日期</p>
-                <p className="text-lg font-semibold text-amber-300">{format(new Date(), 'yyyy.M.d')}</p>
+                <h1 className="text-2xl font-bold text-foreground">{student.name}的成长档案</h1>
+                <p className="text-sm text-muted-foreground">{course?.name || '未分配课程'} · {periodLabel}</p>
               </div>
             </div>
-          </div>
-
-          <div className="px-8 py-6 space-y-8">
-            {/* 1. Knowledge Mastery - 知识点掌握 */}
-            <section>
-              <SectionTitle icon={<BookOpen className="h-5 w-5" />} title="一、知识点掌握" />
-              <div className="overflow-hidden rounded-lg border border-amber-900/30">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-amber-900/20">
-                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-1/4">知识点</th>
-                      <th className="px-4 py-2.5 text-left text-amber-400 font-medium w-2/5">学习心得</th>
-                      <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/4">掌握度</th>
-                      <th className="px-4 py-2.5 text-center text-amber-400 font-medium w-1/6">评分</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mastery.map((m, idx) => (
-                      <tr
-                        key={m.knowledgePointId}
-                        className={`${idx % 2 === 0 ? 'bg-[#0f0f1a]' : 'bg-[#1a1a2e]/50'} ${
-                          m.isWeak ? 'bg-red-900/10' : ''
-                        }`}
-                      >
-                        <td className="px-4 py-2.5 font-medium text-amber-200">{m.knowledgePointName}</td>
-                        <td className="px-4 py-2.5 text-amber-400/50 text-xs">
-                          {knowledge.find((k) => k.knowledgePointId === m.knowledgePointId)?.description || KNOWLEDGE_STATUS_LABELS[m.status as keyof typeof KNOWLEDGE_STATUS_LABELS] || '-'}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="w-20 h-2 bg-amber-900/20 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${m.masteryPercent}%`,
-                                  backgroundColor:
-                                    m.masteryPercent >= 80
-                                      ? '#4ade80'
-                                      : m.masteryPercent >= 40
-                                      ? '#d4a853'
-                                      : '#ef4444',
-                                }}
-                              />
-                            </div>
-                            <span
-                              className={`text-xs font-bold ${
-                                m.masteryPercent >= 80
-                                  ? 'text-green-400'
-                                  : m.masteryPercent >= 40
-                                  ? 'text-amber-400'
-                                  : 'text-red-400'
-                              }`}
-                            >
-                              {m.masteryPercent}%
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-center font-bold text-amber-300">{m.score || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <select value={period} onChange={(e) => setPeriod(e.target.value as PeriodType)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="week">按周</option>
+                  <option value="month">按月</option>
+                  <option value="custom">自定义</option>
+                </select>
+                {period === 'month' && (
+                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 h-9" />
+                )}
+                {period === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36 h-9" />
+                    <span className="text-muted-foreground">至</span>
+                    <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36 h-9" />
+                  </div>
+                )}
               </div>
-            </section>
+              <Button onClick={exportPDF} disabled={exporting} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? '导出中...' : '导出PDF'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* 2. Ability Testing - 功力测试 */}
-            <section>
-              <SectionTitle icon={<Zap className="h-5 w-5" />} title="二、能力测试 · 学习成果" />
+      {/* 报告预览区域 */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div ref={reportRef} className="bg-white shadow-2xl rounded-lg overflow-hidden">
+            
+            {/* 封面页 */}
+            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-16 min-h-[800px] flex flex-col justify-center items-center relative">
+              <div className="absolute top-8 right-8 text-right">
+                <div className="text-sm opacity-80">战码编程</div>
+                <div className="text-xs opacity-60">战码编程</div>
+              </div>
+              
+              <div className="text-center space-y-8">
+                <div className="space-y-4">
+                  <h1 className="text-6xl font-bold tracking-wider">战码少年</h1>
+                  <div className="w-32 h-1 bg-white/50 mx-auto"></div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-12 space-y-6">
+                  <div className="w-48 h-48 bg-white/20 rounded-full mx-auto flex items-center justify-center border-4 border-white/30">
+                    <User className="h-24 w-24 text-white/60" />
+                  </div>
+                  
+                  <div className="space-y-3 text-left">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm opacity-80">姓名：</span>
+                      <span className="text-xl font-semibold">{student.name}</span>
+                    </div>
+                    {student.notes && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm opacity-80">学校：</span>
+                        <span className="text-lg">{student.notes}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm opacity-80">课程：</span>
+                      <span className="text-lg">{course?.name || '编程'}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm opacity-80">报告周期：</span>
+                      <span className="text-lg">{periodLabel}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-8 space-y-2">
+                  <p className="text-lg opacity-90">快乐学习 · 收获成长</p>
+                  <p className="text-sm opacity-70">爱心施教 · 娃娃为王</p>
+                </div>
+              </div>
+            </div>
 
-              {/* Typing Test - 速度练习 */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
-                  <Keyboard className="h-4 w-4 text-amber-400" />
-                  速度练习（打字）
-                </h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-bold text-amber-300">{curTyping.avgSpeed}</p>
-                    <p className="text-xs text-amber-400/50 mt-1">平均速度(字/分)</p>
-                    {speedImprove !== 0 && (
-                      <p
-                        className={`text-xs font-medium mt-1 ${
-                          speedImprove > 0 ? 'text-green-400' : 'text-red-400'
-                        }`}
-                      >
-                        {speedImprove > 0 ? '↑' : '↓'} 较上月{speedImprove > 0 ? '精进' : '退步'}
-                        {Math.abs(speedImprove)}%
-                      </p>
+            {/* 本月课程内容 */}
+            <div className="p-12 min-h-[600px]">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
+                <BookOpen className="h-8 w-8 text-indigo-600" />
+                <h2 className="text-3xl font-bold text-gray-800">本月课程内容</h2>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4">知识点掌握情况</h3>
+                  <div className="space-y-3">
+                    {knowledge.length > 0 ? knowledge.map((kp) => {
+                      const kpDef = course?.knowledgePoints.find(k => k.id === kp.knowledgePointId);
+                      return (
+                        <div key={kp.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${kp.status === 'mastered' ? 'bg-green-500' : kp.status === 'learning' ? 'bg-yellow-500' : 'bg-gray-400'}`}></div>
+                            <span className="font-medium text-gray-800">{kp.knowledgePointName}</span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge variant={kp.status === 'mastered' ? 'default' : kp.status === 'learning' ? 'secondary' : 'outline'}>
+                              {KNOWLEDGE_STATUS_LABELS[kp.status]}
+                            </Badge>
+                            {kp.score && <span className="text-sm text-gray-600">评分: {kp.score}/10</span>}
+                          </div>
+                        </div>
+                      );
+                    }) : (
+                      <p className="text-gray-500 text-center py-8">暂无知识点记录</p>
                     )}
                   </div>
-                  <div className="bg-green-900/15 border border-green-900/20 rounded-xl p-4 text-center">
-                    <p className="text-3xl font-bold text-green-400">{curTyping.avgAccuracy}%</p>
-                    <p className="text-xs text-green-400/50 mt-1">心神专注（正确率）</p>
-                  </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Weekly Summary Table */}
-                {weeklyTypingData.some((w) => w.count > 0) && (
-                  <div className="overflow-hidden rounded-lg border border-amber-900/30 mb-4">
-                    <table className="w-full text-sm">
+            {/* 能力反馈 */}
+            <div className="p-12 min-h-[600px] bg-gray-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <h2 className="text-3xl font-bold text-gray-800">能力反馈</h2>
+              </div>
+
+              {/* 打字测试 */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">⌨️</span> 打字测试
+                </h3>
+                {weeklyTyping.length > 0 ? (
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <table className="w-full">
                       <thead>
-                        <tr className="bg-amber-900/15">
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">周次</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">平均速度</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">心神专注</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">练习次数</th>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">周次</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">平均速度</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">平均正确率</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {weeklyTypingData.map((w) =>
-                          w.count > 0 ? (
-                            <tr key={w.week} className="border-t border-amber-900/15">
-                              <td className="px-3 py-2 font-medium text-amber-200">{w.week}</td>
-                              <td className="px-3 py-2 text-center font-bold text-amber-300">
-                                {w.avgSpeed}
-                              </td>
-                              <td className="px-3 py-2 text-center font-bold text-green-400">
-                                {w.avgAccuracy}%
-                              </td>
-                              <td className="px-3 py-2 text-center text-amber-400/50">{w.count}次</td>
-                            </tr>
-                          ) : null
-                        )}
+                        {weeklyTyping.map((w, i) => (
+                          <tr key={i} className="border-b border-gray-100">
+                            <td className="py-3 px-4 font-medium text-gray-800">{w.week}</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{w.avgSpeed} 字/分钟</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{w.avgAccuracy}%</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
+                    {typingImprovement !== 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          相比上期{typingImprovement > 0 ? '提升' : '下降'} {Math.abs(typingImprovement)}%
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* Typing Chart */}
-                {monthTyping.length >= 2 && (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart
-                      data={monthTyping
-                        .sort((a, b) => a.date.localeCompare(b.date))
-                        .map((r) => ({
-                          date: format(new Date(r.date), 'M/d'),
-                          speed: r.speed,
-                          accuracy: r.accuracy,
-                        }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#3a2a1a" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#d4a853' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#d4a853' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#1a1a2e',
-                          border: '1px solid #8b6914',
-                          borderRadius: '8px',
-                          color: '#d4a853',
-                        }}
-                      />
-                      <Line type="monotone" dataKey="speed" stroke="#d4a853" strokeWidth={2} name="速度" />
-                      <Line type="monotone" dataKey="accuracy" stroke="#4ade80" strokeWidth={2} name="心神专注" />
-                      <Legend wrapperStyle={{ color: '#d4a853' }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无打字测试记录</p>
                 )}
               </div>
 
-              {/* Retry Test - 三刷 */}
+              {/* 三刷测试 */}
               <div>
-                <h4 className="text-sm font-semibold text-amber-200 mb-3 flex items-center gap-2">
-                  <RotateCcw className="h-4 w-4 text-amber-400" />
-                  三刷练习
-                </h4>
-                {retryProblems.length === 0 ? (
-                  <p className="text-sm text-amber-400/40">{monthLabel}暂无三刷记录</p>
-                ) : (
-                  <div className="overflow-hidden rounded-lg border border-amber-900/30">
-                    <table className="w-full text-sm">
+                <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                  <span className="text-2xl">🔄</span> 三刷测试
+                </h3>
+                {retryComparison.length > 0 ? (
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <table className="w-full">
                       <thead>
-                        <tr className="bg-amber-900/15">
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">题目</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">首次耗时</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">最新耗时</th>
-                          <th className="px-3 py-2 text-center font-medium text-amber-400">精进</th>
-                          <th className="px-3 py-2 text-left font-medium text-amber-400">关联知识点</th>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">测试题</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">首次用时</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">最近用时</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">提升情况</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {retryProblems.map((p, idx) => (
-                          <tr key={idx} className={`${idx % 2 === 0 ? 'bg-[#0f0f1a]' : 'bg-[#1a1a2e]/30'}`}>
-                            <td className="px-3 py-2 font-medium text-amber-200">{p.problemName}</td>
-                            <td className="px-3 py-2 text-center text-amber-400/50">{p.firstTime}分钟</td>
-                            <td className="px-3 py-2 text-center font-bold text-amber-300">{p.lastTime}分钟</td>
-                            <td className="px-3 py-2 text-center">
-                              <span
-                                className={`font-bold ${
-                                  p.improvement > 0 ? 'text-green-400' : 'text-red-400'
-                                }`}
-                              >
-                                {p.improvement > 0 ? '+' : ''}
-                                {p.improvement}%
+                        {retryComparison.map((r, i) => (
+                          <tr key={i} className="border-b border-gray-100">
+                            <td className="py-3 px-4 font-medium text-gray-800">{r.name}</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{r.firstTime}分钟</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{r.lastTime}分钟</td>
+                            <td className="py-3 px-4 text-center">
+                              <span className={`font-semibold ${r.improvement > 0 ? 'text-green-600' : r.improvement < 0 ? 'text-red-600' : 'text-gray-600'}`}>
+                                {r.improvement > 0 ? '+' : ''}{r.improvement}%
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-amber-400/50">{p.knowledgePoint || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无三刷测试记录</p>
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* 3. Growth Trajectory - 修炼蜕变 */}
-            <section>
-              <SectionTitle icon={<TrendingUp className="h-5 w-5" />} title="三、成长蜕变 · 进步轨迹" />
-
-              {/* Key Indicators */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <div className="bg-amber-900/15 border border-amber-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-amber-300">{curTyping.count}</p>
-                  <p className="text-xs text-amber-400/50">速度练习次数</p>
-                </div>
-                <div className="bg-green-900/15 border border-green-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-green-400">{curRetry.count}</p>
-                  <p className="text-xs text-green-400/50">三刷次数</p>
-                </div>
-                <div className="bg-purple-900/15 border border-purple-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-purple-400">{curHomework.count}</p>
-                  <p className="text-xs text-purple-400/50">作业</p>
-                </div>
-                <div className="bg-blue-900/15 border border-blue-900/20 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-blue-400">
-                    {strongKPs.length}/{mastery.length}
-                  </p>
-                  <p className="text-xs text-blue-400/50">知识点掌握</p>
-                </div>
+            {/* 提升建议 */}
+            <div className="p-12 min-h-[500px]">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-green-200">
+                <Target className="h-8 w-8 text-green-600" />
+                <h2 className="text-3xl font-bold text-gray-800">提升建议</h2>
               </div>
 
-              {/* Auto-generated description */}
-              <div className="bg-gradient-to-r from-amber-900/10 to-purple-900/10 border border-amber-900/20 rounded-xl p-4 mb-4">
-                <p className="text-sm text-amber-200/80 leading-relaxed">{growthDesc}</p>
-              </div>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2">
-                {highlightTags.map((tag, i) => (
-                  <Badge key={i} className="bg-green-900/30 text-green-400 border-green-800/30 text-xs px-3 py-1">
-                    <Star className="h-3 w-3 mr-1" />
-                    {tag.label}
-                  </Badge>
-                ))}
-                {weaknessTags.map((tag, i) => (
-                  <Badge key={i} className="bg-amber-900/30 text-amber-400 border-amber-800/30 text-xs px-3 py-1">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    {tag.label}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-
-            {/* 4. Home-School Co-education - 家宗共育 */}
-            <section>
-              <SectionTitle icon={<Shield className="h-5 w-5" />} title="四、家宗共育 · 携手修行" />
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-amber-900/10 border border-amber-900/20 rounded-xl p-4">
-                  <h5 className="font-semibold text-amber-300 text-sm mb-2 flex items-center gap-1.5">
-                    <Flame className="h-4 w-4" />
-                    陪伴学习
-                  </h5>
-                  <p className="text-xs text-amber-400/50 leading-relaxed">
-                    鼓励家长陪伴孩子探索编程世界，在创意实践中培养逻辑思维与创新能力
-                  </p>
-                </div>
-                <div className="bg-green-900/10 border border-green-900/20 rounded-xl p-4">
-                  <h5 className="font-semibold text-green-400 text-sm mb-2 flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4" />
-                    学习跟进
-                  </h5>
-                  <p className="text-xs text-green-400/50 leading-relaxed">
-                    关注孩子每周的打字速度和三刷进步，及时给予肯定和鼓励
-                  </p>
-                </div>
-                <div className="bg-purple-900/10 border border-purple-900/20 rounded-xl p-4">
-                  <h5 className="font-semibold text-purple-400 text-sm mb-2 flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4" />
-                    成果切磋
-                  </h5>
-                  <p className="text-xs text-purple-400/50 leading-relaxed">
-                    与孩子一起回顾学习成果，让孩子讲解实现思路，巩固学习效果
-                  </p>
-                </div>
-                <div className="bg-blue-900/10 border border-blue-900/20 rounded-xl p-4">
-                  <h5 className="font-semibold text-blue-400 text-sm mb-2 flex items-center gap-1.5">
-                    <Swords className="h-4 w-4" />
-                    引导论道
-                  </h5>
-                  <p className="text-xs text-blue-400/50 leading-relaxed">
-                    引导孩子用语言描述编程思路，将抽象代码化为可表达的想法，提升理解深度
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* 5. Best Work - 本月佳作 */}
-            {bestHomework && (
-              <section>
-                <SectionTitle icon={<Star className="h-5 w-5" />} title="五、本月佳作 · 学习成果" />
-                <div className="bg-gradient-to-r from-amber-900/10 to-purple-900/10 border border-amber-900/20 rounded-xl p-5">
-                  <div className="flex items-start gap-4">
-                    {bestHomework.imageUrl && (
-                      <img
-                        src={bestHomework.imageUrl}
-                        alt="作品"
-                        className="w-32 h-32 object-cover rounded-lg border border-amber-900/30"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h5 className="font-semibold text-amber-200 mb-1">
-                        {bestHomework.title}
-                        {bestHomework.score != null && (
-                          <span className="ml-2 text-sm text-amber-400 font-normal">
-                            评分：{bestHomework.score}
-                          </span>
-                        )}
-                      </h5>
-                      {bestHomework.content && (
-                        <p className="text-sm text-amber-400/50 mb-2">{bestHomework.content}</p>
-                      )}
-                      {bestHomework.comment && (
-                        <p className="text-sm text-amber-200/70 italic bg-amber-900/10 rounded-lg px-3 py-2 border border-amber-900/15">
-                          老师点评：&ldquo;{bestHomework.comment}&rdquo;
-                        </p>
-                      )}
+              <div className="space-y-6">
+                {weakPoints.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3">需要加强的知识点</h3>
+                    <div className="space-y-2">
+                      {weakPoints.map((kp, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                          <span className="text-red-600">●</span>
+                          <span className="text-gray-800">{kp.knowledgePointName}</span>
+                          <Badge variant="destructive" className="ml-auto text-xs">{KNOWLEDGE_STATUS_LABELS[kp.status]}</Badge>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                )}
+
+                {strongPoints.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-3">已掌握的知识点</h3>
+                    <div className="space-y-2">
+                      {strongPoints.map((kp, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                          <span className="text-green-600">●</span>
+                          <span className="text-gray-800">{kp.knowledgePointName}</span>
+                          <Badge className="ml-auto bg-green-600 text-xs">{KNOWLEDGE_STATUS_LABELS[kp.status]}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">学习建议</h3>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-gray-700 leading-relaxed">
+                      {weakPoints.length > 0 
+                        ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。同时保持对已掌握知识点的熟练度。`
+                        : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
+                    </p>
+                  </div>
                 </div>
-              </section>
-            )}
-
-            {/* 6. Teacher Comment - 老师寄语 */}
-            <section>
-              <SectionTitle icon={<MessageSquare className="h-5 w-5" />} title="六、老师寄语" />
-              <div className="bg-gradient-to-br from-amber-900/10 via-[#1a1a2e]/50 to-purple-900/10 rounded-xl p-5 border border-amber-900/20">
-                <p className="text-amber-200/80 leading-relaxed whitespace-pre-wrap">{teacherComment}</p>
-                <p className="text-right text-sm text-amber-400/40 mt-4">—— 修行导师</p>
               </div>
-            </section>
+            </div>
 
-            {/* 7. Next Month Goals - 下月修炼 */}
-            <section>
-              <SectionTitle icon={<Target className="h-5 w-5" />} title="七、下月目标 · 方向指引" />
-              <div className="bg-[#1a1a2e]/50 border border-amber-900/20 rounded-xl p-5 space-y-2">
-                {nextMonthGoal.split('\n').map((line, i) => (
-                  <p key={i} className="text-sm text-amber-200/70 flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-                    {line}
+            {/* 家校共育 */}
+            <div className="p-12 min-h-[500px] bg-gradient-to-br from-purple-50 to-pink-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-pink-200">
+                <Users className="h-8 w-8 text-pink-600" />
+                <h2 className="text-3xl font-bold text-gray-800">家校共育</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-xl">💡</span> 陪伴创新
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
                   </p>
-                ))}
-              </div>
-            </section>
+                </div>
 
-            {/* Footer */}
-            <div className="text-center pt-6 border-t border-amber-900/20">
-              <p className="text-xs text-amber-400/30">
-                仙码录 · 少儿编程学习追踪系统 | 报告生成时间：{format(new Date(), 'yyyy年M月d日')}
-              </p>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-xl">📚</span> 学业跟进
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    关注孩子的学习进度，定期检查作业完成情况。建议每天安排固定的编程练习时间，保持学习连贯性。
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-xl">🎉</span> 成果互动
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    当孩子完成项目或取得进步时，及时给予肯定和鼓励。可以让孩子向您展示他们的作品，增强成就感。
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-xl">🗣️</span> 引导表达
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    鼓励孩子用语言描述自己的解题思路，培养逻辑表达能力。可以问"你是怎么想到这个方法的？"
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 下月计划 */}
+            <div className="p-12 min-h-[400px]">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
+                <Calendar className="h-8 w-8 text-indigo-600" />
+                <h2 className="text-3xl font-bold text-gray-800">下月计划</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">下月学习目标</Label>
+                  <Textarea
+                    value={nextGoal}
+                    onChange={(e) => setNextGoal(e.target.value)}
+                    placeholder="例如：掌握循环结构、完成3个综合项目、打字速度达到50字/分钟..."
+                    className="min-h-[120px] resize-none border-gray-300"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 老师寄语 */}
+            <div className="p-12 min-h-[400px] bg-gradient-to-br from-indigo-50 to-purple-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
+                <MessageCircle className="h-8 w-8 text-indigo-600" />
+                <h2 className="text-3xl font-bold text-gray-800">老师寄语</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-700">寄语内容</Label>
+                  <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
+                    <Award className="mr-2 h-4 w-4" />
+                    选择模板
+                  </Button>
+                </div>
+
+                {showTemplates && (
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-2">
+                    <p className="text-sm font-medium text-gray-700 mb-2">推荐模板：</p>
+                    {COMMENT_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => { setTeacherComment(template.content); setShowTemplates(false); }}
+                        className="w-full text-left p-3 rounded-md hover:bg-indigo-50 transition-colors border border-gray-100 hover:border-indigo-200"
+                      >
+                        <div className="font-medium text-sm text-gray-800">{template.name}</div>
+                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{template.content}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <Textarea
+                  value={teacherComment}
+                  onChange={(e) => setTeacherComment(e.target.value)}
+                  placeholder="写下您对学生的寄语和鼓励..."
+                  className="min-h-[150px] resize-none border-gray-300"
+                />
+              </div>
+            </div>
+
+            {/* 页脚 */}
+            <div className="bg-gray-800 text-white p-8 text-center">
+              <p className="text-lg font-semibold mb-2">战码编程</p>
+              <p className="text-sm opacity-80">快乐学习 · 收获成长</p>
+              <p className="text-xs opacity-60 mt-2">爱心施教 · 娃娃为王</p>
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
-  );
-}
-
-function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
-  return (
-    <h3 className="text-base font-bold text-amber-200 mb-4 flex items-center gap-2">
-      <span className="text-amber-400">{icon}</span>
-      {title}
-    </h3>
   );
 }

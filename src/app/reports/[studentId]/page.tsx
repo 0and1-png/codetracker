@@ -402,7 +402,7 @@ export default function ReportPage() {
                 {coverPhoto ? (
                   <img src={coverPhoto} alt="封面图片" className="w-full h-full object-cover" />
                 ) : (
-                  <img src="/cover-bg.png" alt="战码编程" className="w-full h-full object-cover" />
+                  <img src="/cover-photo.jpg" alt="战码编程" className="w-full h-full object-cover" />
                 )}
                 {/* 上传替换按钮 */}
                 <div 

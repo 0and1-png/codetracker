@@ -414,19 +414,19 @@ export default function ReportPage() {
                 {/* 金色波浪分割线 */}
                 <svg 
                   className="absolute bottom-0 left-0 w-full" 
-                  viewBox="0 0 800 60" 
+                  viewBox="0 0 800 80" 
                   preserveAspectRatio="none"
-                  style={{ display: 'block', marginBottom: '-1px' }}
+                  style={{ display: 'block', height: '80px', marginBottom: '-2px' }}
                 >
                   <path 
-                    d="M0,0 L0,30 Q200,65 400,35 Q600,5 800,30 L800,0 Z" 
+                    d="M0,0 L0,50 Q200,85 400,50 Q600,15 800,50 L800,0 Z" 
                     fill="#f5f0e6"
                   />
                   <path 
-                    d="M0,30 Q200,65 400,35 Q600,5 800,30" 
+                    d="M0,50 Q200,85 400,50 Q600,15 800,50" 
                     fill="none" 
                     stroke="#d4a853" 
-                    strokeWidth="3"
+                    strokeWidth="4"
                   />
                 </svg>
               </div>

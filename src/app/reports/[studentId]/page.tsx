@@ -2134,30 +2134,30 @@ export default function ReportPage() {
                       monthRetry.forEach(r => allDates.add(r.date));
                       monthHomework.forEach(h => allDates.add(h.date));
                       const attendanceCount = allDates.size;
-                      // Estimate expected days (weekdays in month)
-                      const year = parseInt(selectedMonth.split('-')[0]);
-                      const month = parseInt(selectedMonth.split('-')[1]);
-                      const daysInMonth = new Date(year, month, 0).getDate();
-                      let weekdays = 0;
-                      for (let d = 1; d <= daysInMonth; d++) {
-                        const day = new Date(year, month - 1, d).getDay();
-                        if (day !== 0 && day !== 6) weekdays++;
-                      }
-                      const attendanceRate = weekdays > 0 ? Math.round(attendanceCount / weekdays * 100) : 0;
+                      // 满勤标准：每月8天
+                      const FULL_ATTENDANCE_DAYS = 8;
+                      const attendanceRate = Math.round(attendanceCount / FULL_ATTENDANCE_DAYS * 100);
+                      const isFullAttendance = attendanceCount >= FULL_ATTENDANCE_DAYS;
                       return (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">出勤天数</span>
-                            <span className="text-2xl font-bold text-purple-600">{attendanceCount}<span className="text-sm text-[#888] font-normal"> 天</span></span>
+                            <span className="text-2xl font-bold text-purple-600">{attendanceCount}<span className="text-sm text-[#888] font-normal"> / {FULL_ATTENDANCE_DAYS} 天</span></span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">出勤率</span>
-                            <span className={`text-2xl font-bold ${attendanceRate >= 80 ? 'text-green-500' : attendanceRate >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{attendanceRate}%</span>
+                            <span className={`text-2xl font-bold ${isFullAttendance ? 'text-green-500' : attendanceRate >= 75 ? 'text-amber-500' : 'text-red-500'}`}>{Math.min(attendanceRate, 100)}%</span>
                           </div>
                           {/* 出勤率进度条 */}
                           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${attendanceRate >= 80 ? 'bg-gradient-to-r from-green-400 to-emerald-500' : attendanceRate >= 60 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`} style={{ width: `${Math.min(attendanceRate, 100)}%` }}></div>
+                            <div className={`h-full rounded-full transition-all duration-500 ${isFullAttendance ? 'bg-gradient-to-r from-green-400 to-emerald-500' : attendanceRate >= 75 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`} style={{ width: `${Math.min(attendanceRate, 100)}%` }}></div>
                           </div>
+                          {isFullAttendance && (
+                            <div className="flex items-center gap-2 text-green-600 text-sm">
+                              <CheckCircle className="h-4 w-4" />
+                              <span>本月满勤！</span>
+                            </div>
+                          )}
                           {/* 出勤日期分布 */}
                           <div className="pt-3 border-t border-gray-100">
                             <p className="text-xs text-[#888] mb-2">出勤日期</p>
@@ -2177,48 +2177,55 @@ export default function ReportPage() {
                     <h3 className="text-base font-semibold text-violet-600 mb-4 flex items-center gap-2">
                       <FileText className="h-4 w-4" /> 修炼日志（作业）
                     </h3>
-                    {monthHomework.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[#666]">作业次数</span>
-                          <span className="text-2xl font-bold text-violet-600">{monthHomework.length}<span className="text-sm text-[#888] font-normal"> 次</span></span>
-                        </div>
-                        {/* 作业列表 */}
-                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                          {monthHomework.sort((a, b) => b.date.localeCompare(a.date)).map((hw, i) => (
-                            <div key={i} className="flex items-start gap-3 py-2.5 px-3 rounded-xl bg-violet-50/50">
-                              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <span className="text-violet-500 text-xs">{i + 1}</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-[#333] font-medium truncate">{hw.content}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs text-[#888]">{hw.date}</span>
-                                  {hw.score && (
-                                    <span className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-500 rounded">{hw.score}分</span>
-                                  )}
+                    {(() => {
+                      // 每月作业标准：4次
+                      const HOMEWORK_STANDARD = 4;
+                      const homeworkRate = Math.round(monthHomework.length / HOMEWORK_STANDARD * 100);
+                      const isHomeworkComplete = monthHomework.length >= HOMEWORK_STANDARD;
+                      return monthHomework.length > 0 ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#666]">作业次数</span>
+                            <span className="text-2xl font-bold text-violet-600">{monthHomework.length}<span className="text-sm text-[#888] font-normal"> / {HOMEWORK_STANDARD} 次</span></span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#666]">完成率</span>
+                            <span className={`text-2xl font-bold ${isHomeworkComplete ? 'text-green-500' : homeworkRate >= 75 ? 'text-amber-500' : 'text-red-500'}`}>{Math.min(homeworkRate, 100)}%</span>
+                          </div>
+                          {/* 完成率进度条 */}
+                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${isHomeworkComplete ? 'bg-gradient-to-r from-green-400 to-emerald-500' : homeworkRate >= 75 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`} style={{ width: `${Math.min(homeworkRate, 100)}%` }}></div>
+                          </div>
+                          {isHomeworkComplete && (
+                            <div className="flex items-center gap-2 text-green-600 text-sm">
+                              <CheckCircle className="h-4 w-4" />
+                              <span>本月作业全部完成！</span>
+                            </div>
+                          )}
+                          {/* 作业列表 */}
+                          <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                            {monthHomework.sort((a, b) => b.date.localeCompare(a.date)).map((hw, i) => (
+                              <div key={i} className="flex items-start gap-3 py-2.5 px-3 rounded-xl bg-violet-50/50">
+                                <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <span className="text-violet-500 text-xs">{i + 1}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-[#333] font-medium truncate">{hw.content}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-[#888]">{hw.date}</span>
+                                    {hw.score && (
+                                      <span className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-500 rounded">{hw.score}分</span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                        {/* 作业完成趋势 */}
-                        <div className="pt-3 border-t border-gray-100">
-                          <div className="h-[80px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <BarChart data={monthHomework.sort((a, b) => a.date.localeCompare(b.date)).map(hw => ({ date: hw.date.slice(5), 作业: 1 }))} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                                <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} />
-                                <YAxis hide />
-                                <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '11px' }} />
-                                <Bar dataKey="作业" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-[#888] text-sm">本月暂无作业记录</div>
-                    )}
+                      ) : (
+                        <div className="text-center py-8 text-[#888] text-sm">本月暂无作业记录</div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

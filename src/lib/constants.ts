@@ -214,21 +214,60 @@ export const COURSE_COLORS: Record<string, { bg: string; border: string; text: s
   },
 };
 
-// ============ GESP 考级预设 ============
-export const GESP_LEVELS = [
-  { level: 1, name: 'GESP一级', desc: '基础语法入门', color: '#94a3b8' },
-  { level: 2, name: 'GESP二级', desc: '基本数据结构', color: '#60a5fa' },
-  { level: 3, name: 'GESP三级', desc: '算法基础', color: '#34d399' },
-  { level: 4, name: 'GESP四级', desc: '排序与搜索', color: '#a78bfa' },
-  { level: 5, name: 'GESP五级', desc: '递归与分治', color: '#f472b6' },
-  { level: 6, name: 'GESP六级', desc: '动态规划入门', color: '#fb923c' },
-  { level: 7, name: 'GESP七级', desc: '图论基础', color: '#e879f9' },
-  { level: 8, name: 'GESP八级', desc: '高级数据结构', color: '#f87171' },
-  { level: 9, name: 'GESP九级', desc: '数论与组合', color: '#2dd4bf' },
-  { level: 10, name: 'GESP十级', desc: '计算几何', color: '#818cf8' },
-  { level: 11, name: 'GESP十一级', desc: '高级算法', color: '#fbbf24' },
-  { level: 12, name: 'GESP十二级', desc: '竞赛综合', color: '#ef4444' },
-] as const;
+// ============ GESP 考级预设（按科目分类）============
+// 参考 CCF GESP 官方考试大纲
+
+export interface GESPLlevelDef {
+  level: number;
+  name: string;
+  desc: string;
+  color: string;
+}
+
+/** C++ 信奥 GESP 考级内容 */
+export const GESP_CPP_LEVELS: GESPLlevelDef[] = [
+  { level: 1, name: 'GESP C++ 一级', desc: '变量、数据类型、运算符、顺序/分支结构', color: '#94a3b8' },
+  { level: 2, name: 'GESP C++ 二级', desc: '循环结构(for/while)、数组基础、字符类型', color: '#60a5fa' },
+  { level: 3, name: 'GESP C++ 三级', desc: '函数定义与调用、字符串处理、递归初步', color: '#34d399' },
+  { level: 4, name: 'GESP C++ 四级', desc: '结构体、指针基础、排序算法(冒泡/选择/插入)', color: '#a78bfa' },
+  { level: 5, name: 'GESP C++ 五级', desc: '栈与队列、二分查找、贪心算法', color: '#f472b6' },
+  { level: 6, name: 'GESP C++ 六级', desc: '动态规划基础、数论基础(素数/GCD)', color: '#fb923c' },
+  { level: 7, name: 'GESP C++ 七级', desc: '图论基础(DFS/BFS)、树的遍历', color: '#e879f9' },
+  { level: 8, name: 'GESP C++ 八级', desc: '高级数据结构(线段树/树状数组)、高级DP', color: '#f87171' },
+];
+
+/** Python GESP 考级内容 */
+export const GESP_PYTHON_LEVELS: GESPLlevelDef[] = [
+  { level: 1, name: 'GESP Python 一级', desc: '基础语法、变量、数据类型、输入输出、顺序结构', color: '#94a3b8' },
+  { level: 2, name: 'GESP Python 二级', desc: '条件判断(if/elif/else)、循环(for/while)、列表基础', color: '#60a5fa' },
+  { level: 3, name: 'GESP Python 三级', desc: '函数定义、模块导入、字符串方法、元组与字典', color: '#34d399' },
+  { level: 4, name: 'GESP Python 四级', desc: '文件读写、异常处理、面向对象基础(类与对象)', color: '#a78bfa' },
+  { level: 5, name: 'GESP Python 五级', desc: '算法基础(排序/搜索)、正则表达式、常用标准库', color: '#f472b6' },
+  { level: 6, name: 'GESP Python 六级', desc: '数据结构进阶(栈/队列/树)、动态规划入门', color: '#fb923c' },
+  { level: 7, name: 'GESP Python 七级', desc: '图论基础、高级算法设计、综合应用', color: '#e879f9' },
+  { level: 8, name: 'GESP Python 八级', desc: '竞赛实战、多算法综合、复杂问题解决', color: '#f87171' },
+];
+
+/** 图形化编程 GESP 考级内容 */
+export const GESP_VISUAL_LEVELS: GESPLlevelDef[] = [
+  { level: 1, name: 'GESP 图形化 一级', desc: '认识Scratch、角色与舞台、基本运动、外观模块', color: '#94a3b8' },
+  { level: 2, name: 'GESP 图形化 二级', desc: '事件与消息、顺序执行、简单动画制作', color: '#60a5fa' },
+  { level: 3, name: 'GESP 图形化 三级', desc: '循环结构(重复执行)、条件判断(如果...那么)', color: '#34d399' },
+  { level: 4, name: 'GESP 图形化 四级', desc: '变量与运算、列表(数组)基础、广播消息', color: '#a78bfa' },
+  { level: 5, name: 'GESP 图形化 五级', desc: '克隆、自制积木(函数)、复杂交互设计', color: '#f472b6' },
+  { level: 6, name: 'GESP 图形化 六级', desc: '综合项目设计、多角色协作、游戏逻辑开发', color: '#fb923c' },
+];
+
+/** 根据课程ID获取对应的GESP考级列表 */
+export function getGespLevelsByCourse(courseId: string): GESPLlevelDef[] {
+  if (courseId === 'course_cpp') return GESP_CPP_LEVELS;
+  if (courseId === 'course_python') return GESP_PYTHON_LEVELS;
+  if (courseId === 'course_visual') return GESP_VISUAL_LEVELS;
+  return GESP_CPP_LEVELS; // default
+}
+
+/** 兼容旧接口：默认返回C++考级 */
+export const GESP_LEVELS = GESP_CPP_LEVELS;
 
 // ============ 默认赛事模板 ============
 export const DEFAULT_COMPETITIONS = [

@@ -24,7 +24,8 @@ import {
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
-import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS } from '@/lib/constants';
+import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS, getGespLevelsByCourse } from '@/lib/constants';
+import type { GESPLlevelDef } from '@/lib/constants';
 
 type PeriodType = 'week' | 'month' | 'custom';
 
@@ -69,6 +70,9 @@ export default function ReportPage() {
   const [newCompName, setNewCompName] = useState('');
   const [newCompDate, setNewCompDate] = useState('');
   const [newCompCategory, setNewCompCategory] = useState('');
+  const [courseGespLevels, setCourseGespLevels] = useState<GESPLlevelDef[]>([]);
+  const [isEditingGesp, setIsEditingGesp] = useState(false);
+  const [isEditingCompetition, setIsEditingCompetition] = useState(false);
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -378,6 +382,10 @@ export default function ReportPage() {
     if (!student) return;
     // Load competitions
     setAllCompetitions(getAllCompetitions());
+    // Set course-specific GESP levels
+    if (course) {
+      setCourseGespLevels(getGespLevelsByCourse(course.id));
+    }
     // Load existing sprint goal for current month
     const existing = getSprintGoal(student.id, selectedMonth);
     if (existing) {
@@ -385,12 +393,12 @@ export default function ReportPage() {
       setSprintGespLevels(existing.gespLevels);
       setSprintCompetitionIds(existing.competitionIds);
     } else {
-      // Auto-fill course goal from next chapter
+      // Auto-fill course goal from next chapter directly
       setSprintCourseGoal(autoSprintGoal || '');
       setSprintGespLevels([]);
       setSprintCompetitionIds([]);
     }
-  }, [student, selectedMonth, autoSprintGoal]);
+  }, [student, course, selectedMonth, autoSprintGoal]);
 
   // Save sprint goal when changed
   const handleSaveSprintGoal = useCallback(() => {
@@ -1870,15 +1878,6 @@ export default function ReportPage() {
                           placeholder="输入下月课程学习目标..."
                           className="min-h-[80px] resize-none rounded-lg border-amber-200/50 bg-amber-50/30 text-sm focus-visible:ring-amber-200"
                         />
-                        {autoSprintGoal && !sprintCourseGoal && (
-                          <button
-                            onClick={() => setSprintCourseGoal(autoSprintGoal)}
-                            className="mt-2 text-xs text-amber-600 hover:text-amber-700 flex items-center gap-1 transition-colors"
-                          >
-                            <Target className="h-3 w-3" />
-                            使用自动推荐：{autoSprintGoal}
-                          </button>
-                        )}
                       </div>
                     </div>
 
@@ -1888,34 +1887,86 @@ export default function ReportPage() {
                         <div className="flex items-center gap-2">
                           <GraduationCap className="h-4 w-4 text-blue-600" strokeWidth={1.5} />
                           <span className="text-sm font-semibold text-blue-800">GESP 考级</span>
-                          <span className="text-xs text-blue-600/70 ml-auto">选择目标考级等级</span>
+                          <span className="text-xs text-blue-600/70 ml-auto">{course?.name || ''}对应考级</span>
+                          {sprintGespLevels.length > 0 && (
+                            <button
+                              onClick={() => setIsEditingGesp(!isEditingGesp)}
+                              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors ml-2"
+                            >
+                              {isEditingGesp ? '完成' : '编辑'}
+                            </button>
+                          )}
                         </div>
                       </div>
                       <div className="p-4">
-                        <div className="grid grid-cols-4 gap-2">
-                          {GESP_LEVELS.map((gesp) => {
-                            const isSelected = sprintGespLevels.includes(gesp.level as GESPLlevel);
-                            return (
+                        {/* 已选择的考级（非编辑模式） */}
+                        {!isEditingGesp && sprintGespLevels.length > 0 ? (
+                          <div className="space-y-2">
+                            {courseGespLevels
+                              .filter(g => sprintGespLevels.includes(g.level as GESPLlevel))
+                              .map(gesp => (
+                                <div key={gesp.level} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
+                                  <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{gesp.level}</div>
+                                  <div>
+                                    <div className="text-xs font-medium">{gesp.name}</div>
+                                    <div className="text-[10px] text-blue-100">{gesp.desc}</div>
+                                  </div>
+                                  <button
+                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                    className="ml-auto h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          /* 编辑模式：显示所有可选等级 */
+                          <div className="space-y-2">
+                            {courseGespLevels.map((gesp) => {
+                              const isSelected = sprintGespLevels.includes(gesp.level as GESPLlevel);
+                              return (
+                                <button
+                                  key={gesp.level}
+                                  onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
+                                    isSelected
+                                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                  }`}
+                                >
+                                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                    isSelected ? 'bg-white/20' : 'bg-gray-100'
+                                  }`}>
+                                    {isSelected ? <Check className="h-3 w-3" strokeWidth={2} /> : gesp.level}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="text-xs font-medium">{gesp.name}</div>
+                                    <div className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
+                                      {gesp.desc}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                            {sprintGespLevels.length > 0 && (
                               <button
-                                key={gesp.level}
-                                onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
-                                className={`relative px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
-                                  isSelected
-                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
-                                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                                }`}
+                                onClick={() => setIsEditingGesp(false)}
+                                className="w-full py-2 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                               >
-                                <div className="flex items-center gap-1.5">
-                                  {isSelected && <Check className="h-3 w-3" strokeWidth={2} />}
-                                  <span>{gesp.name}</span>
-                                </div>
-                                <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  {gesp.desc}
-                                </div>
+                                完成选择
                               </button>
-                            );
-                          })}
-                        </div>
+                            )}
+                          </div>
+                        )}
+                        {!isEditingGesp && sprintGespLevels.length === 0 && (
+                          <button
+                            onClick={() => setIsEditingGesp(true)}
+                            className="w-full py-3 text-xs text-blue-500 hover:text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50/50 transition-colors"
+                          >
+                            + 选择目标考级等级
+                          </button>
+                        )}
                       </div>
                     </div>
 

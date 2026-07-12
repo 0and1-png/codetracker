@@ -1341,38 +1341,104 @@ export default function ReportPage() {
                           </div>
                         )}
 
-                        {/* 三刷练习统计图表 */}
+                        {/* 三刷练习效率趋势图表 */}
                         {keyProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-blue-400">
                             <h4 className="text-base font-semibold text-blue-600 mb-5 flex items-center gap-2">
                               <TrendingUp className="h-5 w-5" /> 三刷练习效率趋势
                             </h4>
-                            <div className="h-[260px]">
+                            {/* 效率趋势折线图 */}
+                            <div className="h-[280px] mb-4">
                               <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                  data={keyProblems.map(p => ({
-                                    name: p.problemName.length > 8 ? p.problemName.slice(0, 8) + '...' : p.problemName,
-                                    一刷: p.records[0] ? Math.round(p.records[0].timeSpent / 60 * 10) / 10 : 0,
-                                    二刷: p.records[1] ? Math.round(p.records[1].timeSpent / 60 * 10) / 10 : 0,
-                                    三刷: p.records[2] ? Math.round(p.records[2].timeSpent / 60 * 10) / 10 : 0,
-                                  }))}
+                                <LineChart
+                                  data={(() => {
+                                    // Build chart data: each attempt across all problems
+                                    const allAttempts: { attempt: string; [key: string]: number | string }[] = [];
+                                    const maxAttempts = Math.max(...keyProblems.map(p => p.records.length));
+                                    const attemptLabels = ['一刷', '二刷', '三刷', '四刷', '五刷'];
+                                    for (let i = 0; i < maxAttempts; i++) {
+                                      const row: { attempt: string; [key: string]: number | string } = { attempt: attemptLabels[i] || `第${i+1}次` };
+                                      keyProblems.forEach(p => {
+                                        if (p.records[i]) {
+                                          row[p.problemName.length > 6 ? p.problemName.slice(0, 6) + '..' : p.problemName] = Math.round(p.records[i].timeSpent / 60 * 10) / 10;
+                                        }
+                                      });
+                                      allAttempts.push(row);
+                                    }
+                                    return allAttempts;
+                                  })()}
                                   margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                                 >
                                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} />
+                                  <XAxis dataKey="attempt" tick={{ fontSize: 12, fill: '#666' }} />
                                   <YAxis tick={{ fontSize: 11, fill: '#888' }} label={{ value: '用时(分钟)', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
                                   <Tooltip 
                                     contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                                    formatter={(value: number) => [`${value} 分钟`]}
+                                    formatter={(value: number, name: string) => [`${value} 分钟`, name]}
+                                    labelFormatter={(label) => {
+                                      // Show dates for this attempt
+                                      const idx = ['一刷', '二刷', '三刷', '四刷', '五刷'].indexOf(label as string);
+                                      if (idx < 0) return label;
+                                      const dates = keyProblems.map(p => p.records[idx] ? `${p.problemName.slice(0,4)}: ${p.records[idx].date}` : null).filter(Boolean);
+                                      return `${label}\n${dates.join(' | ')}`;
+                                    }}
                                   />
-                                  <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                  <Bar dataKey="一刷" fill="#f97316" radius={[4, 4, 0, 0]} />
-                                  <Bar dataKey="二刷" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                  <Bar dataKey="三刷" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                </BarChart>
+                                  <Legend wrapperStyle={{ fontSize: '11px' }} />
+                                  {keyProblems.map((p, idx) => {
+                                    const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4'];
+                                    const shortName = p.problemName.length > 6 ? p.problemName.slice(0, 6) + '..' : p.problemName;
+                                    return <Line key={p.problemId} type="monotone" dataKey={shortName} stroke={colors[idx % colors.length]} strokeWidth={2} dot={{ r: 4, fill: colors[idx % colors.length] }} activeDot={{ r: 6 }} />;
+                                  })}
+                                </LineChart>
                               </ResponsiveContainer>
                             </div>
-                            <p className="text-xs text-[#888] mt-3 text-center">柱状图展示每道题各刷次用时对比，用时递减代表掌握度提升</p>
+                            {/* 效率变化明细表 */}
+                            <div className="overflow-hidden rounded-xl border border-blue-100">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gradient-to-r from-blue-50 to-cyan-50">
+                                    <th className="text-left py-2.5 px-4 text-sm font-semibold text-blue-700">题目</th>
+                                    {['一刷', '二刷', '三刷'].map(label => (
+                                      <th key={label} className="text-center py-2.5 px-3 text-sm font-semibold text-blue-700">{label}</th>
+                                    ))}
+                                    <th className="text-center py-2.5 px-3 text-sm font-semibold text-blue-700">效率提升</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {keyProblems.map((p, idx) => {
+                                    const firstTime = p.records[0]?.timeSpent || 0;
+                                    const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
+                                    const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
+                                    return (
+                                      <tr key={p.problemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
+                                        <td className="py-2.5 px-4 text-sm font-medium text-[#333]">{p.problemName}</td>
+                                        {[0, 1, 2].map(i => {
+                                          const rec = p.records[i];
+                                          return (
+                                            <td key={i} className="text-center py-2.5 px-3 text-xs">
+                                              {rec ? (
+                                                <div>
+                                                  <div className="text-[#333] font-medium">{Math.round(rec.timeSpent / 60 * 10) / 10}分钟</div>
+                                                  <div className="text-[#999]">{rec.date}</div>
+                                                </div>
+                                              ) : (
+                                                <span className="text-[#ccc]">-</span>
+                                              )}
+                                            </td>
+                                          );
+                                        })}
+                                        <td className="text-center py-2.5 px-3">
+                                          <span className={`text-sm font-bold ${improvement > 0 ? 'text-green-500' : improvement < 0 ? 'text-red-500' : 'text-[#888]'}`}>
+                                            {improvement > 0 ? `↓${improvement}%` : improvement < 0 ? `↑${Math.abs(improvement)}%` : '-'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            <p className="text-xs text-[#888] mt-3 text-center">折线图展示各题用时趋势，表格展示每次刷题的日期与用时，效率提升=（一刷-最新刷）/一刷</p>
                           </div>
                         )}
 
@@ -1880,20 +1946,72 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* 打字测试趋势图表 */}
+              {/* 打字测试 - 表格+图表 */}
               {monthTyping.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                    打字测试趋势
+                    打字测试记录
                   </h3>
                   <div className="bg-white rounded-2xl p-6 shadow-sm">
-                    {/* 折线图 */}
-                    <div className="h-[240px] mb-4">
+                    {/* 表格形式展示 */}
+                    <div className="overflow-hidden rounded-xl border border-emerald-100 mb-5">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-emerald-50 to-teal-50">
+                            <th className="text-left py-3 px-4 text-sm font-semibold text-emerald-700">测试日期</th>
+                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">指力（字/分）</th>
+                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">悟性（正确率）</th>
+                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">速度变化</th>
+                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">正确率变化</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i, arr) => {
+                            const prev = i > 0 ? arr[i - 1] : null;
+                            const speedChange = prev ? t.speed - prev.speed : 0;
+                            const accChange = prev ? t.accuracy - prev.accuracy : 0;
+                            return (
+                              <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-emerald-50/30'}>
+                                <td className="py-3 px-4 text-sm font-medium text-[#333]">{t.date}</td>
+                                <td className="text-center py-3 px-4">
+                                  <span className="text-lg font-bold text-emerald-600">{t.speed}</span>
+                                  <span className="text-xs text-[#888] ml-1">字/分</span>
+                                </td>
+                                <td className="text-center py-3 px-4">
+                                  <span className="text-lg font-bold text-blue-600">{t.accuracy}</span>
+                                  <span className="text-xs text-[#888] ml-1">%</span>
+                                </td>
+                                <td className="text-center py-3 px-4">
+                                  {prev ? (
+                                    <span className={`text-sm font-bold ${speedChange > 0 ? 'text-green-500' : speedChange < 0 ? 'text-red-500' : 'text-[#888]'}`}>
+                                      {speedChange > 0 ? `+${speedChange}` : speedChange}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#ccc] text-sm">首次</span>
+                                  )}
+                                </td>
+                                <td className="text-center py-3 px-4">
+                                  {prev ? (
+                                    <span className={`text-sm font-bold ${accChange > 0 ? 'text-green-500' : accChange < 0 ? 'text-red-500' : 'text-[#888]'}`}>
+                                      {accChange > 0 ? `+${accChange}%` : `${accChange}%`}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[#ccc] text-sm">首次</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* 趋势折线图 */}
+                    <div className="h-[220px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
                           data={monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map(t => ({
-                            date: t.date.slice(5), // MM-DD format
+                            date: t.date.slice(5),
                             速度: t.speed,
                             正确率: t.accuracy,
                           }))}
@@ -1913,35 +2031,12 @@ export default function ReportPage() {
                           <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888' }} />
                           <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
                           <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#888' }} domain={[0, 100]} label={{ value: '正确率%', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#888' } }} />
-                          <Tooltip 
-                            contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                          />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }} />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
                           <Area yAxisId="left" type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" />
                           <Area yAxisId="right" type="monotone" dataKey="正确率" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorAccuracy)" />
                         </AreaChart>
                       </ResponsiveContainer>
-                    </div>
-                    {/* 数据明细 */}
-                    <div className="space-y-1.5 border-t border-gray-100 pt-4">
-                      {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i) => (
-                        <div key={i} className="flex items-center justify-between py-2 px-4 rounded-lg bg-[#F7F8FC]/50">
-                          <span className="font-medium text-[#333344] text-xs">{t.date}</span>
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-                              <span className="text-xs text-[#888]">速度</span>
-                              <span className="font-bold text-emerald-600 text-sm">{t.speed}</span>
-                              <span className="text-xs text-[#888]">字/分</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-full bg-blue-400"></span>
-                              <span className="text-xs text-[#888]">正确率</span>
-                              <span className="font-bold text-blue-600 text-sm">{t.accuracy}%</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                     {typingImprovement !== 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-100">
@@ -1955,6 +2050,125 @@ export default function ReportPage() {
               )}
             </div>
           </div>
+
+          {/* ========== 出勤与作业统计 ========== */}
+          {(monthHomework.length > 0 || monthRetry.length > 0) && (
+            <div className="rounded-[20px] shadow-xl shadow-purple-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #faf5ff, #f3e8ff)' }}>
+              <div className="p-10">
+                {/* 标题 */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 to-violet-500 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#333344]">月度出勤与作业</h2>
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  {/* 出勤统计 */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-purple-600 mb-4 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> 修行勤勉（出勤）
+                    </h3>
+                    {(() => {
+                      // Count unique dates from all records as attendance
+                      const allDates = new Set<string>();
+                      monthTyping.forEach(t => allDates.add(t.date));
+                      monthRetry.forEach(r => allDates.add(r.date));
+                      monthHomework.forEach(h => allDates.add(h.date));
+                      const attendanceCount = allDates.size;
+                      // Estimate expected days (weekdays in month)
+                      const year = parseInt(selectedMonth.split('-')[0]);
+                      const month = parseInt(selectedMonth.split('-')[1]);
+                      const daysInMonth = new Date(year, month, 0).getDate();
+                      let weekdays = 0;
+                      for (let d = 1; d <= daysInMonth; d++) {
+                        const day = new Date(year, month - 1, d).getDay();
+                        if (day !== 0 && day !== 6) weekdays++;
+                      }
+                      const attendanceRate = weekdays > 0 ? Math.round(attendanceCount / weekdays * 100) : 0;
+                      return (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#666]">出勤天数</span>
+                            <span className="text-2xl font-bold text-purple-600">{attendanceCount}<span className="text-sm text-[#888] font-normal"> 天</span></span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-[#666]">出勤率</span>
+                            <span className={`text-2xl font-bold ${attendanceRate >= 80 ? 'text-green-500' : attendanceRate >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{attendanceRate}%</span>
+                          </div>
+                          {/* 出勤率进度条 */}
+                          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-500 ${attendanceRate >= 80 ? 'bg-gradient-to-r from-green-400 to-emerald-500' : attendanceRate >= 60 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-red-400 to-rose-500'}`} style={{ width: `${Math.min(attendanceRate, 100)}%` }}></div>
+                          </div>
+                          {/* 出勤日期分布 */}
+                          <div className="pt-3 border-t border-gray-100">
+                            <p className="text-xs text-[#888] mb-2">出勤日期</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Array.from(allDates).sort().map(date => (
+                                <span key={date} className="text-xs px-2 py-1 bg-purple-50 text-purple-600 rounded-md">{date.slice(5)}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 作业完成统计 */}
+                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-base font-semibold text-violet-600 mb-4 flex items-center gap-2">
+                      <FileText className="h-4 w-4" /> 修炼日志（作业）
+                    </h3>
+                    {monthHomework.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[#666]">作业次数</span>
+                          <span className="text-2xl font-bold text-violet-600">{monthHomework.length}<span className="text-sm text-[#888] font-normal"> 次</span></span>
+                        </div>
+                        {/* 作业列表 */}
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                          {monthHomework.sort((a, b) => b.date.localeCompare(a.date)).map((hw, i) => (
+                            <div key={i} className="flex items-start gap-3 py-2.5 px-3 rounded-xl bg-violet-50/50">
+                              <div className="h-6 w-6 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-violet-500 text-xs">{i + 1}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[#333] font-medium truncate">{hw.content}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-[#888]">{hw.date}</span>
+                                  {hw.score && (
+                                    <span className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-500 rounded">{hw.score}分</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* 作业完成趋势 */}
+                        <div className="pt-3 border-t border-gray-100">
+                          <div className="h-[80px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={monthHomework.sort((a, b) => a.date.localeCompare(b.date)).map(hw => ({ date: hw.date.slice(5), 作业: 1 }))} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                                <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#888' }} />
+                                <YAxis hide />
+                                <Tooltip contentStyle={{ borderRadius: '8px', fontSize: '11px' }} />
+                                <Bar dataKey="作业" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-[#888] text-sm">本月暂无作业记录</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ========== 第五页：成长建议 ========== */}
           <div className="rounded-[20px] shadow-xl shadow-amber-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #fffbeb, #fef3c7)' }}>

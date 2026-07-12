@@ -86,6 +86,7 @@ export default function HomePage() {
   const [typingForms, setTypingForms] = useState<Record<string, TypingForm>>({});
   const [retryForms, setRetryForms] = useState<Record<string, RetryForm>>({});
   const [homeworkForms, setHomeworkForms] = useState<Record<string, HomeworkForm>>({});
+  const [problemSearch, setProblemSearch] = useState<string>('');
 
   const [savedStudents, setSavedStudents] = useState<Set<string>>(new Set());
 
@@ -586,23 +587,64 @@ export default function HomePage() {
                             <div className="flex items-center gap-2">
                               <Label className="text-xs text-amber-500 shrink-0">题目</Label>
                               {activeCourse && activeCourse.problems.length > 0 ? (
-                                <Select value={getRetryForm(student.id).problemId}
-                                  onValueChange={(v) => updateRetryForm(student.id, 'problemId', v)}>
-                                  <SelectTrigger className="w-40 h-8 text-sm xian-input">
-                                    <SelectValue placeholder="选择题目" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-anye border-xianjin/20">
-                                    {activeCourse.problems.map((p) => {
-                                      const kpId = p.knowledgePointIds?.[0] || p.knowledgePointId;
-                                      const kp = kpId ? activeCourse.knowledgePoints.find((k) => k.id === kpId) : undefined;
-                                      return (
-                                        <SelectItem key={p.id} value={p.id} className="text-amber-200 focus:bg-xianjin/10">
-                                          {p.name}{kp ? ` (${kp.name})` : ''}
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-48 h-8 text-sm xian-input justify-between">
+                                      {getRetryForm(student.id).problemId ? (
+                                        <span className="truncate text-amber-200">
+                                          {activeCourse.problems.find(p => p.id === getRetryForm(student.id).problemId)?.name || '选择题目'}
+                                        </span>
+                                      ) : (
+                                        <span className="text-amber-600">搜索题号/题目名</span>
+                                      )}
+                                      <ChevronDown className="h-3 w-3 text-amber-500 ml-1 shrink-0" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-64 p-0 bg-anye border-xianjin/20" align="start">
+                                    <div className="p-2 border-b border-xianjin/10">
+                                      <Input
+                                        placeholder="输入题号或题目名搜索..."
+                                        className="xian-input h-7 text-xs"
+                                        value={problemSearch}
+                                        onChange={(e) => setProblemSearch(e.target.value)}
+                                      />
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                      {activeCourse.problems
+                                        .filter(p => {
+                                          if (!problemSearch) return true;
+                                          const search = problemSearch.toLowerCase();
+                                          return p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
+                                        })
+                                        .map((p) => {
+                                          const kpId = p.knowledgePointIds?.[0] || p.knowledgePointId;
+                                          const kp = kpId ? activeCourse!.knowledgePoints.find((k) => k.id === kpId) : undefined;
+                                          return (
+                                            <div
+                                              key={p.id}
+                                              className={`px-3 py-2 text-xs cursor-pointer hover:bg-xianjin/10 transition-colors ${
+                                                getRetryForm(student.id).problemId === p.id ? 'bg-xianjin/20 text-xianjin' : 'text-amber-200'
+                                              }`}
+                                              onClick={() => {
+                                                updateRetryForm(student.id, 'problemId', p.id);
+                                                setProblemSearch('');
+                                              }}
+                                            >
+                                              <div className="font-medium">{p.name}</div>
+                                              {kp && <div className="text-amber-600 text-[10px] mt-0.5">{kp.name}</div>}
+                                            </div>
+                                          );
+                                        })}
+                                      {activeCourse.problems.filter(p => {
+                                        if (!problemSearch) return true;
+                                        const search = problemSearch.toLowerCase();
+                                        return p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
+                                      }).length === 0 && (
+                                        <div className="px-3 py-4 text-xs text-amber-600 text-center">未找到匹配的题目</div>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                               ) : (
                                 <span className="text-xs text-amber-700">请先添加题目</span>
                               )}

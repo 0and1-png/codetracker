@@ -58,6 +58,14 @@ export default function ReportPage() {
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
   const MAX_WORDS = 200;
+
+  // 第三页：月度横幅
+  const [reportMonth, setReportMonth] = useState(() => {
+    const now = new Date();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[now.getMonth()]}-${now.getFullYear()}`;
+  });
+  const [monthlyQuote, setMonthlyQuote] = useState('所有的运气和惊喜，都来自你去年的努力和今年的坚持。');
   
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -718,7 +726,31 @@ export default function ReportPage() {
           </div>
 
           {/* ========== 第三页：本月课程内容+知识点 ========== */}
-          <div className="rounded-[20px] shadow-xl shadow-purple-200/30 overflow-hidden" style={{ background: 'linear-gradient(180deg, #faf5ff 0%, #f5f0ff 100%)' }}>
+          <div className="rounded-[20px] overflow-hidden relative" style={{ background: '#f5f0e6' }}>
+            {/* 顶部黄色横幅 */}
+            <div 
+              className="w-full px-8 pt-6 pb-5 flex flex-col items-center justify-center"
+              style={{ background: '#e8b820' }}
+            >
+              {/* 月份年份 - 粗黑体居中 */}
+              <input
+                type="text"
+                value={reportMonth}
+                onChange={(e) => setReportMonth(e.target.value)}
+                className="text-center text-3xl font-black text-[#1a1a1a] bg-transparent border-none outline-none tracking-wider mb-3"
+                style={{ fontFamily: '"Arial Black", "Helvetica Neue", sans-serif' }}
+                placeholder="Jan-2026"
+              />
+              {/* 励志文案 - 白色居中 */}
+              <textarea
+                value={monthlyQuote}
+                onChange={(e) => setMonthlyQuote(e.target.value)}
+                className="text-center text-sm text-white bg-transparent border-none outline-none resize-none w-full max-w-lg leading-relaxed"
+                rows={2}
+                placeholder="输入本月励志文案..."
+              />
+            </div>
+
             <div className="p-10">
               {/* 标题 */}
               <div className="flex items-center gap-4 mb-10">

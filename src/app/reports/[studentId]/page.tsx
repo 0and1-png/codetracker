@@ -1120,13 +1120,20 @@ export default function ReportPage() {
                                   <tr className="bg-gradient-to-r from-orange-50 to-amber-50">
                                     <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">题目</th>
                                     <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">知识点</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">一刷时间</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">二刷时间</th>
-                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">三刷时间</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">一刷</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">二刷</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">三刷</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {keyProblems.map((p, idx) => (
+                                  {keyProblems.map((p, idx) => {
+                                    const formatDuration = (d: number) => {
+                                      if (!d) return '-';
+                                      const mins = Math.floor(d / 60);
+                                      const secs = d % 60;
+                                      return `${mins}分${secs}秒`;
+                                    };
+                                    return (
                                     <tr key={p.problemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-orange-50/30'}>
                                       <td className="py-3 px-4">
                                         <span className="font-medium text-[#333344] text-sm">{p.problemName}</span>
@@ -1139,16 +1146,25 @@ export default function ReportPage() {
                                         </div>
                                       </td>
                                       <td className="py-3 px-4 text-center">
-                                        <span className="text-sm text-[#555]">{p.records[0]?.date || '-'}</span>
+                                        <div className="text-xs">
+                                          <div className="text-[#555]">{p.records[0]?.date || '-'}</div>
+                                          <div className="text-orange-500 font-medium">{p.records[0] ? formatDuration(p.records[0].timeSpent) : '-'}</div>
+                                        </div>
                                       </td>
                                       <td className="py-3 px-4 text-center">
-                                        <span className="text-sm text-[#555]">{p.records[1]?.date || '-'}</span>
+                                        <div className="text-xs">
+                                          <div className="text-[#555]">{p.records[1]?.date || '-'}</div>
+                                          <div className="text-orange-500 font-medium">{p.records[1] ? formatDuration(p.records[1].timeSpent) : '-'}</div>
+                                        </div>
                                       </td>
                                       <td className="py-3 px-4 text-center">
-                                        <span className="text-sm text-[#555]">{p.records[2]?.date || '-'}</span>
+                                        <div className="text-xs">
+                                          <div className="text-[#555]">{p.records[2]?.date || '-'}</div>
+                                          <div className="text-orange-500 font-medium">{p.records[2] ? formatDuration(p.records[2].timeSpent) : '-'}</div>
+                                        </div>
                                       </td>
                                     </tr>
-                                  ))}
+                                  );})}
                                 </tbody>
                               </table>
                             </div>

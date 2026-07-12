@@ -498,6 +498,7 @@ export default function ReportPage() {
               </div>
               
               <div className="space-y-6">
+                {/* 知识点掌握情况 */}
                 <div>
                   <h3 className="text-xl font-semibold text-gray-700 mb-4">知识点掌握情况</h3>
                   <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -532,9 +533,124 @@ export default function ReportPage() {
                     )}
                   </div>
                 </div>
+
+                {/* 本月完成题目 */}
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4">本月完成题目</h3>
+                  {(() => {
+                    // Group retry records by problemId
+                    const problemGroups = monthRetry.reduce((acc, r) => {
+                      if (!acc[r.problemId]) acc[r.problemId] = [];
+                      acc[r.problemId].push(r);
+                      return acc;
+                    }, {} as Record<string, typeof monthRetry>);
+
+                    const problems = Object.entries(problemGroups).map(([problemId, records]) => {
+                      const hasRetry = records.length > 1;
+                      const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
+                      const first = sorted[0];
+                      // Get knowledge points for this problem from course.problems
+                      const problemDef = course?.problems?.find(p => p.id === problemId);
+                      const kpIds = problemDef
+                        ? [...(problemDef.knowledgePointIds || []), ...(problemDef.knowledgePointId ? [problemDef.knowledgePointId] : [])]
+                        : [];
+                      const kpNames: string[] = kpIds
+                        .map((id: string) => course!.knowledgePoints.find(k => k.id === id)?.name || '')
+                        .filter(Boolean);
+
+                      return { problemId, records: sorted, hasRetry, first, kpNames, problemName: first.problemName || problemId };
+                    }).sort((a, b) => a.first.date.localeCompare(b.first.date));
+
+                    const keyProblems = problems.filter(p => p.hasRetry);
+                    const normalProblems = problems.filter(p => !p.hasRetry);
+
+                    if (problems.length === 0) {
+                      return <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无完成题目记录</p>;
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {/* 重点题型（有三刷的） */}
+                        {keyProblems.length > 0 && (
+                          <div className="bg-white rounded-lg p-6 shadow-sm border-l-4 border-orange-400">
+                            <h4 className="text-lg font-semibold text-orange-700 mb-4 flex items-center gap-2">
+                              <AlertCircle className="h-5 w-5" /> 重点题型（多次练习）
+                            </h4>
+                            <div className="space-y-4">
+                              {keyProblems.map((p) => (
+                                <div key={p.problemId} className="border border-orange-100 rounded-lg p-4 bg-orange-50/50">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="font-semibold text-gray-800">{p.problemName}</span>
+                                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
+                                      练习 {p.records.length} 次
+                                    </span>
+                                  </div>
+                                  {p.kpNames.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-3">
+                                      {p.kpNames.map(name => (
+                                        <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="text-gray-500 border-b border-orange-100">
+                                        <th className="text-left py-1.5 px-2">次数</th>
+                                        <th className="text-left py-1.5 px-2">日期</th>
+                                        <th className="text-left py-1.5 px-2">用时</th>
+                                        <th className="text-left py-1.5 px-2">备注</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {p.records.map((r, idx) => (
+                                          <tr key={idx} className="border-b border-orange-50">
+                                            <td className="py-1.5 px-2 text-gray-600">第{r.attempt || idx + 1}次</td>
+                                            <td className="py-1.5 px-2 text-gray-600">{r.date}</td>
+                                            <td className="py-1.5 px-2 text-gray-600">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</td>
+                                            <td className="py-1.5 px-2 text-gray-500 text-xs">{r.notes || '-'}</td>
+                                          </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 普通题目（无三刷的） */}
+                        {normalProblems.length > 0 && (
+                          <div className="bg-white rounded-lg p-6 shadow-sm">
+                            <h4 className="text-lg font-semibold text-gray-700 mb-4">已完成题目</h4>
+                            <div className="space-y-2">
+                              {normalProblems.map((p) => (
+                                <div key={p.problemId} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-green-500">✓</span>
+                                    <span className="text-gray-800 font-medium">{p.problemName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {p.kpNames.map(name => (
+                                      <span key={name} className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded">
+                                        {name}
+                                      </span>
+                                    ))}
+                                    <span className="text-xs text-gray-400 ml-2">{p.first.date}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 
                 {/* 统计信息 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="bg-white rounded-lg p-6 shadow-sm">
                     <div className="text-3xl font-bold text-purple-600">{learnedKnowledge.length}</div>
                     <div className="text-sm text-gray-600 mt-1">已学习知识点</div>
@@ -542,6 +658,15 @@ export default function ReportPage() {
                   <div className="bg-white rounded-lg p-6 shadow-sm">
                     <div className="text-3xl font-bold text-blue-600">{new Set(monthRetry.map(r => r.problemId)).size}</div>
                     <div className="text-sm text-gray-600 mt-1">本月完成编程题</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <div className="text-3xl font-bold text-orange-600">
+                      {(() => {
+                        const problemIds = [...new Set(monthRetry.map(r => r.problemId))];
+                        return problemIds.filter(pid => monthRetry.filter(r => r.problemId === pid).length > 1).length;
+                      })()}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">重点题型（多次练习）</div>
                   </div>
                 </div>
               </div>

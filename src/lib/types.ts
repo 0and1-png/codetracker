@@ -110,3 +110,28 @@ export interface KnowledgeProgress {
   description?: string; // Teacher's assessment description
   updatedAt: string;
 }
+
+// ============ Sprint Goal (冲刺目标) ============
+
+/** GESP 考级等级 */
+export type GESPLlevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+
+/** 自定义赛事/活动 */
+export interface CompetitionEvent {
+  id: string;
+  name: string;           // 赛事名称
+  date?: string;          // 预计日期
+  description?: string;   // 简要说明
+  category?: string;      // 分类（如：编程竞赛、考级、科技比赛等）
+  createdAt: string;
+}
+
+/** 冲刺目标数据（按月份存储） */
+export interface SprintGoalData {
+  month: string;                    // YYYY-MM
+  studentId: string;
+  courseGoal: string;               // 课程目标（自动推荐 + 可编辑）
+  gespLevels: GESPLlevel[];         // 选中的 GESP 考级等级
+  competitionIds: string[];         // 选中的赛事 ID
+  updatedAt: string;
+}

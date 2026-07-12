@@ -213,3 +213,31 @@ export const COURSE_COLORS: Record<string, { bg: string; border: string; text: s
     to: '#b45309',
   },
 };
+
+// ============ GESP 考级预设 ============
+export const GESP_LEVELS = [
+  { level: 1, name: 'GESP一级', desc: '基础语法入门', color: '#94a3b8' },
+  { level: 2, name: 'GESP二级', desc: '基本数据结构', color: '#60a5fa' },
+  { level: 3, name: 'GESP三级', desc: '算法基础', color: '#34d399' },
+  { level: 4, name: 'GESP四级', desc: '排序与搜索', color: '#a78bfa' },
+  { level: 5, name: 'GESP五级', desc: '递归与分治', color: '#f472b6' },
+  { level: 6, name: 'GESP六级', desc: '动态规划入门', color: '#fb923c' },
+  { level: 7, name: 'GESP七级', desc: '图论基础', color: '#e879f9' },
+  { level: 8, name: 'GESP八级', desc: '高级数据结构', color: '#f87171' },
+  { level: 9, name: 'GESP九级', desc: '数论与组合', color: '#2dd4bf' },
+  { level: 10, name: 'GESP十级', desc: '计算几何', color: '#818cf8' },
+  { level: 11, name: 'GESP十一级', desc: '高级算法', color: '#fbbf24' },
+  { level: 12, name: 'GESP十二级', desc: '竞赛综合', color: '#ef4444' },
+] as const;
+
+// ============ 默认赛事模板 ============
+export const DEFAULT_COMPETITIONS = [
+  { id: 'comp_csp_j', name: 'CSP-J 入门组', category: '信奥竞赛', description: 'CCF非专业级软件能力认证-入门级' },
+  { id: 'comp_csp_s', name: 'CSP-S 提高组', category: '信奥竞赛', description: 'CCF非专业级软件能力认证-提高级' },
+  { id: 'comp_noip', name: 'NOIP 普及组', category: '信奥竞赛', description: '全国青少年信息学奥林匹克联赛' },
+  { id: 'comp_lanqiao', name: '蓝桥杯', category: '编程竞赛', description: '蓝桥杯全国软件和信息技术专业人才大赛' },
+  { id: 'comp_noc', name: 'NOC 创客赛', category: '科技创新', description: '全国中小学信息技术创新与实践大赛' },
+  { id: 'comp_whale', name: '世界机器人大会', category: '机器人竞赛', description: '世界机器人大会青少年机器人设计大赛' },
+  { id: 'comp_scratch', name: 'Scratch创意编程', category: '创意编程', description: '全国青少年Scratch创意编程大赛' },
+  { id: 'comp_python_creative', name: 'Python创意编程', category: '创意编程', description: '全国青少年Python创意编程大赛' },
+] as const;

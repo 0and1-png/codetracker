@@ -7,12 +7,16 @@ import type {
   HomeworkRecord,
   KnowledgeProgress,
   KnowledgeStatus,
+  CompetitionEvent,
+  SprintGoalData,
+  GESPLlevel,
 } from './types';
 import {
   COURSE_PRESETS,
   DEFAULT_CPP_KNOWLEDGE,
   DEFAULT_PYTHON_KNOWLEDGE,
   DEFAULT_VISUAL_KNOWLEDGE,
+  DEFAULT_COMPETITIONS,
 } from './constants';
 
 const COURSES_KEY = 'coding_courses';
@@ -21,6 +25,8 @@ const TYPING_KEY = 'coding_typing_records';
 const RETRY_KEY = 'coding_retry_records';
 const HOMEWORK_KEY = 'coding_homework_records';
 const KNOWLEDGE_KEY = 'coding_knowledge_progress';
+const COMPETITIONS_KEY = 'coding_competitions';
+const SPRINT_GOALS_KEY = 'coding_sprint_goals';
 
 function getItem<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -298,4 +304,138 @@ export function updateKnowledgeScore(
     existing.updatedAt = new Date().toISOString();
     saveKnowledge(list);
   }
+}
+
+// ============ Competitions (自定义赛事) ============
+
+function getCompetitions(): CompetitionEvent[] {
+  return getItem<CompetitionEvent[]>(COMPETITIONS_KEY, []);
+}
+
+function saveCompetitions(data: CompetitionEvent[]): void {
+  setItem(COMPETITIONS_KEY, data);
+}
+
+/** 获取所有赛事（默认 + 自定义） */
+export function getAllCompetitions(): CompetitionEvent[] {
+  const custom = getCompetitions();
+  const defaults: CompetitionEvent[] = DEFAULT_COMPETITIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    category: c.category,
+    description: c.description,
+    createdAt: new Date().toISOString(),
+  }));
+  // Merge: defaults first, then custom (avoid duplicates by id)
+  const customIds = new Set(custom.map((c) => c.id));
+  const merged = [...defaults.filter((d) => !customIds.has(d.id)), ...custom];
+  return merged;
+}
+
+/** 添加自定义赛事 */
+export function addCompetition(event: Omit<CompetitionEvent, 'id' | 'createdAt'>): CompetitionEvent {
+  const list = getCompetitions();
+  const newEvent: CompetitionEvent = {
+    ...event,
+    id: `comp_custom_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  list.push(newEvent);
+  saveCompetitions(list);
+  return newEvent;
+}
+
+/** 删除自定义赛事（只能删自定义的，不能删默认的） */
+export function removeCompetition(id: string): void {
+  const list = getCompetitions();
+  const filtered = list.filter((c) => c.id !== id);
+  saveCompetitions(filtered);
+}
+
+// ============ Sprint Goals (冲刺目标) ============
+
+function getSprintGoals(): SprintGoalData[] {
+  return getItem<SprintGoalData[]>(SPRINT_GOALS_KEY, []);
+}
+
+function saveSprintGoals(data: SprintGoalData[]): void {
+  setItem(SPRINT_GOALS_KEY, data);
+}
+
+/** 获取某月某学生的冲刺目标 */
+export function getSprintGoal(studentId: string, month: string): SprintGoalData | null {
+  const list = getSprintGoals();
+  return list.find((g) => g.studentId === studentId && g.month === month) || null;
+}
+
+/** 保存/更新冲刺目标 */
+export function saveSprintGoal(data: SprintGoalData): void {
+  const list = getSprintGoals();
+  const idx = list.findIndex((g) => g.studentId === data.studentId && g.month === data.month);
+  if (idx >= 0) {
+    list[idx] = data;
+  } else {
+    list.push(data);
+  }
+  saveSprintGoals(list);
+}
+
+/** 更新冲刺目标的课程目标 */
+export function updateSprintGoalCourse(studentId: string, month: string, courseGoal: string): void {
+  const list = getSprintGoals();
+  const existing = list.find((g) => g.studentId === studentId && g.month === month);
+  if (existing) {
+    existing.courseGoal = courseGoal;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    list.push({
+      month,
+      studentId,
+      courseGoal,
+      gespLevels: [],
+      competitionIds: [],
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  saveSprintGoals(list);
+}
+
+/** 更新冲刺目标的 GESP 考级 */
+export function updateSprintGoalGesp(studentId: string, month: string, levels: GESPLlevel[]): void {
+  const list = getSprintGoals();
+  const existing = list.find((g) => g.studentId === studentId && g.month === month);
+  if (existing) {
+    existing.gespLevels = levels;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    list.push({
+      month,
+      studentId,
+      courseGoal: '',
+      gespLevels: levels,
+      competitionIds: [],
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  saveSprintGoals(list);
+}
+
+/** 更新冲刺目标的赛事选择 */
+export function updateSprintGoalCompetitions(studentId: string, month: string, competitionIds: string[]): void {
+  const list = getSprintGoals();
+  const existing = list.find((g) => g.studentId === studentId && g.month === month);
+  if (existing) {
+    existing.competitionIds = competitionIds;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    list.push({
+      month,
+      studentId,
+      courseGoal: '',
+      gespLevels: [],
+      competitionIds,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  saveSprintGoals(list);
 }

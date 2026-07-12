@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check } from 'lucide-react';
 import {
   getStudents,
   getTypingByStudent,
@@ -16,10 +16,15 @@ import {
   getHomeworkByStudent,
   getKnowledgeByStudent,
   getCourses,
+  getAllCompetitions,
+  getSprintGoal,
+  saveSprintGoal,
+  addCompetition,
+  removeCompetition,
 } from '@/lib/store';
-import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course } from '@/lib/types';
+import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
-import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
+import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS } from '@/lib/constants';
 
 type PeriodType = 'week' | 'month' | 'custom';
 
@@ -54,6 +59,16 @@ export default function ReportPage() {
   const [studentPhoto, setStudentPhoto] = useState<string>('');
   const [coverPhoto, setCoverPhoto] = useState<string>('');
   const [classroomPhotos, setClassroomPhotos] = useState<string[]>([]);
+
+  // 冲刺目标表格状态
+  const [sprintCourseGoal, setSprintCourseGoal] = useState('');
+  const [sprintGespLevels, setSprintGespLevels] = useState<GESPLlevel[]>([]);
+  const [sprintCompetitionIds, setSprintCompetitionIds] = useState<string[]>([]);
+  const [allCompetitions, setAllCompetitions] = useState<CompetitionEvent[]>([]);
+  const [showAddCompetition, setShowAddCompetition] = useState(false);
+  const [newCompName, setNewCompName] = useState('');
+  const [newCompDate, setNewCompDate] = useState('');
+  const [newCompCategory, setNewCompCategory] = useState('');
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -357,6 +372,76 @@ export default function ReportPage() {
       setNextGoal(autoSprintGoal);
     }
   }, [autoSprintGoal, nextGoal]);
+
+  // Load sprint goal data and competitions
+  useEffect(() => {
+    if (!student) return;
+    // Load competitions
+    setAllCompetitions(getAllCompetitions());
+    // Load existing sprint goal for current month
+    const existing = getSprintGoal(student.id, selectedMonth);
+    if (existing) {
+      setSprintCourseGoal(existing.courseGoal);
+      setSprintGespLevels(existing.gespLevels);
+      setSprintCompetitionIds(existing.competitionIds);
+    } else {
+      // Auto-fill course goal from next chapter
+      setSprintCourseGoal(autoSprintGoal || '');
+      setSprintGespLevels([]);
+      setSprintCompetitionIds([]);
+    }
+  }, [student, selectedMonth, autoSprintGoal]);
+
+  // Save sprint goal when changed
+  const handleSaveSprintGoal = useCallback(() => {
+    if (!student) return;
+    const data: SprintGoalData = {
+      month: selectedMonth,
+      studentId: student.id,
+      courseGoal: sprintCourseGoal,
+      gespLevels: sprintGespLevels,
+      competitionIds: sprintCompetitionIds,
+      updatedAt: new Date().toISOString(),
+    };
+    saveSprintGoal(data);
+  }, [student, selectedMonth, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds]);
+
+  // Toggle GESP level
+  const toggleGespLevel = useCallback((level: GESPLlevel) => {
+    setSprintGespLevels(prev => 
+      prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
+    );
+  }, []);
+
+  // Toggle competition
+  const toggleCompetition = useCallback((id: string) => {
+    setSprintCompetitionIds(prev =>
+      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
+    );
+  }, []);
+
+  // Add custom competition
+  const handleAddCompetition = useCallback(() => {
+    if (!newCompName.trim()) return;
+    const newEvent = addCompetition({
+      name: newCompName.trim(),
+      date: newCompDate || undefined,
+      category: newCompCategory || '自定义',
+    });
+    setAllCompetitions(getAllCompetitions());
+    setSprintCompetitionIds(prev => [...prev, newEvent.id]);
+    setNewCompName('');
+    setNewCompDate('');
+    setNewCompCategory('');
+    setShowAddCompetition(false);
+  }, [newCompName, newCompDate, newCompCategory]);
+
+  // Remove custom competition
+  const handleRemoveCompetition = useCallback((id: string) => {
+    removeCompetition(id);
+    setAllCompetitions(getAllCompetitions());
+    setSprintCompetitionIds(prev => prev.filter(cid => cid !== id));
+  }, []);
 
   const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
@@ -1764,17 +1849,188 @@ export default function ReportPage() {
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
                   <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
-                    <span className="text-lg">🎯</span> 冲刺Goal
+                    <span className="text-lg">🎯</span> 冲刺目标
                   </h3>
-                  <Textarea
-                    value={nextGoal}
-                    onChange={(e) => setNextGoal(e.target.value)}
-                    placeholder="写下下月学习目标..."
-                    className="min-h-[100px] resize-none rounded-xl border-gray-200 bg-[#F7F8FC] focus-visible:ring-amber-200"
-                  />
-                  {autoSprintGoal && (
-                    <p className="text-xs text-[#888] mt-2">自动推荐：{autoSprintGoal}</p>
-                  )}
+                  
+                  {/* 冲刺目标表格 */}
+                  <div className="space-y-4">
+                    {/* 模块1：课程目标 */}
+                    <div className="border border-amber-200/60 rounded-xl overflow-hidden">
+                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 border-b border-amber-200/40">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-amber-600" strokeWidth={1.5} />
+                          <span className="text-sm font-semibold text-amber-800">课程目标</span>
+                          <span className="text-xs text-amber-600/70 ml-auto">自动推荐下月学习内容</span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <Textarea
+                          value={sprintCourseGoal}
+                          onChange={(e) => setSprintCourseGoal(e.target.value)}
+                          placeholder="输入下月课程学习目标..."
+                          className="min-h-[80px] resize-none rounded-lg border-amber-200/50 bg-amber-50/30 text-sm focus-visible:ring-amber-200"
+                        />
+                        {autoSprintGoal && !sprintCourseGoal && (
+                          <button
+                            onClick={() => setSprintCourseGoal(autoSprintGoal)}
+                            className="mt-2 text-xs text-amber-600 hover:text-amber-700 flex items-center gap-1 transition-colors"
+                          >
+                            <Target className="h-3 w-3" />
+                            使用自动推荐：{autoSprintGoal}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 模块2：GESP考级 */}
+                    <div className="border border-blue-200/60 rounded-xl overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200/40">
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4 text-blue-600" strokeWidth={1.5} />
+                          <span className="text-sm font-semibold text-blue-800">GESP 考级</span>
+                          <span className="text-xs text-blue-600/70 ml-auto">选择目标考级等级</span>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <div className="grid grid-cols-4 gap-2">
+                          {GESP_LEVELS.map((gesp) => {
+                            const isSelected = sprintGespLevels.includes(gesp.level as GESPLlevel);
+                            return (
+                              <button
+                                key={gesp.level}
+                                onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                className={`relative px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  {isSelected && <Check className="h-3 w-3" strokeWidth={2} />}
+                                  <span>{gesp.name}</span>
+                                </div>
+                                <div className={`text-[10px] mt-0.5 ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
+                                  {gesp.desc}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 模块3：赛事 */}
+                    <div className="border border-purple-200/60 rounded-xl overflow-hidden">
+                      <div className="bg-gradient-to-r from-purple-50 to-fuchsia-50 px-4 py-3 border-b border-purple-200/40">
+                        <div className="flex items-center gap-2">
+                          <Trophy className="h-4 w-4 text-purple-600" strokeWidth={1.5} />
+                          <span className="text-sm font-semibold text-purple-800">赛事活动</span>
+                          <button
+                            onClick={() => setShowAddCompetition(!showAddCompetition)}
+                            className="ml-auto text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                          >
+                            <Plus className="h-3 w-3" />
+                            自定义添加
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        {/* 添加赛事表单 */}
+                        {showAddCompetition && (
+                          <div className="mb-4 p-3 bg-purple-50/50 rounded-lg border border-purple-200/40 space-y-2">
+                            <div className="flex gap-2">
+                              <Input
+                                value={newCompName}
+                                onChange={(e) => setNewCompName(e.target.value)}
+                                placeholder="赛事名称"
+                                className="flex-1 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
+                              />
+                              <Input
+                                value={newCompDate}
+                                onChange={(e) => setNewCompDate(e.target.value)}
+                                placeholder="预计日期"
+                                type="date"
+                                className="w-32 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Input
+                                value={newCompCategory}
+                                onChange={(e) => setNewCompCategory(e.target.value)}
+                                placeholder="分类（如：编程竞赛）"
+                                className="flex-1 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
+                              />
+                              <Button
+                                onClick={handleAddCompetition}
+                                className="h-8 px-3 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
+                              >
+                                添加
+                              </Button>
+                              <Button
+                                onClick={() => setShowAddCompetition(false)}
+                                variant="outline"
+                                className="h-8 px-3 text-xs rounded-lg border-purple-200 text-purple-600"
+                              >
+                                取消
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 赛事列表 */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {allCompetitions.map((comp) => {
+                            const isSelected = sprintCompetitionIds.includes(comp.id);
+                            const isCustom = comp.id.startsWith('comp_custom_');
+                            return (
+                              <div
+                                key={comp.id}
+                                className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-purple-400 shadow-md shadow-purple-200/50'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                                }`}
+                                onClick={() => toggleCompetition(comp.id)}
+                              >
+                                <div className={`h-4 w-4 rounded flex items-center justify-center border ${
+                                  isSelected ? 'bg-white/20 border-white/40' : 'border-gray-300'
+                                }`}>
+                                  {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={2} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-medium truncate">{comp.name}</div>
+                                  <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>
+                                    {comp.category}
+                                  </div>
+                                </div>
+                                {isCustom && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
+                                    className={`h-4 w-4 rounded-full flex items-center justify-center ${
+                                      isSelected ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 保存按钮 */}
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        onClick={handleSaveSprintGoal}
+                        className="rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md shadow-amber-200/50 transition-all duration-200"
+                      >
+                        <Target className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                        保存冲刺目标
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

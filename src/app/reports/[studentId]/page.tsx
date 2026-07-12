@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Star, Camera } from 'lucide-react';
 import {
   getStudents,
   getTypingByStudent,
@@ -44,6 +44,21 @@ export default function ReportPage() {
   const [nextGoal, setNextGoal] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
   const [exporting, setExporting] = useState(false);
+  
+  // 新增：学生信息和图片
+  const [studentAge, setStudentAge] = useState('');
+  const [studentSchool, setStudentSchool] = useState('');
+  const [programmingTime, setProgrammingTime] = useState('');
+  const [learningContent, setLearningContent] = useState('');
+  const [interests, setInterests] = useState('');
+  const [studentPhoto, setStudentPhoto] = useState<string>('');
+  const [coverPhoto, setCoverPhoto] = useState<string>('');
+  const [classroomPhotos, setClassroomPhotos] = useState<string[]>([]);
+  
+  // 新增：战码少年有话说
+  const [studentWords, setStudentWords] = useState('');
+  const MAX_WORDS = 200;
+  
   const reportRef = useRef<HTMLDivElement>(null);
 
   const loadData = useCallback(async () => {
@@ -51,6 +66,7 @@ export default function ReportPage() {
     const s = students.find(st => st.id === studentId);
     if (!s) return;
     setStudent(s);
+    setStudentSchool(s.notes || '');
 
     const courses = await getCourses();
     const c = courses.find(co => co.id === s.courseId);
@@ -71,6 +87,9 @@ export default function ReportPage() {
 
   const getPeriodDates = () => {
     if (period === 'custom') {
+      if (!customStart || !customEnd) {
+        return { start: '', end: '' };
+      }
       return { start: customStart, end: customEnd };
     }
     const now = new Date();
@@ -89,14 +108,17 @@ export default function ReportPage() {
 
   const { start: periodStart, end: periodEnd } = getPeriodDates();
 
-  const filterByPeriod = <T extends { date: string }>(records: T[]) =>
-    records.filter(r => r.date >= periodStart && r.date <= periodEnd);
+  const filterByPeriod = <T extends { date: string }>(records: T[], start: string, end: string) => {
+    if (!start || !end) return records;
+    return records.filter(r => r.date >= start && r.date <= end);
+  };
 
-  const monthTyping = filterByPeriod(allTyping);
-  const monthRetry = filterByPeriod(allRetry);
-  const monthHomework = filterByPeriod(allHomework);
+  const monthTyping = filterByPeriod(allTyping, periodStart, periodEnd);
+  const monthRetry = filterByPeriod(allRetry, periodStart, periodEnd);
+  const monthHomework = filterByPeriod(allHomework, periodStart, periodEnd);
 
   const prevPeriodStart = (() => {
+    if (!periodStart || !periodEnd) return '';
     const start = new Date(periodStart);
     const end = new Date(periodEnd);
     const diff = end.getTime() - start.getTime();
@@ -105,6 +127,7 @@ export default function ReportPage() {
     return prevStart.toISOString().split('T')[0];
   })();
   const prevPeriodEnd = (() => {
+    if (!periodStart) return '';
     const start = new Date(periodStart);
     return new Date(start.getTime() - 86400000).toISOString().split('T')[0];
   })();
@@ -122,24 +145,102 @@ export default function ReportPage() {
 
   const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
+  // 图片上传处理
+  const handleImageUpload = (setter: (value: string) => void) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setter(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleClassroomPhotoUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file && classroomPhotos.length < 6) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setClassroomPhotos([...classroomPhotos, event.target?.result as string]);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
   const exportPDF = async () => {
     if (!reportRef.current || !student) return;
     setExporting(true);
     try {
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
-      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        onclone: (_doc: Document, element: HTMLElement) => {
+          // Fix: html2canvas doesn't support lab() color function from Tailwind CSS 4
+          // Replace all gradient backgrounds with solid colors in the cloned DOM
+          const allElements = element.querySelectorAll('*');
+          allElements.forEach((el: Element) => {
+            const htmlEl = el as HTMLElement;
+            const computed = window.getComputedStyle(htmlEl);
+            const bg = computed.backgroundImage;
+            if (bg && (bg.includes('lab(') || bg.includes('oklab('))) {
+              htmlEl.style.backgroundImage = 'none';
+              htmlEl.style.backgroundColor = computed.backgroundColor || '#ffffff';
+            }
+            // Also fix border colors that might use lab()
+            const borderColor = computed.borderColor;
+            if (borderColor && borderColor.includes('lab(')) {
+              htmlEl.style.borderColor = '#d1d5db';
+            }
+            const color = computed.color;
+            if (color && color.includes('lab(')) {
+              htmlEl.style.color = '#1f2937';
+            }
+          });
+        }
+      });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Multi-page support
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const width = imgWidth * ratio;
-      const height = imgHeight * ratio;
-      const x = (pdfWidth - width) / 2;
-      pdf.addImage(imgData, 'PNG', x, 0, width, height);
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+      
+      if (scaledHeight <= pdfHeight) {
+        const x = (pdfWidth - imgWidth * ratio) / 2;
+        pdf.addImage(imgData, 'PNG', x, 0, imgWidth * ratio, scaledHeight);
+      } else {
+        // Split into multiple pages
+        let yOffset = 0;
+        let pageNum = 0;
+        while (yOffset < scaledHeight) {
+          if (pageNum > 0) pdf.addPage();
+          const x = (pdfWidth - imgWidth * ratio) / 2;
+          pdf.addImage(imgData, 'PNG', x, -yOffset, imgWidth * ratio, scaledHeight);
+          yOffset += pdfHeight;
+          pageNum++;
+        }
+      }
+      
       const fileName = `${student.name}_${selectedMonth.replace('-', '年')}月_成长档案.pdf`;
       pdf.save(fileName);
     } catch (err) {
@@ -191,8 +292,14 @@ export default function ReportPage() {
   const weeklyTyping = getWeeklyTyping();
   const retryComparison = getRetryComparison();
 
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star key={i} className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+    ));
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* 控制栏 */}
       <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -222,7 +329,7 @@ export default function ReportPage() {
                   </div>
                 )}
               </div>
-              <Button onClick={exportPDF} disabled={exporting} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+              <Button onClick={exportPDF} disabled={exporting} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
                 <Download className="mr-2 h-4 w-4" />
                 {exporting ? '导出中...' : '导出PDF'}
               </Button>
@@ -236,101 +343,248 @@ export default function ReportPage() {
         <div className="max-w-4xl mx-auto">
           <div ref={reportRef} className="bg-white shadow-2xl rounded-lg overflow-hidden">
             
-            {/* 封面页 */}
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-16 min-h-[800px] flex flex-col justify-center items-center relative">
-              <div className="absolute top-8 right-8 text-right">
+            {/* 第一页：封面 */}
+            <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white p-12 min-h-[800px] flex flex-col justify-between relative">
+              <div className="absolute top-6 right-6 text-right">
                 <div className="text-sm opacity-80">战码编程</div>
-                <div className="text-xs opacity-60">战码编程</div>
               </div>
               
               <div className="text-center space-y-8">
                 <div className="space-y-4">
-                  <h1 className="text-6xl font-bold tracking-wider">战码少年</h1>
+                  <h1 className="text-5xl font-bold tracking-wider">战码少年</h1>
+                  <h2 className="text-3xl font-semibold opacity-90">修炼手册</h2>
                   <div className="w-32 h-1 bg-white/50 mx-auto"></div>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-12 space-y-6">
-                  <div className="w-48 h-48 bg-white/20 rounded-full mx-auto flex items-center justify-center border-4 border-white/30">
-                    <User className="h-24 w-24 text-white/60" />
-                  </div>
-                  
-                  <div className="space-y-3 text-left">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm opacity-80">姓名：</span>
-                      <span className="text-xl font-semibold">{student.name}</span>
-                    </div>
-                    {student.notes && (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm opacity-80">学校：</span>
-                        <span className="text-lg">{student.notes}</span>
+                {/* 学生大头贴 */}
+                <div className="relative inline-block">
+                  <div 
+                    className="w-40 h-40 bg-white/20 rounded-full mx-auto flex items-center justify-center border-4 border-white/30 cursor-pointer hover:bg-white/30 transition-colors overflow-hidden"
+                    onClick={() => handleImageUpload(setCoverPhoto)}
+                  >
+                    {coverPhoto ? (
+                      <img src={coverPhoto} alt="学生照片" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <Camera className="h-16 w-16 text-white/60 mx-auto mb-2" />
+                        <span className="text-xs opacity-60">点击上传照片</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm opacity-80">课程：</span>
-                      <span className="text-lg">{course?.name || '编程'}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm opacity-80">报告周期：</span>
-                      <span className="text-lg">{periodLabel}</span>
-                    </div>
                   </div>
                 </div>
                 
-                <div className="pt-8 space-y-2">
-                  <p className="text-lg opacity-90">快乐学习 · 收获成长</p>
-                  <p className="text-sm opacity-70">爱心施教 · 娃娃为王</p>
+                {/* 战码少年有话说 */}
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-md mx-auto">
+                  <p className="text-sm opacity-80 mb-2">战码少年有话说：</p>
+                  <Textarea
+                    value={studentWords}
+                    onChange={(e) => {
+                      if (e.target.value.length <= MAX_WORDS) {
+                        setStudentWords(e.target.value);
+                      }
+                    }}
+                    placeholder="写下你想说的话..."
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 min-h-[80px] resize-none"
+                  />
+                  <p className="text-xs opacity-60 mt-2 text-right">{studentWords.length}/{MAX_WORDS}</p>
+                </div>
+              </div>
+              
+              <div className="text-center space-y-2">
+                <p className="text-lg opacity-90">快乐学习 · 收获成长</p>
+                <p className="text-sm opacity-70">爱心施教 · 娃娃为王</p>
+              </div>
+            </div>
+
+            {/* 第二页：学生基本信息 */}
+            <div className="p-12 min-h-[700px]">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-blue-200">
+                <User className="h-8 w-8 text-blue-600" />
+                <h2 className="text-3xl font-bold text-gray-800">学生基本信息</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-8">
+                {/* 左侧：学生照片 */}
+                <div className="flex flex-col items-center justify-center">
+                  <div 
+                    className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors overflow-hidden"
+                    onClick={() => handleImageUpload(setStudentPhoto)}
+                  >
+                    {studentPhoto ? (
+                      <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center text-gray-400">
+                        <Upload className="h-12 w-12 mx-auto mb-2" />
+                        <span className="text-sm">点击上传照片</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* 右侧：基本信息 */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">学生姓名</Label>
+                    <Input value={student.name} disabled className="mt-1 bg-gray-50" />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">年龄</Label>
+                    <Input 
+                      value={studentAge} 
+                      onChange={(e) => setStudentAge(e.target.value)}
+                      placeholder="请输入年龄"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">学校</Label>
+                    <Input 
+                      value={studentSchool} 
+                      onChange={(e) => setStudentSchool(e.target.value)}
+                      placeholder="请输入学校"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">编程时间</Label>
+                    <Input 
+                      value={programmingTime} 
+                      onChange={(e) => setProgrammingTime(e.target.value)}
+                      placeholder="例如：1年"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">学习内容</Label>
+                    <Input 
+                      value={learningContent} 
+                      onChange={(e) => setLearningContent(e.target.value)}
+                      placeholder="例如：Scratch图形化编程"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">兴趣爱好</Label>
+                    <Input 
+                      value={interests} 
+                      onChange={(e) => setInterests(e.target.value)}
+                      placeholder="例如：画画、游戏、音乐"
+                      className="mt-1"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 本月课程内容 */}
-            <div className="p-12 min-h-[600px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
-                <BookOpen className="h-8 w-8 text-indigo-600" />
+            {/* 第三页：本月课程内容+知识点 */}
+            <div className="p-12 min-h-[700px] bg-gray-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
+                <BookOpen className="h-8 w-8 text-purple-600" />
                 <h2 className="text-3xl font-bold text-gray-800">本月课程内容</h2>
               </div>
               
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-700 mb-4">知识点掌握情况</h3>
-                  <div className="space-y-3">
-                    {knowledge.length > 0 ? knowledge.map((kp) => {
-                      const kpDef = course?.knowledgePoints.find(k => k.id === kp.knowledgePointId);
-                      return (
-                        <div key={kp.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-3 h-3 rounded-full ${kp.status === 'mastered' ? 'bg-green-500' : kp.status === 'learning' ? 'bg-yellow-500' : 'bg-gray-400'}`}></div>
-                            <span className="font-medium text-gray-800">{kp.knowledgePointName}</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge variant={kp.status === 'mastered' ? 'default' : kp.status === 'learning' ? 'secondary' : 'outline'}>
-                              {KNOWLEDGE_STATUS_LABELS[kp.status]}
-                            </Badge>
-                            {kp.score && <span className="text-sm text-gray-600">评分: {kp.score}/10</span>}
-                          </div>
-                        </div>
-                      );
-                    }) : (
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    {knowledge.length > 0 ? (
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 px-4 text-gray-600 font-semibold">知识点</th>
+                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">掌握程度</th>
+                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">评分</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {knowledge.map((kp) => (
+                            <tr key={kp.id} className="border-b border-gray-100">
+                              <td className="py-3 px-4 font-medium text-gray-800">{kp.knowledgePointName}</td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge variant={kp.status === 'mastered' ? 'default' : kp.status === 'learning' ? 'secondary' : 'outline'}>
+                                  {KNOWLEDGE_STATUS_LABELS[kp.status]}
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex justify-center">
+                                  {renderStars(kp.score || 0)}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
                       <p className="text-gray-500 text-center py-8">暂无知识点记录</p>
                     )}
+                  </div>
+                </div>
+                
+                {/* 统计信息 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <div className="text-3xl font-bold text-purple-600">{knowledge.length}</div>
+                    <div className="text-sm text-gray-600 mt-1">累计学习知识点</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                    <div className="text-3xl font-bold text-blue-600">{allRetry.length}</div>
+                    <div className="text-sm text-gray-600 mt-1">累计完成编程题</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 能力反馈 */}
-            <div className="p-12 min-h-[600px] bg-gray-50">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
-                <TrendingUp className="h-8 w-8 text-purple-600" />
+            {/* 第四页：能力反馈 */}
+            <div className="p-12 min-h-[700px]">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-green-200">
+                <TrendingUp className="h-8 w-8 text-green-600" />
                 <h2 className="text-3xl font-bold text-gray-800">能力反馈</h2>
               </div>
 
+              <div className="grid grid-cols-2 gap-6">
+                {/* 点赞 */}
+                <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">👍</span> 点赞
+                  </h3>
+                  {strongPoints.length > 0 ? (
+                    <ul className="space-y-2">
+                      {strongPoints.slice(0, 5).map((kp, i) => (
+                        <li key={i} className="flex items-center gap-2 text-gray-700">
+                          <span className="text-green-600">✓</span>
+                          {kp.knowledgePointName}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500 text-sm">暂无数据</p>
+                  )}
+                </div>
+
+                {/* 待提升 */}
+                <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">💪</span> 待提升
+                  </h3>
+                  {weakPoints.length > 0 ? (
+                    <ul className="space-y-2">
+                      {weakPoints.slice(0, 5).map((kp, i) => (
+                        <li key={i} className="flex items-center gap-2 text-gray-700">
+                          <span className="text-orange-600">→</span>
+                          {kp.knowledgePointName}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500 text-sm">暂无数据</p>
+                  )}
+                </div>
+              </div>
+
               {/* 打字测试 */}
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <span className="text-2xl">⌨️</span> 打字测试
-                </h3>
-                {weeklyTyping.length > 0 ? (
+              {weeklyTyping.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4">打字测试</h3>
                   <div className="bg-white rounded-lg p-6 shadow-sm">
                     <table className="w-full">
                       <thead>
@@ -350,116 +604,82 @@ export default function ReportPage() {
                         ))}
                       </tbody>
                     </table>
-                    {typingImprovement !== 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          相比上期{typingImprovement > 0 ? '提升' : '下降'} {Math.abs(typingImprovement)}%
-                        </p>
-                      </div>
-                    )}
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无打字测试记录</p>
-                )}
-              </div>
-
-              {/* 三刷测试 */}
-              <div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <span className="text-2xl">🔄</span> 三刷测试
-                </h3>
-                {retryComparison.length > 0 ? (
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">测试题</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">首次用时</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">最近用时</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">提升情况</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {retryComparison.map((r, i) => (
-                          <tr key={i} className="border-b border-gray-100">
-                            <td className="py-3 px-4 font-medium text-gray-800">{r.name}</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{r.firstTime}分钟</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{r.lastTime}分钟</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`font-semibold ${r.improvement > 0 ? 'text-green-600' : r.improvement < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-                                {r.improvement > 0 ? '+' : ''}{r.improvement}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无三刷测试记录</p>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* 提升建议 */}
-            <div className="p-12 min-h-[500px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-green-200">
-                <Target className="h-8 w-8 text-green-600" />
-                <h2 className="text-3xl font-bold text-gray-800">提升建议</h2>
+            {/* 第五页：成长建议 */}
+            <div className="p-12 min-h-[700px] bg-gradient-to-br from-yellow-50 to-orange-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-yellow-200">
+                <Target className="h-8 w-8 text-yellow-600" />
+                <h2 className="text-3xl font-bold text-gray-800">成长建议</h2>
               </div>
 
               <div className="space-y-6">
-                {weakPoints.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-3">需要加强的知识点</h3>
-                    <div className="space-y-2">
-                      {weakPoints.map((kp, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                          <span className="text-red-600">●</span>
-                          <span className="text-gray-800">{kp.knowledgePointName}</span>
-                          <Badge variant="destructive" className="ml-auto text-xs">{KNOWLEDGE_STATUS_LABELS[kp.status]}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">💡 提升Tip</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {weakPoints.length > 0 
+                      ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
+                      : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
+                  </p>
+                </div>
 
-                {strongPoints.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-3">已掌握的知识点</h3>
-                    <div className="space-y-2">
-                      {strongPoints.map((kp, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                          <span className="text-green-600">●</span>
-                          <span className="text-gray-800">{kp.knowledgePointName}</span>
-                          <Badge className="ml-auto bg-green-600 text-xs">{KNOWLEDGE_STATUS_LABELS[kp.status]}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">🏠 家校Tip</h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
+                  </p>
+                </div>
 
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">学习建议</h3>
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-gray-700 leading-relaxed">
-                      {weakPoints.length > 0 
-                        ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。同时保持对已掌握知识点的熟练度。`
-                        : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
-                    </p>
-                  </div>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">🎯 冲刺Goal</h3>
+                  <Textarea
+                    value={nextGoal}
+                    onChange={(e) => setNextGoal(e.target.value)}
+                    placeholder="写下下月学习目标..."
+                    className="min-h-[100px] resize-none"
+                  />
                 </div>
               </div>
             </div>
 
-            {/* 家校共育 */}
-            <div className="p-12 min-h-[500px] bg-gradient-to-br from-purple-50 to-pink-50">
+            {/* 第六页：课堂风采 */}
+            <div className="p-12 min-h-[700px]">
               <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-pink-200">
-                <Users className="h-8 w-8 text-pink-600" />
+                <Camera className="h-8 w-8 text-pink-600" />
+                <h2 className="text-3xl font-bold text-gray-800">课堂风采</h2>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                {classroomPhotos.map((photo, i) => (
+                  <div key={i} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                    <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                {classroomPhotos.length < 6 && (
+                  <div 
+                    className="aspect-square bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={handleClassroomPhotoUpload}
+                  >
+                    <div className="text-center text-gray-400">
+                      <Upload className="h-8 w-8 mx-auto mb-2" />
+                      <span className="text-sm">添加照片</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 第七页：家校共育和下月计划 */}
+            <div className="p-12 min-h-[700px] bg-gradient-to-br from-purple-50 to-pink-50">
+              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
+                <Users className="h-8 w-8 text-purple-600" />
                 <h2 className="text-3xl font-bold text-gray-800">家校共育</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
                     <span className="text-xl">💡</span> 陪伴创新
@@ -477,85 +697,47 @@ export default function ReportPage() {
                     关注孩子的学习进度，定期检查作业完成情况。建议每天安排固定的编程练习时间，保持学习连贯性。
                   </p>
                 </div>
-
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-xl">🎉</span> 成果互动
-                  </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    当孩子完成项目或取得进步时，及时给予肯定和鼓励。可以让孩子向您展示他们的作品，增强成就感。
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-xl">🗣️</span> 引导表达
-                  </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    鼓励孩子用语言描述自己的解题思路，培养逻辑表达能力。可以问"你是怎么想到这个方法的？"
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 下月计划 */}
-            <div className="p-12 min-h-[400px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
-                <Calendar className="h-8 w-8 text-indigo-600" />
-                <h2 className="text-3xl font-bold text-gray-800">下月计划</h2>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">下月学习目标</Label>
+              {/* 老师寄语 */}
+              <div className="mt-8">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-indigo-200">
+                  <MessageCircle className="h-8 w-8 text-indigo-600" />
+                  <h2 className="text-3xl font-bold text-gray-800">老师寄语</h2>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-gray-700">寄语内容</Label>
+                    <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
+                      <Award className="mr-2 h-4 w-4" />
+                      选择模板
+                    </Button>
+                  </div>
+
+                  {showTemplates && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-2">
+                      <p className="text-sm font-medium text-gray-700 mb-2">推荐模板：</p>
+                      {COMMENT_TEMPLATES.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => { setTeacherComment(template.content); setShowTemplates(false); }}
+                          className="w-full text-left p-3 rounded-md hover:bg-indigo-50 transition-colors border border-gray-100 hover:border-indigo-200"
+                        >
+                          <div className="font-medium text-sm text-gray-800">{template.name}</div>
+                          <div className="text-xs text-gray-600 mt-1 line-clamp-2">{template.content}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <Textarea
-                    value={nextGoal}
-                    onChange={(e) => setNextGoal(e.target.value)}
-                    placeholder="例如：掌握循环结构、完成3个综合项目、打字速度达到50字/分钟..."
-                    className="min-h-[120px] resize-none border-gray-300"
+                    value={teacherComment}
+                    onChange={(e) => setTeacherComment(e.target.value)}
+                    placeholder="写下您对学生的寄语和鼓励..."
+                    className="min-h-[150px] resize-none"
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* 老师寄语 */}
-            <div className="p-12 min-h-[400px] bg-gradient-to-br from-indigo-50 to-purple-50">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-indigo-200">
-                <MessageCircle className="h-8 w-8 text-indigo-600" />
-                <h2 className="text-3xl font-bold text-gray-800">老师寄语</h2>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-gray-700">寄语内容</Label>
-                  <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
-                    <Award className="mr-2 h-4 w-4" />
-                    选择模板
-                  </Button>
-                </div>
-
-                {showTemplates && (
-                  <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-2">
-                    <p className="text-sm font-medium text-gray-700 mb-2">推荐模板：</p>
-                    {COMMENT_TEMPLATES.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => { setTeacherComment(template.content); setShowTemplates(false); }}
-                        className="w-full text-left p-3 rounded-md hover:bg-indigo-50 transition-colors border border-gray-100 hover:border-indigo-200"
-                      >
-                        <div className="font-medium text-sm text-gray-800">{template.name}</div>
-                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{template.content}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <Textarea
-                  value={teacherComment}
-                  onChange={(e) => setTeacherComment(e.target.value)}
-                  placeholder="写下您对学生的寄语和鼓励..."
-                  className="min-h-[150px] resize-none border-gray-300"
-                />
               </div>
             </div>
 

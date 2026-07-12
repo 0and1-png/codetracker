@@ -1247,13 +1247,14 @@ export default function ReportPage() {
                     本月完成题目
                   </h3>
                   {(() => {
+                    // 从三刷记录获取题目
                     const problemGroups = monthRetry.reduce((acc, r) => {
                       if (!acc[r.problemId]) acc[r.problemId] = [];
                       acc[r.problemId].push(r);
                       return acc;
                     }, {} as Record<string, typeof monthRetry>);
 
-                    const problems = Object.entries(problemGroups).map(([problemId, records]) => {
+                    const allProblems = Object.entries(problemGroups).map(([problemId, records]) => {
                       const hasRetry = records.length > 1;
                       const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
                       const first = sorted[0];
@@ -1267,11 +1268,10 @@ export default function ReportPage() {
 
                       return { problemId, records: sorted, hasRetry, first, kpNames, problemName: first.problemName || problemId };
                     }).sort((a, b) => a.first.date.localeCompare(b.first.date));
+                    const keyProblems = allProblems.filter(p => p.hasRetry);
+                    const normalProblems = allProblems.filter(p => !p.hasRetry);
 
-                    const keyProblems = problems.filter(p => p.hasRetry);
-                    const normalProblems = problems.filter(p => !p.hasRetry);
-
-                    if (problems.length === 0) {
+                    if (allProblems.length === 0) {
                       return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">暂无完成题目记录</p></div>;
                     }
 

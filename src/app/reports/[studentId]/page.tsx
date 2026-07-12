@@ -411,30 +411,31 @@ export default function ReportPage() {
                 >
                   <span className="text-xs text-[#555] flex items-center gap-1"><Upload className="h-3 w-3" /> 替换图片</span>
                 </div>
-                {/* 金色波浪分割线 */}
-                <svg 
-                  className="absolute bottom-0 left-0 w-full" 
-                  viewBox="0 0 800 80" 
-                  preserveAspectRatio="none"
-                  style={{ display: 'block', height: '80px', marginBottom: '-2px' }}
-                >
-                  <path 
-                    d="M0,0 L0,50 Q200,85 400,50 Q600,15 800,50 L800,0 Z" 
-                    fill="#f5f0e6"
-                  />
-                  <path 
-                    d="M0,50 Q200,85 400,50 Q600,15 800,50" 
-                    fill="none" 
-                    stroke="#d4a853" 
-                    strokeWidth="4"
-                  />
-                </svg>
+                {/* 金色波浪分割线 - 简化版 */}
+                <div className="absolute bottom-0 left-0 w-full" style={{ height: '40px', marginBottom: '-1px' }}>
+                  <svg 
+                    className="w-full h-full" 
+                    viewBox="0 0 800 40" 
+                    preserveAspectRatio="none"
+                  >
+                    <path 
+                      d="M0,20 Q200,40 400,20 Q600,0 800,20 L800,40 L0,40 Z" 
+                      fill="#f5f0e6"
+                    />
+                    <path 
+                      d="M0,20 Q200,40 400,20 Q600,0 800,20" 
+                      fill="none" 
+                      stroke="#d4a853" 
+                      strokeWidth="3"
+                    />
+                  </svg>
+                </div>
               </div>
 
-              {/* 中部书法标题区域 */}
-              <div className="relative px-10 pt-6 pb-4">
-                {/* 战码少年 - 黑色毛笔书法，左对齐 */}
-                <div className="mb-4 ml-4">
+              {/* 中部书法标题区域 - 左右布局 */}
+              <div className="relative px-10 pt-6 pb-4 flex items-center justify-between">
+                {/* 战码少年 - 黑色毛笔书法，左侧 */}
+                <div>
                   <h1 
                     className="text-5xl font-black inline-block"
                     style={{ 
@@ -445,11 +446,11 @@ export default function ReportPage() {
                   >
                     战码少年
                   </h1>
-                  {/* 黄色下划线 */}
-                  <div className="mt-1 ml-1 h-[3px] w-48 rounded-full" style={{ background: '#e8b820' }}></div>
+                  {/* 黄色下划线（短） */}
+                  <div className="mt-1 ml-1 h-[3px] w-40 rounded-full" style={{ background: '#e8b820' }}></div>
                 </div>
-                {/* 修炼手册 - 红色毛笔书法，右对齐偏移 */}
-                <div className="mb-6 ml-20">
+                {/* 修炼手册 - 红色毛笔书法，右侧 */}
+                <div>
                   <h2 
                     className="text-4xl font-black inline-block"
                     style={{ 
@@ -460,9 +461,10 @@ export default function ReportPage() {
                   >
                     修炼手册
                   </h2>
-                  {/* 黄色下划线（更长） */}
-                  <div className="mt-1 ml-1 h-[3px] w-64 rounded-full" style={{ background: '#e8b820' }}></div>
+                  {/* 黄色下划线（长） */}
+                  <div className="mt-1 ml-1 h-[3px] w-52 rounded-full" style={{ background: '#e8b820' }}></div>
                 </div>
+              </div>
 
                 {/* 下方左右分栏：大头贴 + 少年留言 */}
                 <div className="grid grid-cols-[200px_1fr] gap-6 mt-4">
@@ -542,7 +544,6 @@ export default function ReportPage() {
                   <span className="text-[#555] text-sm tracking-wider" style={{ fontFamily: '"STSong", "SimSun", serif' }}>爱心施教 · 娃娃为王</span>
                 </div>
               </div>
-            </div>
           </div>
 
           {/* ========== 第二页：学生基本信息 ========== */}

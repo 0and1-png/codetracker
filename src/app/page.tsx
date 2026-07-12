@@ -43,13 +43,25 @@ import {
   calcHomeworkSummary, calcKnowledgeMastery, getMonthRange, getPreviousMonthRange,
   getRecordsInPeriod,
 } from '@/lib/analytics';
-import { XIAN, COURSE_COLORS } from '@/lib/constants';
+import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS } from '@/lib/constants';
 
 type RecordTab = 'typing' | 'retry' | 'homework';
 
-interface TypingForm { speed: string; accuracy: string }
-interface RetryForm { problemId: string; attempt: string; timeSpent: string; notes: string }
-interface HomeworkForm { title: string; content: string; score: string; comment: string; imageUrl: string }
+interface TypingForm { speed: string; accuracy: string; praiseTags: string[]; improveTags: string[] }
+interface RetryForm { problemId: string; attempt: string; timeSpent: string; notes: string; praiseTags: string[]; improveTags: string[]; growthSuggestions: string[] }
+interface HomeworkForm { title: string; content: string; score: string; comment: string; imageUrl: string; praiseTags: string[]; improveTags: string[]; growthSuggestions: string[] }
+
+// Growth suggestion presets
+const GROWTH_SUGGESTION_PRESETS = [
+  '多做基础练习巩固理解',
+  '加强打字速度和正确率',
+  '尝试独立完成题目',
+  '注重代码规范和注释',
+  '培养调试和排错能力',
+  '学习更高效的解题方法',
+  '加强逻辑思维训练',
+  '提升问题拆解能力',
+] as const;
 
 export default function HomePage() {
   const router = useRouter();
@@ -165,9 +177,9 @@ export default function HomePage() {
     }
   };
 
-  const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', accuracy: '' };
-  const getRetryForm = (id: string): RetryForm => retryForms[id] || { problemId: '', attempt: '1', timeSpent: '', notes: '' };
-  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { title: '', content: '', score: '', comment: '', imageUrl: '' };
+  const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', accuracy: '', praiseTags: [], improveTags: [] };
+  const getRetryForm = (id: string): RetryForm => retryForms[id] || { problemId: '', attempt: '1', timeSpent: '', notes: '', praiseTags: [], improveTags: [], growthSuggestions: [] };
+  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { title: '', content: '', score: '', comment: '', imageUrl: '', praiseTags: [], improveTags: [], growthSuggestions: [] };
 
   const updateTypingForm = (id: string, field: keyof TypingForm, value: string) => {
     setTypingForms((prev) => ({ ...prev, [id]: { ...getTypingForm(id), [field]: value } }));
@@ -220,6 +232,8 @@ export default function HomePage() {
       addTypingRecord({
         id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
         speed: Number(form.speed), accuracy: Number(form.accuracy) || 0,
+        praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
+        improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
       });
     } else if (activeTab === 'retry') {
       const form = getRetryForm(studentId);
@@ -230,6 +244,9 @@ export default function HomePage() {
         problemId: form.problemId, problemName: problem?.name || '',
         attempt: Number(form.attempt) || 1, timeSpent: Number(form.timeSpent),
         notes: form.notes.trim() || undefined,
+        praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
+        improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
+        growthSuggestions: form.growthSuggestions.length > 0 ? form.growthSuggestions : undefined,
       });
     } else if (activeTab === 'homework') {
       const form = getHomeworkForm(studentId);
@@ -240,6 +257,9 @@ export default function HomePage() {
         score: form.score ? Number(form.score) : undefined,
         comment: form.comment.trim() || undefined,
         imageUrl: form.imageUrl.trim() || undefined,
+        praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
+        improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
+        growthSuggestions: form.growthSuggestions.length > 0 ? form.growthSuggestions : undefined,
       });
     }
     setSavedStudents((prev) => new Set(prev).add(studentId));
@@ -573,7 +593,8 @@ export default function HomePage() {
                                   </SelectTrigger>
                                   <SelectContent className="bg-anye border-xianjin/20">
                                     {activeCourse.problems.map((p) => {
-                                      const kp = activeCourse.knowledgePoints.find((k) => k.id === p.knowledgePointId);
+                                      const kpId = p.knowledgePointIds?.[0] || p.knowledgePointId;
+                                      const kp = kpId ? activeCourse.knowledgePoints.find((k) => k.id === kpId) : undefined;
                                       return (
                                         <SelectItem key={p.id} value={p.id} className="text-amber-200 focus:bg-xianjin/10">
                                           {p.name}{kp ? ` (${kp.name})` : ''}
@@ -652,6 +673,80 @@ export default function HomePage() {
                             </div>
                           </div>
                         )}
+
+                        {/* Teacher feedback tags */}
+                        <div className="mt-2 pt-2 border-t border-xianjin/10 space-y-1.5">
+                          {/* Praise tags */}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-emerald-500 shrink-0 w-8">点赞</span>
+                            {PRESET_STRENGTHS.map((tag) => {
+                              const form = activeTab === 'typing' ? getTypingForm(student.id) : activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
+                              const tags = form.praiseTags;
+                              const isSelected = tags.includes(tag);
+                              return (
+                                <button key={tag} type="button"
+                                  className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
+                                    isSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-900/20 text-emerald-600 hover:bg-emerald-900/40 border border-emerald-800/30'
+                                  }`}
+                                  onClick={() => {
+                                    const newTags = isSelected ? tags.filter((t: string) => t !== tag) : [...tags, tag];
+                                    if (activeTab === 'typing') setTypingForms((prev) => ({ ...prev, [student.id]: { ...getTypingForm(student.id), praiseTags: newTags } }));
+                                    else if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), praiseTags: newTags } }));
+                                    else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), praiseTags: newTags } }));
+                                  }}>
+                                  {tag}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {/* Improve tags */}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-orange-500 shrink-0 w-8">待提升</span>
+                            {PRESET_IMPROVEMENTS.map((tag) => {
+                              const form = activeTab === 'typing' ? getTypingForm(student.id) : activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
+                              const tags = form.improveTags;
+                              const isSelected = tags.includes(tag);
+                              return (
+                                <button key={tag} type="button"
+                                  className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
+                                    isSelected ? 'bg-orange-600 text-white' : 'bg-orange-900/20 text-orange-600 hover:bg-orange-900/40 border border-orange-800/30'
+                                  }`}
+                                  onClick={() => {
+                                    const newTags = isSelected ? tags.filter((t: string) => t !== tag) : [...tags, tag];
+                                    if (activeTab === 'typing') setTypingForms((prev) => ({ ...prev, [student.id]: { ...getTypingForm(student.id), improveTags: newTags } }));
+                                    else if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), improveTags: newTags } }));
+                                    else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), improveTags: newTags } }));
+                                  }}>
+                                  {tag}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {/* Growth suggestions (only for retry and homework) */}
+                          {activeTab !== 'typing' && (
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="text-[10px] text-blue-500 shrink-0 w-8">建议</span>
+                              {GROWTH_SUGGESTION_PRESETS.map((sug) => {
+                                const form = activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
+                                const sugs = form.growthSuggestions;
+                                const isSelected = sugs.includes(sug);
+                                return (
+                                  <button key={sug} type="button"
+                                    className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
+                                      isSelected ? 'bg-blue-600 text-white' : 'bg-blue-900/20 text-blue-600 hover:bg-blue-900/40 border border-blue-800/30'
+                                    }`}
+                                    onClick={() => {
+                                      const newSugs = isSelected ? sugs.filter((s: string) => s !== sug) : [...sugs, sug];
+                                      if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), growthSuggestions: newSugs } }));
+                                      else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), growthSuggestions: newSugs } }));
+                                    }}>
+                                    {sug}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Actions */}

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Star, Camera } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Star, Camera, ThumbsUp, AlertCircle } from 'lucide-react';
 import {
   getStudents,
   getTypingByStudent,
@@ -18,7 +18,7 @@ import {
   getCourses,
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course } from '@/lib/types';
-import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints } from '@/lib/analytics';
+import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
 import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS } from '@/lib/constants';
 
 type PeriodType = 'week' | 'month' | 'custom';
@@ -142,6 +142,20 @@ export default function ReportPage() {
   const knowledgeMastery = calcKnowledgeMastery(knowledge, allRetry, course || undefined);
   const strongPoints = getStrongKnowledgePoints(knowledgeMastery);
   const weakPoints = getWeakKnowledgePoints(knowledgeMastery);
+
+  // New: Learned knowledge mastery (based on actual problem completion)
+  const learnedKnowledge = calcLearnedKnowledgeMastery(monthRetry, course || undefined);
+  // New: Teacher tags collected from records
+  const teacherTags = collectTeacherTags(monthTyping, monthRetry, monthHomework);
+  // New: Auto sprint goal from next chapter
+  const autoSprintGoal = getNextChapterContent(knowledge, course || undefined);
+
+  // Initialize nextGoal with auto-generated content if empty
+  useEffect(() => {
+    if (!nextGoal && autoSprintGoal) {
+      setNextGoal(autoSprintGoal);
+    }
+  }, [autoSprintGoal, nextGoal]);
 
   const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
@@ -487,27 +501,26 @@ export default function ReportPage() {
                 <div>
                   <h3 className="text-xl font-semibold text-gray-700 mb-4">知识点掌握情况</h3>
                   <div className="bg-white rounded-lg p-6 shadow-sm">
-                    {knowledge.length > 0 ? (
+                    {learnedKnowledge.length > 0 ? (
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-200">
                             <th className="text-left py-3 px-4 text-gray-600 font-semibold">知识点</th>
-                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">掌握程度</th>
-                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">评分</th>
+                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">完成度</th>
+                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">掌握星级</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {knowledge.map((kp) => (
-                            <tr key={kp.id} className="border-b border-gray-100">
+                          {learnedKnowledge.map((kp) => (
+                            <tr key={kp.knowledgePointId} className="border-b border-gray-100">
                               <td className="py-3 px-4 font-medium text-gray-800">{kp.knowledgePointName}</td>
                               <td className="py-3 px-4 text-center">
-                                <Badge variant={kp.status === 'mastered' ? 'default' : kp.status === 'learning' ? 'secondary' : 'outline'}>
-                                  {KNOWLEDGE_STATUS_LABELS[kp.status]}
-                                </Badge>
+                                <span className="text-sm text-gray-600">{kp.completedProblems}/{kp.totalProblems}题</span>
+                                <span className="ml-2 text-xs text-gray-500">({kp.completionPercent}%)</span>
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <div className="flex justify-center">
-                                  {renderStars(kp.score || 0)}
+                                  {renderStars(kp.stars)}
                                 </div>
                               </td>
                             </tr>
@@ -515,7 +528,7 @@ export default function ReportPage() {
                         </tbody>
                       </table>
                     ) : (
-                      <p className="text-gray-500 text-center py-8">暂无知识点记录</p>
+                      <p className="text-gray-500 text-center py-8">暂无知识点学习记录</p>
                     )}
                   </div>
                 </div>
@@ -523,12 +536,12 @@ export default function ReportPage() {
                 {/* 统计信息 */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <div className="text-3xl font-bold text-purple-600">{knowledge.length}</div>
-                    <div className="text-sm text-gray-600 mt-1">累计学习知识点</div>
+                    <div className="text-3xl font-bold text-purple-600">{learnedKnowledge.length}</div>
+                    <div className="text-sm text-gray-600 mt-1">已学习知识点</div>
                   </div>
                   <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <div className="text-3xl font-bold text-blue-600">{allRetry.length}</div>
-                    <div className="text-sm text-gray-600 mt-1">累计完成编程题</div>
+                    <div className="text-3xl font-bold text-blue-600">{new Set(monthRetry.map(r => r.problemId)).size}</div>
+                    <div className="text-sm text-gray-600 mt-1">本月完成编程题</div>
                   </div>
                 </div>
               </div>
@@ -545,9 +558,17 @@ export default function ReportPage() {
                 {/* 点赞 */}
                 <div className="bg-green-50 rounded-lg p-6 border border-green-200">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">👍</span> 点赞
+                    <ThumbsUp className="h-5 w-5 text-green-600" /> 点赞
                   </h3>
-                  {strongPoints.length > 0 ? (
+                  {teacherTags.praiseTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {teacherTags.praiseTags.map((tag) => (
+                        <span key={tag} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm border border-green-200">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : strongPoints.length > 0 ? (
                     <ul className="space-y-2">
                       {strongPoints.slice(0, 5).map((kp, i) => (
                         <li key={i} className="flex items-center gap-2 text-gray-700">
@@ -564,9 +585,17 @@ export default function ReportPage() {
                 {/* 待提升 */}
                 <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
                   <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">💪</span> 待提升
+                    <AlertCircle className="h-5 w-5 text-orange-600" /> 待提升
                   </h3>
-                  {weakPoints.length > 0 ? (
+                  {teacherTags.improveTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {teacherTags.improveTags.map((tag) => (
+                        <span key={tag} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm border border-orange-200">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : weakPoints.length > 0 ? (
                     <ul className="space-y-2">
                       {weakPoints.slice(0, 5).map((kp, i) => (
                         <li key={i} className="flex items-center gap-2 text-gray-700">
@@ -581,29 +610,36 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* 打字测试 */}
-              {weeklyTyping.length > 0 && (
+              {/* 打字测试 - 时间趋势图 */}
+              {monthTyping.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-xl font-semibold text-gray-700 mb-4">打字测试</h3>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4">打字测试趋势</h3>
                   <div className="bg-white rounded-lg p-6 shadow-sm">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">周次</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">平均速度</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">平均正确率</th>
+                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">日期</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">速度(字/分钟)</th>
+                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">正确率</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {weeklyTyping.map((w, i) => (
+                        {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i) => (
                           <tr key={i} className="border-b border-gray-100">
-                            <td className="py-3 px-4 font-medium text-gray-800">{w.week}</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{w.avgSpeed} 字/分钟</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{w.avgAccuracy}%</td>
+                            <td className="py-3 px-4 font-medium text-gray-800">{t.date}</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{t.speed}</td>
+                            <td className="py-3 px-4 text-center text-gray-700">{t.accuracy}%</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    {typingImprovement !== 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          相比上期{typingImprovement > 0 ? '提升' : '下降'} {Math.abs(typingImprovement)}%
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -619,11 +655,22 @@ export default function ReportPage() {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <h3 className="text-lg font-semibold text-gray-700 mb-3">💡 提升Tip</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {weakPoints.length > 0 
-                      ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
-                      : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
-                  </p>
+                  {teacherTags.growthSuggestions.length > 0 ? (
+                    <div className="space-y-2">
+                      {teacherTags.growthSuggestions.map((sug, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">●</span>
+                          <p className="text-gray-600">{sug}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 leading-relaxed">
+                      {weakPoints.length > 0 
+                        ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
+                        : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -641,6 +688,9 @@ export default function ReportPage() {
                     placeholder="写下下月学习目标..."
                     className="min-h-[100px] resize-none"
                   />
+                  {autoSprintGoal && (
+                    <p className="text-xs text-gray-400 mt-2">自动推荐：{autoSprintGoal}</p>
+                  )}
                 </div>
               </div>
             </div>

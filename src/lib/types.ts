@@ -31,7 +31,8 @@ export interface KnowledgePointDef {
 export interface ProblemDef {
   id: string;
   name: string;
-  knowledgePointId?: string;
+  knowledgePointId?: string;      // Legacy single KP link
+  knowledgePointIds?: string[];   // Multiple KP links (new)
 }
 
 export interface Course {
@@ -61,6 +62,8 @@ export interface TypingRecord {
   date: string;
   speed: number;
   accuracy: number;
+  praiseTags?: string[];    // Teacher praise tags (synced to report)
+  improveTags?: string[];   // Teacher improvement tags (synced to report)
 }
 
 export interface ProblemRetryRecord {
@@ -73,6 +76,9 @@ export interface ProblemRetryRecord {
   attempt: number;
   timeSpent: number;
   notes?: string;
+  praiseTags?: string[];       // Teacher praise tags
+  improveTags?: string[];      // Teacher improvement tags
+  growthSuggestions?: string[]; // Growth suggestions selected by teacher
 }
 
 export interface HomeworkRecord {
@@ -85,6 +91,9 @@ export interface HomeworkRecord {
   score?: number;
   comment?: string;
   imageUrl?: string;
+  praiseTags?: string[];       // Teacher praise tags
+  improveTags?: string[];      // Teacher improvement tags
+  growthSuggestions?: string[]; // Growth suggestions selected by teacher
 }
 
 // ============ Knowledge Progress ============

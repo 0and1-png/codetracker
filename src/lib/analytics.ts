@@ -483,3 +483,153 @@ export function recommendCommentTemplate(tags: AutoTag[]): CommentTemplate {
   }
   return COMMENT_TEMPLATES.find((t) => t.id === 'good_2')!;
 }
+
+// ============ Learned Knowledge Mastery (based on actual problem completion) ============
+
+export interface LearnedKnowledgeMastery {
+  knowledgePointId: string;
+  knowledgePointName: string;
+  totalProblems: number;     // Total problems linked to this KP
+  completedProblems: number; // Problems the student has attempted
+  completionPercent: number; // 0-100
+  stars: number;             // 1-5 stars
+}
+
+/**
+ * Calculate knowledge mastery based on actual problem completion.
+ * Only returns knowledge points that have been "touched" (student has at least one retry record).
+ * Stars: 5 stars = all problems for this KP completed, otherwise proportional.
+ */
+export function calcLearnedKnowledgeMastery(
+  retryRecords: ProblemRetryRecord[],
+  course?: Course
+): LearnedKnowledgeMastery[] {
+  if (!course || retryRecords.length === 0) return [];
+
+  // Build map: knowledgePointId -> problem IDs linked to it
+  const kpToProblems = new Map<string, Set<string>>();
+  course.problems.forEach((p) => {
+    const kpIds = p.knowledgePointIds && p.knowledgePointIds.length > 0
+      ? p.knowledgePointIds
+      : (p.knowledgePointId ? [p.knowledgePointId] : []);
+    kpIds.forEach((kpId) => {
+      if (!kpToProblems.has(kpId)) kpToProblems.set(kpId, new Set());
+      kpToProblems.get(kpId)!.add(p.id);
+    });
+  });
+
+  // Find which problems the student has attempted (unique problem IDs)
+  const attemptedProblems = new Set<string>();
+  retryRecords.forEach((r) => attemptedProblems.add(r.problemId));
+
+  // Calculate mastery per KP - only for KPs that have been touched
+  const result: LearnedKnowledgeMastery[] = [];
+  kpToProblems.forEach((problemIds, kpId) => {
+    const completedCount = Array.from(problemIds).filter((pid) => attemptedProblems.has(pid)).length;
+    const totalCount = problemIds.size;
+
+    // Only include if student has attempted at least one problem under this KP
+    if (completedCount === 0) return;
+
+    const completionPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    // Stars: 5 = 100%, 4 = 80-99%, 3 = 60-79%, 2 = 40-59%, 1 = 1-39%
+    const stars = completionPercent >= 100 ? 5
+      : completionPercent >= 80 ? 4
+      : completionPercent >= 60 ? 3
+      : completionPercent >= 40 ? 2
+      : 1;
+
+    const kpDef = course.knowledgePoints.find((kp) => kp.id === kpId);
+    if (kpDef) {
+      result.push({
+        knowledgePointId: kpId,
+        knowledgePointName: kpDef.name,
+        totalProblems: totalCount,
+        completedProblems: completedCount,
+        completionPercent,
+        stars,
+      });
+    }
+  });
+
+  return result.sort((a, b) => b.completionPercent - a.completionPercent);
+}
+
+// ============ Teacher Tag Collection ============
+
+export interface CollectedTeacherTags {
+  praiseTags: string[];
+  improveTags: string[];
+  growthSuggestions: string[];
+}
+
+/**
+ * Collect all teacher-assigned tags from records within a period.
+ */
+export function collectTeacherTags(
+  typingRecords: TypingRecord[],
+  retryRecords: ProblemRetryRecord[],
+  homeworkRecords: HomeworkRecord[]
+): CollectedTeacherTags {
+  const praiseSet = new Set<string>();
+  const improveSet = new Set<string>();
+  const suggestionSet = new Set<string>();
+
+  const allRecords = [...typingRecords, ...retryRecords, ...homeworkRecords];
+  allRecords.forEach((r) => {
+    if ('praiseTags' in r && r.praiseTags) r.praiseTags.forEach((t) => praiseSet.add(t));
+    if ('improveTags' in r && r.improveTags) r.improveTags.forEach((t) => improveSet.add(t));
+    if ('growthSuggestions' in r && r.growthSuggestions) r.growthSuggestions.forEach((t) => suggestionSet.add(t));
+  });
+
+  return {
+    praiseTags: Array.from(praiseSet),
+    improveTags: Array.from(improveSet),
+    growthSuggestions: Array.from(suggestionSet),
+  };
+}
+
+// ============ Next Chapter Content (for Sprint Goal) ============
+
+/**
+ * Get the next chapter's knowledge points from the curriculum tree.
+ * Based on the last mastered/learned knowledge point, find what comes next.
+ */
+export function getNextChapterContent(
+  knowledge: { knowledgePointId: string; status: string }[],
+  course?: Course
+): string {
+  if (!course || !course.curriculum || course.curriculum.length === 0) return '';
+
+  // Flatten curriculum to get ordered knowledge points
+  const orderedKpIds: string[] = [];
+  const flattenNodes = (nodes: Course['curriculum']) => {
+    nodes.forEach((node) => {
+      if (node.knowledgePointId) orderedKpIds.push(node.knowledgePointId);
+      if (node.children) flattenNodes(node.children);
+    });
+  };
+  flattenNodes(course.curriculum);
+
+  // Find the last learned/mastered KP
+  const learnedIds = new Set(knowledge.filter((k) => k.status !== 'not_started').map((k) => k.knowledgePointId));
+  let lastLearnedIdx = -1;
+  for (let i = orderedKpIds.length - 1; i >= 0; i--) {
+    if (learnedIds.has(orderedKpIds[i])) {
+      lastLearnedIdx = i;
+      break;
+    }
+  }
+
+  // Get next KPs
+  const nextKpIds = orderedKpIds.slice(lastLearnedIdx + 1, lastLearnedIdx + 4);
+  if (nextKpIds.length === 0) return '继续巩固已学知识点，挑战更高难度题目';
+
+  const nextNames = nextKpIds
+    .map((id) => course.knowledgePoints.find((kp) => kp.id === id)?.name)
+    .filter(Boolean);
+
+  return nextNames.length > 0
+    ? `下月重点学习：${nextNames.join('、')}`
+    : '继续巩固已学知识点，挑战更高难度题目';
+}

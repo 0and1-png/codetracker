@@ -1794,24 +1794,42 @@ export default function ReportPage() {
                 <div className="flex-1 h-px bg-gradient-to-r from-pink-200 to-transparent ml-4"></div>
               </div>
 
-              <div className="grid grid-cols-3 gap-5">
-                {classroomPhotos.map((photo, i) => (
-                  <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                    <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover" />
-                  </div>
-                ))}
-                {classroomPhotos.length < 6 && (
-                  <div 
-                    className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', border: '2px dashed #f9a8d4' }}
-                    onClick={handleClassroomPhotoUpload}
-                  >
-                    <div className="text-center">
-                      <Upload className="h-8 w-8 text-pink-300 mx-auto mb-2" />
-                      <span className="text-sm text-pink-400">添加照片</span>
-                    </div>
-                  </div>
-                )}
+              {/* 9宫格照片展示 */}
+              <div className="grid grid-cols-3 gap-4">
+                {Array.from({ length: 9 }).map((_, i) => {
+                  const photo = classroomPhotos[i];
+                  if (photo) {
+                    return (
+                      <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 relative group">
+                        <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </div>
+                    );
+                  } else if (i === classroomPhotos.length && classroomPhotos.length < 9) {
+                    return (
+                      <div 
+                        key={i}
+                        className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg relative overflow-hidden"
+                        style={{ background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', border: '2px dashed #f9a8d4' }}
+                        onClick={handleClassroomPhotoUpload}
+                      >
+                        <div className="text-center z-10">
+                          <div className="h-12 w-12 rounded-full bg-white/80 flex items-center justify-center mx-auto mb-2 shadow-md">
+                            <Upload className="h-6 w-6 text-pink-400" />
+                          </div>
+                          <span className="text-sm font-medium text-pink-500">添加照片</span>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-pink-100/50 to-rose-100/50" />
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200/50 flex items-center justify-center">
+                        <Camera className="h-8 w-8 text-gray-200" />
+                      </div>
+                    );
+                  }
+                })}
               </div>
             </div>
           </div>

@@ -532,36 +532,36 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC]">
-      {/* 控制栏 */}
-      <div className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur-xl">
+    <div className="min-h-screen bg-gradient-to-b from-[#faf8f5] to-[#f5f0eb]">
+      {/* 控制栏 - 毛玻璃质感 */}
+      <div className="sticky top-0 z-20 border-b border-purple-100/40 bg-gradient-to-r from-white/80 via-purple-50/30 to-white/80 backdrop-blur-xl shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#3066FF] to-[#9933FF] flex items-center justify-center">
-                <FileText className="h-5 w-5 text-white" />
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#3066FF] to-[#9933FF] flex items-center justify-center shadow-lg shadow-purple-200/50">
+                <FileText className="h-5 w-5 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-[#333344]">{student.name}的成长档案</h1>
-                <p className="text-xs text-[#888]">{course?.name || '未分配课程'} · {periodLabel}</p>
+                <h1 className="text-xl font-bold text-[#333344] tracking-wide">{student.name}的成长档案</h1>
+                <p className="text-xs text-[#888] mt-0.5">{course?.name || '未分配课程'} · {periodLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-2xl bg-white/80 px-4 py-2 shadow-sm border border-gray-100">
-                <Calendar className="h-4 w-4 text-[#9933FF]" />
-                <select value={period} onChange={(e) => setPeriod(e.target.value as PeriodType)} className="bg-transparent text-sm text-[#333344] outline-none cursor-pointer">
+              <div className="flex items-center gap-2 rounded-2xl bg-white/90 px-4 py-2 shadow-sm border border-purple-100/50 backdrop-blur-sm">
+                <Calendar className="h-4 w-4 text-[#9933FF]" strokeWidth={1.5} />
+                <select value={period} onChange={(e) => setPeriod(e.target.value as PeriodType)} className="bg-transparent text-sm text-[#333344] outline-none cursor-pointer font-medium">
                   <option value="week">按周</option>
                   <option value="month">按月</option>
                   <option value="custom">自定义</option>
                 </select>
                 {period === 'month' && (
-                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
+                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 h-8 rounded-xl border-purple-100/50 text-sm bg-purple-50/30" />
                 )}
                 {period === 'custom' && (
                   <div className="flex items-center gap-2">
-                    <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
+                    <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36 h-8 rounded-xl border-purple-100/50 text-sm bg-purple-50/30" />
                     <span className="text-[#888] text-sm">至</span>
-                    <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
+                    <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36 h-8 rounded-xl border-purple-100/50 text-sm bg-purple-50/30" />
                   </div>
                 )}
               </div>
@@ -569,22 +569,22 @@ export default function ReportPage() {
               <Button 
                 variant={timelineMode ? "default" : "outline"} 
                 onClick={() => { setTimelineMode(!timelineMode); setMergeMode(false); }} 
-                className={`rounded-2xl transition-all duration-300 ${timelineMode ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-200/50' : 'bg-white/80 border border-gray-200 text-[#333344] hover:bg-gray-50'}`}
+                className={`rounded-2xl transition-all duration-300 font-medium ${timelineMode ? 'bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-orange-200/50' : 'bg-white/90 border border-purple-100/50 text-[#333344] hover:bg-purple-50/50 hover:border-purple-200/50'}`}
               >
-                <TrendingUp className="mr-2 h-4 w-4" />
+                <TrendingUp className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 {timelineMode ? '时间轴' : '单月'}
               </Button>
               {/* 合并模式切换 */}
               <Button 
                 variant={mergeMode ? "default" : "outline"} 
                 onClick={() => { setMergeMode(!mergeMode); setTimelineMode(false); }} 
-                className={`rounded-2xl transition-all duration-300 ${mergeMode ? 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-lg shadow-green-200/50' : 'bg-white/80 border border-gray-200 text-[#333344] hover:bg-gray-50'}`}
+                className={`rounded-2xl transition-all duration-300 font-medium ${mergeMode ? 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-200/50' : 'bg-white/90 border border-purple-100/50 text-[#333344] hover:bg-purple-50/50 hover:border-purple-200/50'}`}
               >
-                <Calendar className="mr-2 h-4 w-4" />
+                <Calendar className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 {mergeMode ? '合并报告' : '合并'}
               </Button>
-              <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-300/50 hover:-translate-y-0.5">
-                <Download className="mr-2 h-4 w-4" />
+              <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-400/50 hover:-translate-y-0.5 font-medium">
+                <Download className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 {exporting ? '导出中...' : '导出PDF'}
               </Button>
             </div>
@@ -597,7 +597,7 @@ export default function ReportPage() {
         
         {/* 合并模式选择面板 */}
         {mergeMode && (
-          <div className="max-w-4xl mx-auto mb-6 bg-white rounded-2xl shadow-lg p-6 border border-green-100">
+          <div className="max-w-4xl mx-auto mb-6 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-purple-100/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-[#333344] flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-green-500" />
@@ -1781,51 +1781,55 @@ export default function ReportPage() {
           </div>
 
           {/* ========== 第六页：课堂风采 ========== */}
-          <div className="rounded-[20px] bg-white shadow-xl shadow-pink-100/50 overflow-hidden">
-            <div className="p-10">
+          <div className="rounded-[20px] shadow-xl overflow-hidden relative" style={{ background: 'linear-gradient(180deg, #fef7f0, #fdf2e9)' }}>
+            {/* 纸质纹理 */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Cpath d='M0 0h1v40H0zM20 0h1v40h-1z'/%3E%3C/g%3E%3C/svg%3E")` }} />
+            <div className="p-10 relative">
               {/* 标题 */}
               <div className="flex items-center gap-4 mb-10">
-                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-200/50">
-                  <Camera className="h-5 w-5 text-white" />
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-rose-300 to-pink-400 flex items-center justify-center shadow-lg shadow-rose-200/50">
+                  <Camera className="h-5 w-5 text-white" strokeWidth={1.5} />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-[#333344]">课堂风采</h2>
+                  <p className="text-xs text-[#999] mt-0.5">记录精彩瞬间</p>
                 </div>
-                <div className="flex-1 h-px bg-gradient-to-r from-pink-200 to-transparent ml-4"></div>
+                <div className="flex-1 h-px bg-gradient-to-r from-rose-200 to-transparent ml-4"></div>
               </div>
 
-              {/* 9宫格照片展示 */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* 9宫格照片展示 - 纸质相册风格 */}
+              <div className="grid grid-cols-3 gap-5">
                 {Array.from({ length: 9 }).map((_, i) => {
                   const photo = classroomPhotos[i];
                   if (photo) {
                     return (
-                      <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 relative group">
-                        <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 hover:scale-[1.03] relative group" style={{ background: '#fff', padding: '6px' }}>
+                        <div className="w-full h-full rounded-xl overflow-hidden relative">
+                          <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
                       </div>
                     );
                   } else if (i === classroomPhotos.length && classroomPhotos.length < 9) {
                     return (
                       <div 
                         key={i}
-                        className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg relative overflow-hidden"
-                        style={{ background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', border: '2px dashed #f9a8d4' }}
+                        className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-lg relative overflow-hidden"
+                        style={{ background: 'linear-gradient(135deg, #fef7f0, #fce7f3)', border: '2px dashed #e8c4b8' }}
                         onClick={handleClassroomPhotoUpload}
                       >
                         <div className="text-center z-10">
-                          <div className="h-12 w-12 rounded-full bg-white/80 flex items-center justify-center mx-auto mb-2 shadow-md">
-                            <Upload className="h-6 w-6 text-pink-400" />
+                          <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center mx-auto mb-2 shadow-md transition-transform duration-300 hover:scale-110">
+                            <Camera className="h-7 w-7 text-[#c49a8a]" strokeWidth={1.2} />
                           </div>
-                          <span className="text-sm font-medium text-pink-500">添加照片</span>
+                          <span className="text-sm font-medium text-[#c49a8a]">添加照片</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-br from-pink-100/50 to-rose-100/50" />
                       </div>
                     );
                   } else {
                     return (
-                      <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200/50 flex items-center justify-center">
-                        <Camera className="h-8 w-8 text-gray-200" />
+                      <div key={i} className="aspect-square rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f5f0eb, #ede5dc)', border: '1px solid rgba(200,180,160,0.2)' }}>
+                        <Camera className="h-10 w-10 text-[#d4c4b4]" strokeWidth={1} />
                       </div>
                     );
                   }

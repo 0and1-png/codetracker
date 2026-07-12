@@ -378,69 +378,169 @@ export default function ReportPage() {
         <div ref={reportRef} className="max-w-4xl mx-auto space-y-8">
           
           {/* ========== 第一页：封面 ========== */}
-          <div className="rounded-[24px] overflow-hidden shadow-2xl shadow-purple-300/30" style={{ background: 'linear-gradient(135deg, #3066FF 0%, #6B3FA0 35%, #9933FF 55%, #C84BAA 75%, #E848A8 100%)' }}>
-            <div className="p-14 min-h-[800px] flex flex-col justify-between relative">
-              {/* 顶部装饰 */}
-              <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-white blur-3xl"></div>
-                <div className="absolute bottom-20 right-10 w-60 h-60 rounded-full bg-white blur-3xl"></div>
-              </div>
-              
-              <div className="relative z-10">
-                <p className="text-white/70 text-sm tracking-[0.3em] text-center mb-2">战码编程</p>
-                <div className="w-16 h-0.5 bg-white/30 mx-auto"></div>
-              </div>
-              
-              <div className="relative z-10 text-center space-y-10">
-                <div className="space-y-5">
-                  <h1 className="text-6xl font-black text-white tracking-wider drop-shadow-lg">战码少年</h1>
-                  <h2 className="text-3xl font-bold text-white/90 tracking-wide">修炼手册</h2>
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="w-12 h-px bg-white/30"></div>
-                    <div className="w-2 h-2 rounded-full bg-white/50"></div>
-                    <div className="w-12 h-px bg-white/30"></div>
-                  </div>
+          <div 
+            className="rounded-[20px] overflow-hidden relative"
+            style={{ background: '#f5f0e6' }}
+          >
+            {/* 亚麻布料纹理背景 */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8b898' fill-opacity='0.10'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px)`,
+              }}
+            />
+
+            <div className="relative">
+              {/* 顶部图片区域 */}
+              <div className="relative w-full" style={{ height: '320px' }}>
+                {coverPhoto ? (
+                  <img src={coverPhoto} alt="封面图片" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/cover-bg.png" alt="战码编程" className="w-full h-full object-cover" />
+                )}
+                {/* 上传替换按钮 */}
+                <div 
+                  className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white transition-colors"
+                  onClick={() => handleImageUpload(setCoverPhoto)}
+                >
+                  <span className="text-xs text-[#555] flex items-center gap-1"><Upload className="h-3 w-3" /> 替换图片</span>
                 </div>
-                
-                {/* 圆形头像上传 */}
-                <div className="relative inline-block group">
-                  <div className="absolute -inset-2 rounded-full bg-white/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <div 
-                    className="relative w-44 h-44 rounded-full mx-auto flex items-center justify-center border-4 border-white/40 cursor-pointer overflow-hidden transition-all duration-500 group-hover:border-white/70 group-hover:scale-105"
-                    style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}
-                    onClick={() => handleImageUpload(setCoverPhoto)}
+                {/* 金色波浪分割线 */}
+                <svg 
+                  className="absolute bottom-0 left-0 w-full" 
+                  viewBox="0 0 800 60" 
+                  preserveAspectRatio="none"
+                  style={{ display: 'block', marginBottom: '-1px' }}
+                >
+                  <path 
+                    d="M0,0 L0,30 Q200,65 400,35 Q600,5 800,30 L800,0 Z" 
+                    fill="#f5f0e6"
+                  />
+                  <path 
+                    d="M0,30 Q200,65 400,35 Q600,5 800,30" 
+                    fill="none" 
+                    stroke="#d4a853" 
+                    strokeWidth="3"
+                  />
+                </svg>
+              </div>
+
+              {/* 中部书法标题区域 */}
+              <div className="relative px-10 pt-6 pb-4">
+                {/* 战码少年 - 黑色毛笔书法，左对齐 */}
+                <div className="mb-4 ml-4">
+                  <h1 
+                    className="text-5xl font-black inline-block"
+                    style={{ 
+                      fontFamily: '"Ma Shan Zheng", "ZCOOL KuaiLe", "STKaiti", "KaiTi", serif',
+                      color: '#1a1a1a',
+                      letterSpacing: '0.15em',
+                    }}
                   >
-                    {coverPhoto ? (
-                      <img src={coverPhoto} alt="学生照片" className="w-full h-full object-cover" />
+                    战码少年
+                  </h1>
+                  {/* 黄色下划线 */}
+                  <div className="mt-1 ml-1 h-[3px] w-48 rounded-full" style={{ background: '#e8b820' }}></div>
+                </div>
+                {/* 修炼手册 - 红色毛笔书法，右对齐偏移 */}
+                <div className="mb-6 ml-20">
+                  <h2 
+                    className="text-4xl font-black inline-block"
+                    style={{ 
+                      fontFamily: '"Ma Shan Zheng", "ZCOOL KuaiLe", "STKaiti", "KaiTi", serif',
+                      color: '#c0392b',
+                      letterSpacing: '0.15em',
+                    }}
+                  >
+                    修炼手册
+                  </h2>
+                  {/* 黄色下划线（更长） */}
+                  <div className="mt-1 ml-1 h-[3px] w-64 rounded-full" style={{ background: '#e8b820' }}></div>
+                </div>
+
+                {/* 下方左右分栏：大头贴 + 少年留言 */}
+                <div className="grid grid-cols-[200px_1fr] gap-6 mt-4">
+                  {/* 左侧：大头贴粘贴框 - 蓝色虚线 */}
+                  <div 
+                    className="aspect-square flex items-center justify-center cursor-pointer relative"
+                    style={{ 
+                      border: '2.5px dashed #4a90d9',
+                      borderRadius: '8px',
+                      background: '#faf5e8',
+                    }}
+                    onClick={() => handleImageUpload(setStudentPhoto)}
+                  >
+                    {studentPhoto ? (
+                      <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover rounded-md" />
                     ) : (
-                      <div className="text-center">
-                        <Camera className="h-14 w-14 text-white/50 mx-auto mb-2 group-hover:text-white/80 transition-colors" />
-                        <span className="text-xs text-white/50 group-hover:text-white/80 transition-colors">点击上传照片</span>
-                      </div>
+                      <span 
+                        className="text-sm text-[#999] text-center leading-relaxed"
+                        style={{ fontFamily: '"STSong", "SimSun", serif' }}
+                      >
+                        (大头贴<br/>粘贴处)
+                      </span>
                     )}
                   </div>
-                </div>
-                
-                {/* 战码少年有话说 */}
-                <div className="max-w-md mx-auto rounded-2xl p-6" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                  <p className="text-sm text-white/70 mb-3 tracking-wide">战码少年有话说</p>
-                  <Textarea
-                    value={studentWords}
-                    onChange={(e) => {
-                      if (e.target.value.length <= MAX_WORDS) {
-                        setStudentWords(e.target.value);
-                      }
+
+                  {/* 右侧：少年留言框 - 蓝色实线 */}
+                  <div 
+                    className="rounded-lg p-4 relative"
+                    style={{ 
+                      border: '2.5px solid #4a90d9',
+                      background: '#faf5e8',
+                      minHeight: '180px',
                     }}
-                    placeholder="写下你想说的话..."
-                    className="bg-white/10 border-white/15 text-white placeholder:text-white/40 min-h-[80px] resize-none rounded-xl focus-visible:ring-white/30"
-                  />
-                  <p className="text-xs text-white/40 mt-2 text-right">{studentWords.length}/{MAX_WORDS}</p>
+                  >
+                    {/* 黄色小标签 */}
+                    <span 
+                      className="text-xs font-medium mb-2 block"
+                      style={{ 
+                        color: '#e8b820',
+                        fontFamily: '"STSong", "SimSun", serif',
+                      }}
+                    >
+                      战码少年有话说：
+                    </span>
+                    {/* 横线输入区域 */}
+                    <Textarea
+                      value={studentWords}
+                      onChange={(e) => {
+                        if (e.target.value.length <= MAX_WORDS) {
+                          setStudentWords(e.target.value);
+                        }
+                      }}
+                      placeholder=""
+                      className="w-full bg-transparent border-none outline-none resize-none text-sm text-[#333] placeholder:text-[#ccc] min-h-[120px] leading-7 p-0"
+                      style={{
+                        backgroundImage: 'repeating-linear-gradient(to bottom, transparent, transparent 27px, #d4c5a9 27px, #d4c5a9 28px)',
+                        lineHeight: '28px',
+                        fontFamily: '"STSong", "SimSun", serif',
+                      }}
+                    />
+                    {/* 字数统计 */}
+                    <div className="absolute bottom-2 right-3 text-xs text-[#bbb]">
+                      {studentWords.length}/{MAX_WORDS}
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="relative z-10 text-center space-y-2">
-                <p className="text-lg text-white/80 font-medium">快乐学习 · 收获成长</p>
-                <p className="text-sm text-white/50">爱心施教 · 娃娃为王</p>
+
+              {/* 底部黄色横幅 */}
+              <div 
+                className="px-8 py-4 flex items-center justify-center"
+                style={{ background: '#e8b820' }}
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-[#555] text-sm tracking-wider" style={{ fontFamily: '"STSong", "SimSun", serif' }}>快乐学习 · 收获成长</span>
+                  <div className="w-px h-4 bg-[#888]/40"></div>
+                  <span className="text-[#555] text-sm tracking-wider" style={{ fontFamily: '"STSong", "SimSun", serif' }}>爱心施教 · 娃娃为王</span>
+                </div>
               </div>
             </div>
           </div>

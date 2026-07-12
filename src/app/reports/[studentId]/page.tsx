@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -71,6 +71,100 @@ export default function ReportPage() {
   const [timelineMode, setTimelineMode] = useState(false);
   const [timelineQuotes, setTimelineQuotes] = useState<Record<string, string>>({});
   
+  // 合并模式：将多个月份合并为一个报告
+  const [mergeMode, setMergeMode] = useState(false);
+  const [selectedMergeMonths, setSelectedMergeMonths] = useState<string[]>([]);
+  const [mergeTitle, setMergeTitle] = useState('');
+  const [mergedQuote, setMergedQuote] = useState('');
+  
+  // 获取某个月份的数据
+  const getMonthData = useCallback((monthKey: string) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    const monthTyping = allTyping.filter(r => r.date >= startStr && r.date <= endStr);
+    const monthRetry = allRetry.filter(r => r.date >= startStr && r.date <= endStr);
+    const monthHomework = allHomework.filter(r => r.date >= startStr && r.date <= endStr);
+    
+    return {
+      typing: monthTyping,
+      retry: monthRetry,
+      homework: monthHomework,
+      typingSummary: calcTypingSummary(monthTyping),
+      retrySummary: calcRetrySummary(monthRetry, course || undefined),
+      learnedKnowledge: calcLearnedKnowledgeMastery(monthRetry, course || undefined),
+      teacherTags: collectTeacherTags(monthTyping, monthRetry, monthHomework),
+    };
+  }, [allTyping, allRetry, allHomework, course]);
+  
+  // 合并后的数据
+  const mergedData = useMemo(() => {
+    if (!mergeMode || selectedMergeMonths.length === 0 || !course) return null;
+    
+    // 合并所有选中月份的记录
+    const allRetryMerged: ProblemRetryRecord[] = [];
+    const allHomeworkMerged: HomeworkRecord[] = [];
+    const allTypingMerged: TypingRecord[] = [];
+    
+    selectedMergeMonths.forEach(monthKey => {
+      const data = getMonthData(monthKey);
+      allRetryMerged.push(...data.retry);
+      allHomeworkMerged.push(...data.homework);
+      allTypingMerged.push(...data.typing);
+    });
+    
+    // 计算合并后的知识点掌握情况
+    const kpMap = new Map<string, { name: string; total: number; completed: number }>();
+    allRetryMerged.forEach(r => {
+      const problem = course.problems.find(p => p.id === r.problemId);
+      if (!problem) return;
+      const kpIds = (problem.knowledgePointIds?.length ?? 0) > 0 
+        ? problem.knowledgePointIds 
+        : (problem.knowledgePointId ? [problem.knowledgePointId] : []);
+      if (!kpIds) return;
+      kpIds.forEach((kpId: string) => {
+        const kp = course.knowledgePoints.find(k => k.id === kpId);
+        if (!kp) return;
+        if (!kpMap.has(kpId)) {
+          kpMap.set(kpId, { name: kp.name, total: 0, completed: 0 });
+        }
+        const entry = kpMap.get(kpId)!;
+        entry.total++;
+        // 三刷完成判断：有记录即视为完成
+        entry.completed++;
+      });
+    });
+    
+    const mergedKnowledgeMastery = Array.from(kpMap.values()).map((kp) => ({
+      knowledgePointId: kp.name,
+      knowledgePointName: kp.name,
+      completion: kp.total > 0 ? Math.round((kp.completed / kp.total) * 100) : 0,
+      stars: kp.total > 0 ? Math.min(5, Math.max(1, Math.ceil((kp.completed / kp.total) * 5))) : 0,
+      status: 'learning' as const
+    }));
+    
+    return {
+      retryRecords: allRetryMerged,
+      homeworkRecords: allHomeworkMerged,
+      typingRecords: allTypingMerged,
+      knowledgeMastery: mergedKnowledgeMastery
+    };
+  }, [mergeMode, selectedMergeMonths, getMonthData, course]);
+  
+  // 预设合并选项
+  const mergePresets = [
+    { label: '上半年', months: [1, 2, 3, 4, 5, 6] },
+    { label: '下半年', months: [7, 8, 9, 10, 11, 12] },
+    { label: '全年', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { label: 'Q1', months: [1, 2, 3] },
+    { label: 'Q2', months: [4, 5, 6] },
+    { label: 'Q3', months: [7, 8, 9] },
+    { label: 'Q4', months: [10, 11, 12] },
+  ];
+  
   // 获取所有有数据的月份
   const getAvailableMonths = useCallback(() => {
     const months = new Set<string>();
@@ -113,29 +207,58 @@ export default function ReportPage() {
         };
       });
   }, [allTyping, allRetry, allHomework]);
-  
-  // 获取某个月份的数据
-  const getMonthData = useCallback((monthKey: string) => {
-    const [year, month] = monthKey.split('-').map(Number);
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 0);
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
+
+  // 获取合并月份的数据
+  const getMergedData = useCallback(() => {
+    if (selectedMergeMonths.length === 0) return null;
     
-    const monthTyping = allTyping.filter(r => r.date >= startStr && r.date <= endStr);
-    const monthRetry = allRetry.filter(r => r.date >= startStr && r.date <= endStr);
-    const monthHomework = allHomework.filter(r => r.date >= startStr && r.date <= endStr);
+    const allTypingMerged: TypingRecord[] = [];
+    const allRetryMerged: ProblemRetryRecord[] = [];
+    const allHomeworkMerged: HomeworkRecord[] = [];
+    
+    selectedMergeMonths.forEach(monthKey => {
+      const data = getMonthData(monthKey);
+      allTypingMerged.push(...data.typing);
+      allRetryMerged.push(...data.retry);
+      allHomeworkMerged.push(...data.homework);
+    });
     
     return {
-      typing: monthTyping,
-      retry: monthRetry,
-      homework: monthHomework,
-      typingSummary: calcTypingSummary(monthTyping),
-      retrySummary: calcRetrySummary(monthRetry, course || undefined),
-      learnedKnowledge: calcLearnedKnowledgeMastery(monthRetry, course || undefined),
-      teacherTags: collectTeacherTags(monthTyping, monthRetry, monthHomework),
+      typing: allTypingMerged,
+      retry: allRetryMerged,
+      homework: allHomeworkMerged,
+      typingSummary: calcTypingSummary(allTypingMerged),
+      retrySummary: calcRetrySummary(allRetryMerged, course || undefined),
+      learnedKnowledge: calcLearnedKnowledgeMastery(allRetryMerged, course || undefined),
+      teacherTags: collectTeacherTags(allTypingMerged, allRetryMerged, allHomeworkMerged),
+      monthRange: selectedMergeMonths.length > 0 ? {
+        start: selectedMergeMonths[0],
+        end: selectedMergeMonths[selectedMergeMonths.length - 1]
+      } : null
     };
-  }, [allTyping, allRetry, allHomework, course]);
+  }, [selectedMergeMonths, getMonthData, course]);
+  
+  // 应用预设合并选项
+  const applyMergePreset = useCallback((preset: typeof mergePresets[0]) => {
+    const availableMonths = getAvailableMonths();
+    const year = availableMonths.length > 0 ? availableMonths[0].year : new Date().getFullYear();
+    
+    const monthsToSelect = availableMonths
+      .filter(m => preset.months.includes(m.month) && m.year === year)
+      .map(m => m.key);
+    
+    setSelectedMergeMonths(monthsToSelect);
+    setMergeTitle(`${year}年${preset.label}报告`);
+  }, [getAvailableMonths]);
+  
+  // 切换月份选择
+  const toggleMergeMonth = useCallback((monthKey: string) => {
+    setSelectedMergeMonths(prev => 
+      prev.includes(monthKey) 
+        ? prev.filter(m => m !== monthKey)
+        : [...prev, monthKey].sort()
+    );
+  }, []);
   
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -445,11 +568,20 @@ export default function ReportPage() {
               {/* 时间轴模式切换 */}
               <Button 
                 variant={timelineMode ? "default" : "outline"} 
-                onClick={() => setTimelineMode(!timelineMode)} 
+                onClick={() => { setTimelineMode(!timelineMode); setMergeMode(false); }} 
                 className={`rounded-2xl transition-all duration-300 ${timelineMode ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-200/50' : 'bg-white/80 border border-gray-200 text-[#333344] hover:bg-gray-50'}`}
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
-                {timelineMode ? '时间轴模式' : '单月模式'}
+                {timelineMode ? '时间轴' : '单月'}
+              </Button>
+              {/* 合并模式切换 */}
+              <Button 
+                variant={mergeMode ? "default" : "outline"} 
+                onClick={() => { setMergeMode(!mergeMode); setTimelineMode(false); }} 
+                className={`rounded-2xl transition-all duration-300 ${mergeMode ? 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white shadow-lg shadow-green-200/50' : 'bg-white/80 border border-gray-200 text-[#333344] hover:bg-gray-50'}`}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {mergeMode ? '合并报告' : '合并'}
               </Button>
               <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-300/50 hover:-translate-y-0.5">
                 <Download className="mr-2 h-4 w-4" />
@@ -462,6 +594,68 @@ export default function ReportPage() {
 
       {/* 报告预览区域 */}
       <div className="container mx-auto px-6 py-8">
+        
+        {/* 合并模式选择面板 */}
+        {mergeMode && (
+          <div className="max-w-4xl mx-auto mb-6 bg-white rounded-2xl shadow-lg p-6 border border-green-100">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#333344] flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-green-500" />
+                合并报告设置
+              </h3>
+              <div className="flex items-center gap-2">
+                {mergePresets.map(preset => (
+                  <Button
+                    key={preset.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyMergePreset(preset)}
+                    className="rounded-xl border-green-200 text-green-700 hover:bg-green-50"
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            
+            {/* 报告标题 */}
+            <div className="mb-4">
+              <label className="text-sm text-[#666] mb-1 block">报告标题</label>
+              <Input
+                value={mergeTitle}
+                onChange={(e) => setMergeTitle(e.target.value)}
+                placeholder="例如：2024年上半年报告"
+                className="rounded-xl border-gray-200"
+              />
+            </div>
+            
+            {/* 月份选择 */}
+            <div>
+              <label className="text-sm text-[#666] mb-2 block">选择要合并的月份（已选 {selectedMergeMonths.length} 个月）</label>
+              <div className="grid grid-cols-6 gap-2">
+                {getAvailableMonths().map(month => (
+                  <div
+                    key={month.key}
+                    onClick={() => toggleMergeMonth(month.key)}
+                    className={`p-3 rounded-xl cursor-pointer transition-all text-center ${
+                      selectedMergeMonths.includes(month.key)
+                        ? 'bg-gradient-to-br from-green-400 to-teal-500 text-white shadow-md'
+                        : 'bg-gray-50 text-[#666] hover:bg-gray-100 border border-gray-200'
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{month.display}</div>
+                  </div>
+                ))}
+              </div>
+              {getAvailableMonths().length === 0 && (
+                <div className="text-center py-8 text-[#999]">
+                  暂无数据，请先添加学习记录
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div ref={reportRef} className="max-w-4xl mx-auto space-y-8">
           
           {/* ========== 第一页：封面 ========== */}
@@ -1191,6 +1385,189 @@ export default function ReportPage() {
               </div>
             );
           })}
+
+          {/* ========== 合并报告模式：显示选中的多个月份合并数据 ========== */}
+          {mergeMode && selectedMergeMonths.length > 0 && mergedData && (
+            <div className="rounded-[20px] overflow-hidden relative" style={{ background: '#f5f0e6' }}>
+              {/* 顶部黄色横幅 */}
+              <div 
+                className="w-full px-8 pt-6 pb-5 flex flex-col items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #e8b820, #f0c840)' }}
+              >
+                {/* 报告标题 */}
+                <div className="text-center text-3xl font-black text-[#1a1a1a] tracking-wider mb-2" style={{ fontFamily: '"Arial Black", "Helvetica Neue", sans-serif' }}>
+                  {selectedMergeMonths.length === 6 ? '半年度报告' : selectedMergeMonths.length === 12 ? '年度报告' : `${selectedMergeMonths.length}个月合并报告`}
+                </div>
+                {/* 月份范围 */}
+                <div className="text-sm text-white/90 mb-2">
+                  {(() => {
+                    const sorted = [...selectedMergeMonths].sort();
+                    const first = sorted[0];
+                    const last = sorted[sorted.length - 1];
+                    return `${first} ~ ${last}`;
+                  })()}
+                </div>
+                {/* 励志文案 */}
+                <textarea
+                  value={mergedQuote}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMergedQuote(e.target.value)}
+                  className="text-center text-sm text-white bg-transparent border-none outline-none resize-none w-full max-w-lg leading-relaxed"
+                  rows={2}
+                  placeholder="输入合并报告励志文案..."
+                />
+              </div>
+
+              <div className="p-10">
+                {/* 标题 */}
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                    <BookOpen className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#333344]">合并课程内容</h2>
+                    <p className="text-sm text-[#888] mt-1">包含 {selectedMergeMonths.length} 个月份的学习数据</p>
+                  </div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
+                </div>
+                
+                <div className="space-y-8">
+                  {/* 合并知识点掌握情况 */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
+                      知识点掌握情况（合并）
+                    </h3>
+                    <div className="space-y-3">
+                      {mergedData.knowledgeMastery.length > 0 ? (
+                        mergedData.knowledgeMastery.map((kp: { knowledgePointId: string; knowledgePointName: string; completion: number; stars: number }) => (
+                          <div key={kp.knowledgePointId} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-purple-50">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold text-[#333344] text-base">{kp.knowledgePointName}</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="w-24 h-2 rounded-full bg-purple-100 overflow-hidden">
+                                  <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500" style={{ width: `${kp.completion}%` }}></div>
+                                </div>
+                                <span className="text-xs text-[#888] w-10 text-right">{kp.completion}%</span>
+                                <div className="flex">{renderStars(kp.stars)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="bg-white rounded-2xl p-10 text-center">
+                          <p className="text-[#888]">暂无知识点学习记录</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 合并完成题目 */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+                      完成题目（合并）
+                    </h3>
+                    {(() => {
+                      const problemMap = new Map<string, { problemId: string; problemName: string; records: ProblemRetryRecord[]; kpNames: string[] }>();
+                      mergedData.retryRecords.forEach((r: ProblemRetryRecord) => {
+                        const existing = problemMap.get(r.problemId);
+                        if (existing) {
+                          existing.records.push(r);
+                        } else {
+                          const problem = course?.problems?.find(p => p.id === r.problemId);
+                          const kpNames = (problem?.knowledgePointIds || (problem?.knowledgePointId ? [problem.knowledgePointId] : []))
+                            .map((id: string) => course?.knowledgePoints?.find(kp => kp.id === id)?.name || '')
+                            .filter(Boolean);
+                          problemMap.set(r.problemId, {
+                            problemId: r.problemId,
+                            problemName: r.problemName,
+                            records: [r],
+                            kpNames,
+                          });
+                        }
+                      });
+                      const allProblems = Array.from(problemMap.values());
+                      const keyProblems = allProblems.filter(p => p.records.length > 1);
+                      const normalProblems = allProblems.filter(p => p.records.length === 1);
+
+                      return (
+                        <div className="space-y-4">
+                          {/* 重点题型 */}
+                          {keyProblems.length > 0 && (
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-orange-400">
+                              <h4 className="text-base font-semibold text-orange-600 mb-5 flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5" /> 重点题型（多次练习）
+                              </h4>
+                              <div className="space-y-4">
+                                {keyProblems.map((p) => (
+                                  <div key={p.problemId} className="rounded-2xl p-5 border border-orange-100" style={{ background: 'linear-gradient(135deg, #fffaf5, #fff5eb)' }}>
+                                    <div className="flex items-center justify-between mb-3">
+                                      <span className="font-bold text-[#333344] text-base">{p.problemName}</span>
+                                      <span className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded-full font-medium">
+                                        练习 {p.records.length} 次
+                                      </span>
+                                    </div>
+                                    {p.kpNames.length > 0 && (
+                                      <div className="flex flex-wrap gap-2 mb-4">
+                                        {p.kpNames.map(name => (
+                                          <span key={name} className="text-xs px-3 py-1 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 普通题目 */}
+                          {normalProblems.length > 0 && (
+                            <div className="bg-white rounded-2xl p-6 shadow-sm">
+                              <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
+                              <div className="space-y-2">
+                                {normalProblems.map((p) => (
+                                  <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                                        <span className="text-green-500 text-xs">✓</span>
+                                      </div>
+                                      <span className="text-[#333344] font-medium">{p.problemName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {p.kpNames.map(name => (
+                                        <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
+                                      ))}
+                                      <span className="text-xs text-[#888] ml-2">{p.records[0].date}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  
+                  {/* 统计信息 */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { value: mergedData.knowledgeMastery.length, label: '已学习知识点', color: 'from-purple-400 to-purple-600', shadow: 'shadow-purple-200/50' },
+                      { value: new Set(mergedData.retryRecords.map((r: ProblemRetryRecord) => r.problemId)).size, label: '完成编程题', color: 'from-blue-400 to-blue-600', shadow: 'shadow-blue-200/50' },
+                      { value: (() => { const pids = [...new Set(mergedData.retryRecords.map((r: ProblemRetryRecord) => r.problemId))]; return pids.filter(pid => mergedData.retryRecords.filter((r: ProblemRetryRecord) => r.problemId === pid).length > 1).length; })(), label: '重点题型', color: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-200/50' },
+                    ].map((stat, i) => (
+                      <div key={i} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
+                        <div className={`text-3xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</div>
+                        <div className="text-sm text-[#888] mt-2">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ========== 第四页：能力反馈 ========== */}
           <div className="rounded-[20px] bg-white shadow-xl shadow-green-100/50 overflow-hidden">

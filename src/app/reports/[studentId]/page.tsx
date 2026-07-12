@@ -1367,6 +1367,79 @@ export default function ReportPage() {
                           </div>
                         )}
 
+                        {/* 重点题型 - 汇总表格 */}
+                        {keyProblems.length > 0 && (
+                          <div className="bg-white rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-base font-semibold text-orange-600 flex items-center gap-2 mb-4">
+                              <AlertCircle className="h-4 w-4" /> 重点题型汇总
+                            </h4>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-orange-100">
+                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
+                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
+                                    <th className="text-center py-2.5 px-3 font-semibold text-orange-500">一刷</th>
+                                    <th className="text-center py-2.5 px-3 font-semibold text-blue-500">二刷</th>
+                                    <th className="text-center py-2.5 px-3 font-semibold text-green-500">三刷</th>
+                                    <th className="text-center py-2.5 px-3 font-semibold text-[#555]">效率提升</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {keyProblems.map((p) => {
+                                    const formatDuration = (d: number) => {
+                                      if (!d) return '-';
+                                      const mins = Math.floor(d / 60);
+                                      const secs = d % 60;
+                                      return mins > 0 ? `${mins}分${secs}秒` : `${secs}秒`;
+                                    };
+                                    const firstTime = p.records[0]?.timeSpent || 0;
+                                    const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
+                                    const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
+                                    return (
+                                      <tr key={p.problemId} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
+                                        <td className="py-3 px-3 font-medium text-[#333]">{p.problemName}</td>
+                                        <td className="py-3 px-3">
+                                          <div className="flex flex-wrap gap-1">
+                                            {p.kpNames.length > 0 ? p.kpNames.slice(0, 2).map(name => (
+                                              <span key={name} className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded">{name}</span>
+                                            )) : <span className="text-xs text-[#aaa]">-</span>}
+                                            {p.kpNames.length > 2 && <span className="text-xs text-[#aaa]">+{p.kpNames.length - 2}</span>}
+                                          </div>
+                                        </td>
+                                        {['一刷', '二刷', '三刷'].map((label, i) => {
+                                          const rec = p.records[i];
+                                          return (
+                                            <td key={label} className="py-3 px-3 text-center">
+                                              {rec ? (
+                                                <div>
+                                                  <div className="text-xs font-semibold text-[#333]">{formatDuration(rec.timeSpent)}</div>
+                                                  <div className="text-[10px] text-[#aaa]">{rec.date.slice(5)}</div>
+                                                </div>
+                                              ) : (
+                                                <span className="text-xs text-[#ccc]">--</span>
+                                              )}
+                                            </td>
+                                          );
+                                        })}
+                                        <td className="py-3 px-3 text-center">
+                                          {improvement !== 0 ? (
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${improvement > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+                                              {improvement > 0 ? `↑${improvement}%` : `↓${Math.abs(improvement)}%`}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-[#ccc]">--</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
                         {/* 普通题目 */}
                         {normalProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm">

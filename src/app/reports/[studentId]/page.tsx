@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, Eye, EyeOff } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
 import {
   getStudents,
@@ -1443,24 +1443,43 @@ export default function ReportPage() {
                         {/* 普通题目 */}
                         {normalProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm">
-                            <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
-                            <div className="space-y-2">
-                              {normalProblems.map((p) => (
-                                <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
-                                  <div className="flex items-center gap-3">
-                                    <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                                      <span className="text-green-500 text-xs">✓</span>
-                                    </div>
-                                    <span className="text-[#333344] font-medium">{p.problemName}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {p.kpNames.map(name => (
-                                      <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
-                                    ))}
-                                    <span className="text-xs text-[#888] ml-2">{p.first.date}</span>
-                                  </div>
-                                </div>
-                              ))}
+                            <h4 className="text-base font-semibold text-[#555] flex items-center gap-2 mb-4">
+                              <CheckCircle className="h-4 w-4 text-green-500" /> 已完成题目
+                            </h4>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-gray-100">
+                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
+                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
+                                    <th className="text-center py-2.5 px-3 font-semibold text-[#555]">完成时间</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {normalProblems.map((p) => (
+                                    <tr key={p.problemId} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors">
+                                      <td className="py-3 px-3">
+                                        <div className="flex items-center gap-2">
+                                          <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-green-500 text-[10px]">✓</span>
+                                          </div>
+                                          <span className="font-medium text-[#333]">{p.problemName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-3">
+                                        <div className="flex flex-wrap gap-1">
+                                          {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                            <span key={name} className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded">{name}</span>
+                                          )) : <span className="text-xs text-[#aaa]">-</span>}
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-3 text-center">
+                                        <span className="text-xs text-[#666]">{p.first.date}</span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
                         )}
@@ -1636,24 +1655,43 @@ export default function ReportPage() {
                             {/* 普通题目 */}
                             {normalProblems.length > 0 && (
                               <div className="bg-white rounded-2xl p-6 shadow-sm">
-                                <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
-                                <div className="space-y-2">
-                                  {normalProblems.map((p) => (
-                                    <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
-                                      <div className="flex items-center gap-3">
-                                        <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                                          <span className="text-green-500 text-xs">✓</span>
-                                        </div>
-                                        <span className="text-[#333344] font-medium">{p.problemName}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {p.kpNames.map(name => (
-                                          <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
-                                        ))}
-                                        <span className="text-xs text-[#888] ml-2">{p.first.date}</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                <h4 className="text-base font-semibold text-[#555] flex items-center gap-2 mb-4">
+                                  <CheckCircle className="h-4 w-4 text-green-500" /> 已完成题目
+                                </h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="border-b border-gray-100">
+                                        <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
+                                        <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
+                                        <th className="text-center py-2.5 px-3 font-semibold text-[#555]">完成时间</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {normalProblems.map((p) => (
+                                        <tr key={p.problemId} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors">
+                                          <td className="py-3 px-3">
+                                            <div className="flex items-center gap-2">
+                                              <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-green-500 text-[10px]">✓</span>
+                                              </div>
+                                              <span className="font-medium text-[#333]">{p.problemName}</span>
+                                            </div>
+                                          </td>
+                                          <td className="py-3 px-3">
+                                            <div className="flex flex-wrap gap-1">
+                                              {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                                <span key={name} className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded">{name}</span>
+                                              )) : <span className="text-xs text-[#aaa]">-</span>}
+                                            </div>
+                                          </td>
+                                          <td className="py-3 px-3 text-center">
+                                            <span className="text-xs text-[#666]">{p.first.date}</span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
                             )}
@@ -1820,24 +1858,43 @@ export default function ReportPage() {
                           {/* 普通题目 */}
                           {normalProblems.length > 0 && (
                             <div className="bg-white rounded-2xl p-6 shadow-sm">
-                              <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
-                              <div className="space-y-2">
-                                {normalProblems.map((p) => (
-                                  <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
-                                    <div className="flex items-center gap-3">
-                                      <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
-                                        <span className="text-green-500 text-xs">✓</span>
-                                      </div>
-                                      <span className="text-[#333344] font-medium">{p.problemName}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {p.kpNames.map(name => (
-                                        <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
-                                      ))}
-                                      <span className="text-xs text-[#888] ml-2">{p.records[0].date}</span>
-                                    </div>
-                                  </div>
-                                ))}
+                              <h4 className="text-base font-semibold text-[#555] flex items-center gap-2 mb-4">
+                                <CheckCircle className="h-4 w-4 text-green-500" /> 已完成题目
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b border-gray-100">
+                                      <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
+                                      <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
+                                      <th className="text-center py-2.5 px-3 font-semibold text-[#555]">完成时间</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {normalProblems.map((p) => (
+                                      <tr key={p.problemId} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors">
+                                        <td className="py-3 px-3">
+                                          <div className="flex items-center gap-2">
+                                            <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                              <span className="text-green-500 text-[10px]">✓</span>
+                                            </div>
+                                            <span className="font-medium text-[#333]">{p.problemName}</span>
+                                          </div>
+                                        </td>
+                                        <td className="py-3 px-3">
+                                          <div className="flex flex-wrap gap-1">
+                                            {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                              <span key={name} className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded">{name}</span>
+                                            )) : <span className="text-xs text-[#aaa]">-</span>}
+                                          </div>
+                                        </td>
+                                        <td className="py-3 px-3 text-center">
+                                          <span className="text-xs text-[#666]">{p.records[0].date}</span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           )}

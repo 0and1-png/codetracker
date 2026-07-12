@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Star, Camera, ThumbsUp, AlertCircle } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle } from 'lucide-react';
 import {
   getStudents,
   getTypingByStudent,
@@ -306,44 +306,65 @@ export default function ReportPage() {
   const weeklyTyping = getWeeklyTyping();
   const retryComparison = getRetryComparison();
 
+  // Gold 3D star renderer
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+      <span key={i} className="relative inline-block mx-0.5">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            fill={i < rating ? 'url(#goldGrad)' : '#e5e7eb'}
+            stroke={i < rating ? '#d4a017' : '#d1d5db'}
+            strokeWidth="0.5"
+          />
+          {i < rating && (
+            <defs>
+              <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ffd700" />
+                <stop offset="50%" stopColor="#ffb347" />
+                <stop offset="100%" stopColor="#f0a500" />
+              </linearGradient>
+            </defs>
+          )}
+        </svg>
+      </span>
     ));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-[#F7F8FC]">
       {/* 控制栏 */}
-      <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+      <div className="sticky top-0 z-20 border-b border-white/60 bg-white/70 backdrop-blur-xl">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#3066FF] to-[#9933FF] flex items-center justify-center">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{student.name}的成长档案</h1>
-                <p className="text-sm text-muted-foreground">{course?.name || '未分配课程'} · {periodLabel}</p>
+                <h1 className="text-xl font-bold text-[#333344]">{student.name}的成长档案</h1>
+                <p className="text-xs text-[#888]">{course?.name || '未分配课程'} · {periodLabel}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <select value={period} onChange={(e) => setPeriod(e.target.value as PeriodType)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+              <div className="flex items-center gap-2 rounded-2xl bg-white/80 px-4 py-2 shadow-sm border border-gray-100">
+                <Calendar className="h-4 w-4 text-[#9933FF]" />
+                <select value={period} onChange={(e) => setPeriod(e.target.value as PeriodType)} className="bg-transparent text-sm text-[#333344] outline-none cursor-pointer">
                   <option value="week">按周</option>
                   <option value="month">按月</option>
                   <option value="custom">自定义</option>
                 </select>
                 {period === 'month' && (
-                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 h-9" />
+                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
                 )}
                 {period === 'custom' && (
                   <div className="flex items-center gap-2">
-                    <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36 h-9" />
-                    <span className="text-muted-foreground">至</span>
-                    <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36 h-9" />
+                    <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
+                    <span className="text-[#888] text-sm">至</span>
+                    <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="w-36 h-8 rounded-xl border-gray-200 text-sm" />
                   </div>
                 )}
               </div>
-              <Button onClick={exportPDF} disabled={exporting} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-300/50 hover:-translate-y-0.5">
                 <Download className="mr-2 h-4 w-4" />
                 {exporting ? '导出中...' : '导出PDF'}
               </Button>
@@ -353,43 +374,56 @@ export default function ReportPage() {
       </div>
 
       {/* 报告预览区域 */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div ref={reportRef} className="bg-white shadow-2xl rounded-lg overflow-hidden">
-            
-            {/* 第一页：封面 */}
-            <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white p-12 min-h-[800px] flex flex-col justify-between relative">
-              <div className="absolute top-6 right-6 text-right">
-                <div className="text-sm opacity-80">战码编程</div>
+      <div className="container mx-auto px-6 py-8">
+        <div ref={reportRef} className="max-w-4xl mx-auto space-y-8">
+          
+          {/* ========== 第一页：封面 ========== */}
+          <div className="rounded-[24px] overflow-hidden shadow-2xl shadow-purple-300/30" style={{ background: 'linear-gradient(135deg, #3066FF 0%, #6B3FA0 35%, #9933FF 55%, #C84BAA 75%, #E848A8 100%)' }}>
+            <div className="p-14 min-h-[800px] flex flex-col justify-between relative">
+              {/* 顶部装饰 */}
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-white blur-3xl"></div>
+                <div className="absolute bottom-20 right-10 w-60 h-60 rounded-full bg-white blur-3xl"></div>
               </div>
               
-              <div className="text-center space-y-8">
-                <div className="space-y-4">
-                  <h1 className="text-5xl font-bold tracking-wider">战码少年</h1>
-                  <h2 className="text-3xl font-semibold opacity-90">修炼手册</h2>
-                  <div className="w-32 h-1 bg-white/50 mx-auto"></div>
+              <div className="relative z-10">
+                <p className="text-white/70 text-sm tracking-[0.3em] text-center mb-2">战码编程</p>
+                <div className="w-16 h-0.5 bg-white/30 mx-auto"></div>
+              </div>
+              
+              <div className="relative z-10 text-center space-y-10">
+                <div className="space-y-5">
+                  <h1 className="text-6xl font-black text-white tracking-wider drop-shadow-lg">战码少年</h1>
+                  <h2 className="text-3xl font-bold text-white/90 tracking-wide">修炼手册</h2>
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-12 h-px bg-white/30"></div>
+                    <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                    <div className="w-12 h-px bg-white/30"></div>
+                  </div>
                 </div>
                 
-                {/* 学生大头贴 */}
-                <div className="relative inline-block">
+                {/* 圆形头像上传 */}
+                <div className="relative inline-block group">
+                  <div className="absolute -inset-2 rounded-full bg-white/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div 
-                    className="w-40 h-40 bg-white/20 rounded-full mx-auto flex items-center justify-center border-4 border-white/30 cursor-pointer hover:bg-white/30 transition-colors overflow-hidden"
+                    className="relative w-44 h-44 rounded-full mx-auto flex items-center justify-center border-4 border-white/40 cursor-pointer overflow-hidden transition-all duration-500 group-hover:border-white/70 group-hover:scale-105"
+                    style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)' }}
                     onClick={() => handleImageUpload(setCoverPhoto)}
                   >
                     {coverPhoto ? (
                       <img src={coverPhoto} alt="学生照片" className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-center">
-                        <Camera className="h-16 w-16 text-white/60 mx-auto mb-2" />
-                        <span className="text-xs opacity-60">点击上传照片</span>
+                        <Camera className="h-14 w-14 text-white/50 mx-auto mb-2 group-hover:text-white/80 transition-colors" />
+                        <span className="text-xs text-white/50 group-hover:text-white/80 transition-colors">点击上传照片</span>
                       </div>
                     )}
                   </div>
                 </div>
                 
                 {/* 战码少年有话说 */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-md mx-auto">
-                  <p className="text-sm opacity-80 mb-2">战码少年有话说：</p>
+                <div className="max-w-md mx-auto rounded-2xl p-6" style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <p className="text-sm text-white/70 mb-3 tracking-wide">战码少年有话说</p>
                   <Textarea
                     value={studentWords}
                     onChange={(e) => {
@@ -398,147 +432,133 @@ export default function ReportPage() {
                       }
                     }}
                     placeholder="写下你想说的话..."
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 min-h-[80px] resize-none"
+                    className="bg-white/10 border-white/15 text-white placeholder:text-white/40 min-h-[80px] resize-none rounded-xl focus-visible:ring-white/30"
                   />
-                  <p className="text-xs opacity-60 mt-2 text-right">{studentWords.length}/{MAX_WORDS}</p>
+                  <p className="text-xs text-white/40 mt-2 text-right">{studentWords.length}/{MAX_WORDS}</p>
                 </div>
               </div>
               
-              <div className="text-center space-y-2">
-                <p className="text-lg opacity-90">快乐学习 · 收获成长</p>
-                <p className="text-sm opacity-70">爱心施教 · 娃娃为王</p>
+              <div className="relative z-10 text-center space-y-2">
+                <p className="text-lg text-white/80 font-medium">快乐学习 · 收获成长</p>
+                <p className="text-sm text-white/50">爱心施教 · 娃娃为王</p>
               </div>
             </div>
+          </div>
 
-            {/* 第二页：学生基本信息 */}
-            <div className="p-12 min-h-[700px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-blue-200">
-                <User className="h-8 w-8 text-blue-600" />
-                <h2 className="text-3xl font-bold text-gray-800">学生基本信息</h2>
+          {/* ========== 第二页：学生基本信息 ========== */}
+          <div className="rounded-[20px] bg-white shadow-xl shadow-gray-200/50 overflow-hidden">
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-200/50">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">学生基本信息</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent ml-4"></div>
               </div>
               
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-[240px_1fr] gap-10">
                 {/* 左侧：学生照片 */}
-                <div className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-start pt-2">
                   <div 
-                    className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors overflow-hidden"
+                    className="w-52 h-52 rounded-[20px] flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-blue-100/50 hover:-translate-y-1"
+                    style={{ background: 'linear-gradient(135deg, #f0f4ff, #e8eeff)', border: '2px solid #e0e7ff' }}
                     onClick={() => handleImageUpload(setStudentPhoto)}
                   >
                     {studentPhoto ? (
                       <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="text-center text-gray-400">
-                        <Upload className="h-12 w-12 mx-auto mb-2" />
-                        <span className="text-sm">点击上传照片</span>
+                      <div className="text-center">
+                        <Upload className="h-10 w-10 text-blue-300 mx-auto mb-2" />
+                        <span className="text-sm text-blue-400">点击上传照片</span>
                       </div>
                     )}
                   </div>
                 </div>
                 
                 {/* 右侧：基本信息 */}
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">学生姓名</Label>
-                    <Input value={student.name} disabled className="mt-1 bg-gray-50" />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">年龄</Label>
-                    <Input 
-                      value={studentAge} 
-                      onChange={(e) => setStudentAge(e.target.value)}
-                      placeholder="请输入年龄"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">学校</Label>
-                    <Input 
-                      value={studentSchool} 
-                      onChange={(e) => setStudentSchool(e.target.value)}
-                      placeholder="请输入学校"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">编程时间</Label>
-                    <Input 
-                      value={programmingTime} 
-                      onChange={(e) => setProgrammingTime(e.target.value)}
-                      placeholder="例如：1年"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">学习内容</Label>
-                    <Input 
-                      value={learningContent} 
-                      onChange={(e) => setLearningContent(e.target.value)}
-                      placeholder="例如：Scratch图形化编程"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-700">兴趣爱好</Label>
-                    <Input 
-                      value={interests} 
-                      onChange={(e) => setInterests(e.target.value)}
-                      placeholder="例如：画画、游戏、音乐"
-                      className="mt-1"
-                    />
-                  </div>
+                <div className="space-y-5">
+                  {[
+                    { label: '学生姓名', value: student.name, disabled: true, placeholder: '' },
+                    { label: '年龄', value: studentAge, setter: setStudentAge, placeholder: '请输入年龄' },
+                    { label: '学校', value: studentSchool, setter: setStudentSchool, placeholder: '请输入学校' },
+                    { label: '编程时间', value: programmingTime, setter: setProgrammingTime, placeholder: '例如：1年' },
+                    { label: '学习内容', value: learningContent, setter: setLearningContent, placeholder: '例如：Scratch图形化编程' },
+                    { label: '兴趣爱好', value: interests, setter: setInterests, placeholder: '例如：画画、游戏、音乐' },
+                  ].map((field) => (
+                    <div key={field.label}>
+                      <Label className="text-sm font-medium text-[#555] mb-1.5 block">{field.label}</Label>
+                      <Input 
+                        value={field.value}
+                        onChange={field.setter ? (e: React.ChangeEvent<HTMLInputElement>) => field.setter(e.target.value) : undefined}
+                        disabled={field.disabled}
+                        placeholder={field.placeholder}
+                        className="rounded-xl border-gray-200 bg-[#F7F8FC] transition-all duration-200 hover:bg-white hover:shadow-md hover:border-blue-200 focus-visible:ring-blue-200 h-11"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* 第三页：本月课程内容+知识点 */}
-            <div className="p-12 min-h-[700px] bg-gray-50">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
-                <BookOpen className="h-8 w-8 text-purple-600" />
-                <h2 className="text-3xl font-bold text-gray-800">本月课程内容</h2>
+          {/* ========== 第三页：本月课程内容+知识点 ========== */}
+          <div className="rounded-[20px] shadow-xl shadow-purple-200/30 overflow-hidden" style={{ background: 'linear-gradient(180deg, #faf5ff 0%, #f5f0ff 100%)' }}>
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">本月课程内容</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* 知识点掌握情况 */}
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-4">知识点掌握情况</h3>
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
+                    知识点掌握情况
+                  </h3>
+                  <div className="space-y-3">
                     {learnedKnowledge.length > 0 ? (
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 text-gray-600 font-semibold">知识点</th>
-                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">完成度</th>
-                            <th className="text-center py-3 px-4 text-gray-600 font-semibold">掌握星级</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {learnedKnowledge.map((kp) => (
-                            <tr key={kp.knowledgePointId} className="border-b border-gray-100">
-                              <td className="py-3 px-4 font-medium text-gray-800">{kp.knowledgePointName}</td>
-                              <td className="py-3 px-4 text-center">
-                                <span className="text-sm text-gray-600">{kp.completedProblems}/{kp.totalProblems}题</span>
-                                <span className="ml-2 text-xs text-gray-500">({kp.completionPercent}%)</span>
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <div className="flex justify-center">
-                                  {renderStars(kp.stars)}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      learnedKnowledge.map((kp) => (
+                        <div key={kp.knowledgePointId} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-purple-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold text-[#333344] text-base">{kp.knowledgePointName}</span>
+                              <span className="text-xs px-2.5 py-1 bg-purple-50 text-purple-500 rounded-full">{kp.completedProblems}/{kp.totalProblems}题</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="w-24 h-2 rounded-full bg-purple-100 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500" style={{ width: `${kp.completionPercent}%` }}></div>
+                              </div>
+                              <span className="text-xs text-[#888] w-10 text-right">{kp.completionPercent}%</span>
+                              <div className="flex">{renderStars(kp.stars)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
                     ) : (
-                      <p className="text-gray-500 text-center py-8">暂无知识点学习记录</p>
+                      <div className="bg-white rounded-2xl p-10 text-center">
+                        <p className="text-[#888]">暂无知识点学习记录</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* 本月完成题目 */}
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-4">本月完成题目</h3>
+                  <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+                    本月完成题目
+                  </h3>
                   {(() => {
-                    // Group retry records by problemId
                     const problemGroups = monthRetry.reduce((acc, r) => {
                       if (!acc[r.problemId]) acc[r.problemId] = [];
                       acc[r.problemId].push(r);
@@ -549,7 +569,6 @@ export default function ReportPage() {
                       const hasRetry = records.length > 1;
                       const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
                       const first = sorted[0];
-                      // Get knowledge points for this problem from course.problems
                       const problemDef = course?.problems?.find(p => p.id === problemId);
                       const kpIds = problemDef
                         ? [...(problemDef.knowledgePointIds || []), ...(problemDef.knowledgePointId ? [problemDef.knowledgePointId] : [])]
@@ -565,79 +584,67 @@ export default function ReportPage() {
                     const normalProblems = problems.filter(p => !p.hasRetry);
 
                     if (problems.length === 0) {
-                      return <p className="text-gray-500 text-center py-8 bg-white rounded-lg">暂无完成题目记录</p>;
+                      return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">暂无完成题目记录</p></div>;
                     }
 
                     return (
-                      <div className="space-y-4">
-                        {/* 重点题型（有三刷的） */}
+                      <div className="space-y-5">
+                        {/* 重点题型 */}
                         {keyProblems.length > 0 && (
-                          <div className="bg-white rounded-lg p-6 shadow-sm border-l-4 border-orange-400">
-                            <h4 className="text-lg font-semibold text-orange-700 mb-4 flex items-center gap-2">
+                          <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-orange-400">
+                            <h4 className="text-base font-semibold text-orange-600 mb-5 flex items-center gap-2">
                               <AlertCircle className="h-5 w-5" /> 重点题型（多次练习）
                             </h4>
                             <div className="space-y-4">
                               {keyProblems.map((p) => (
-                                <div key={p.problemId} className="border border-orange-100 rounded-lg p-4 bg-orange-50/50">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="font-semibold text-gray-800">{p.problemName}</span>
-                                    <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
+                                <div key={p.problemId} className="rounded-2xl p-5 border border-orange-100" style={{ background: 'linear-gradient(135deg, #fffaf5, #fff5eb)' }}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <span className="font-bold text-[#333344] text-base">{p.problemName}</span>
+                                    <span className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded-full font-medium">
                                       练习 {p.records.length} 次
                                     </span>
                                   </div>
                                   {p.kpNames.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-3">
+                                    <div className="flex flex-wrap gap-2 mb-4">
                                       {p.kpNames.map(name => (
-                                        <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 rounded">
-                                          {name}
-                                        </span>
+                                        <span key={name} className="text-xs px-3 py-1 bg-blue-50 text-blue-500 rounded-full">{name}</span>
                                       ))}
                                     </div>
                                   )}
-                                  <table className="w-full text-sm">
-                                    <thead>
-                                      <tr className="text-gray-500 border-b border-orange-100">
-                                        <th className="text-left py-1.5 px-2">次数</th>
-                                        <th className="text-left py-1.5 px-2">日期</th>
-                                        <th className="text-left py-1.5 px-2">用时</th>
-                                        <th className="text-left py-1.5 px-2">备注</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {p.records.map((r, idx) => (
-                                          <tr key={idx} className="border-b border-orange-50">
-                                            <td className="py-1.5 px-2 text-gray-600">第{r.attempt || idx + 1}次</td>
-                                            <td className="py-1.5 px-2 text-gray-600">{r.date}</td>
-                                            <td className="py-1.5 px-2 text-gray-600">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</td>
-                                            <td className="py-1.5 px-2 text-gray-500 text-xs">{r.notes || '-'}</td>
-                                          </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                  <div className="space-y-2">
+                                    {p.records.map((r, idx) => (
+                                      <div key={idx} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/70">
+                                        <span className="text-sm text-[#888]">第{r.attempt || idx + 1}次</span>
+                                        <span className="text-sm text-[#555]">{r.date}</span>
+                                        <span className="text-sm text-[#555]">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</span>
+                                        <span className="text-xs text-[#888]">{r.notes || '-'}</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           </div>
                         )}
 
-                        {/* 普通题目（无三刷的） */}
+                        {/* 普通题目 */}
                         {normalProblems.length > 0 && (
-                          <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h4 className="text-lg font-semibold text-gray-700 mb-4">已完成题目</h4>
+                          <div className="bg-white rounded-2xl p-6 shadow-sm">
+                            <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
                             <div className="space-y-2">
                               {normalProblems.map((p) => (
-                                <div key={p.problemId} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                                <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
                                   <div className="flex items-center gap-3">
-                                    <span className="text-green-500">✓</span>
-                                    <span className="text-gray-800 font-medium">{p.problemName}</span>
+                                    <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                                      <span className="text-green-500 text-xs">✓</span>
+                                    </div>
+                                    <span className="text-[#333344] font-medium">{p.problemName}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     {p.kpNames.map(name => (
-                                      <span key={name} className="text-xs px-2 py-0.5 bg-purple-50 text-purple-600 rounded">
-                                        {name}
-                                      </span>
+                                      <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
                                     ))}
-                                    <span className="text-xs text-gray-400 ml-2">{p.first.date}</span>
+                                    <span className="text-xs text-[#888] ml-2">{p.first.date}</span>
                                   </div>
                                 </div>
                               ))}
@@ -651,117 +658,131 @@ export default function ReportPage() {
                 
                 {/* 统计信息 */}
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <div className="text-3xl font-bold text-purple-600">{learnedKnowledge.length}</div>
-                    <div className="text-sm text-gray-600 mt-1">已学习知识点</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <div className="text-3xl font-bold text-blue-600">{new Set(monthRetry.map(r => r.problemId)).size}</div>
-                    <div className="text-sm text-gray-600 mt-1">本月完成编程题</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <div className="text-3xl font-bold text-orange-600">
-                      {(() => {
-                        const problemIds = [...new Set(monthRetry.map(r => r.problemId))];
-                        return problemIds.filter(pid => monthRetry.filter(r => r.problemId === pid).length > 1).length;
-                      })()}
+                  {[
+                    { value: learnedKnowledge.length, label: '已学习知识点', color: 'from-purple-400 to-purple-600', shadow: 'shadow-purple-200/50' },
+                    { value: new Set(monthRetry.map(r => r.problemId)).size, label: '本月完成编程题', color: 'from-blue-400 to-blue-600', shadow: 'shadow-blue-200/50' },
+                    { value: (() => { const pids = [...new Set(monthRetry.map(r => r.problemId))]; return pids.filter(pid => monthRetry.filter(r => r.problemId === pid).length > 1).length; })(), label: '重点题型', color: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-200/50' },
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
+                      <div className={`text-3xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</div>
+                      <div className="text-sm text-[#888] mt-2">{stat.label}</div>
                     </div>
-                    <div className="text-sm text-gray-600 mt-1">重点题型（多次练习）</div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* 第四页：能力反馈 */}
-            <div className="p-12 min-h-[700px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-green-200">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-                <h2 className="text-3xl font-bold text-gray-800">能力反馈</h2>
+          {/* ========== 第四页：能力反馈 ========== */}
+          <div className="rounded-[20px] bg-white shadow-xl shadow-green-100/50 overflow-hidden">
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200/50">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">能力反馈</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-emerald-200 to-transparent ml-4"></div>
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                 {/* 点赞 */}
-                <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <ThumbsUp className="h-5 w-5 text-green-600" /> 点赞
+                <div className="rounded-2xl p-6 border border-emerald-100" style={{ background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)' }}>
+                  <h3 className="text-base font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <ThumbsUp className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    点赞
                   </h3>
                   {teacherTags.praiseTags.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {teacherTags.praiseTags.map((tag) => (
-                        <span key={tag} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm border border-green-200">
+                        <span key={tag} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl text-sm font-medium border border-emerald-100 shadow-sm">
                           {tag}
                         </span>
                       ))}
                     </div>
                   ) : strongPoints.length > 0 ? (
-                    <ul className="space-y-2">
+                    <div className="space-y-3">
                       {strongPoints.slice(0, 5).map((kp, i) => (
-                        <li key={i} className="flex items-center gap-2 text-gray-700">
-                          <span className="text-green-600">✓</span>
-                          {kp.knowledgePointName}
-                        </li>
+                        <div key={i} className="flex items-center gap-3 py-2 px-4 rounded-xl bg-white/70">
+                          <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                            <span className="text-emerald-500 text-xs">✓</span>
+                          </div>
+                          <span className="text-[#333344] text-sm">{kp.knowledgePointName}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
-                    <p className="text-gray-500 text-sm">暂无数据</p>
+                    <p className="text-[#888] text-sm">暂无数据</p>
                   )}
                 </div>
 
                 {/* 待提升 */}
-                <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-orange-600" /> 待提升
+                <div className="rounded-2xl p-6 border border-orange-100" style={{ background: 'linear-gradient(135deg, #fffaf5, #fff7ed)' }}>
+                  <h3 className="text-base font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                    </div>
+                    待提升
                   </h3>
                   {teacherTags.improveTags.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {teacherTags.improveTags.map((tag) => (
-                        <span key={tag} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm border border-orange-200">
+                        <span key={tag} className="px-4 py-2 bg-orange-50 text-orange-600 rounded-2xl text-sm font-medium border border-orange-100 shadow-sm">
                           {tag}
                         </span>
                       ))}
                     </div>
                   ) : weakPoints.length > 0 ? (
-                    <ul className="space-y-2">
+                    <div className="space-y-3">
                       {weakPoints.slice(0, 5).map((kp, i) => (
-                        <li key={i} className="flex items-center gap-2 text-gray-700">
-                          <span className="text-orange-600">→</span>
-                          {kp.knowledgePointName}
-                        </li>
+                        <div key={i} className="flex items-center gap-3 py-2 px-4 rounded-xl bg-white/70">
+                          <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center">
+                            <span className="text-orange-500 text-xs">→</span>
+                          </div>
+                          <span className="text-[#333344] text-sm">{kp.knowledgePointName}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
-                    <p className="text-gray-500 text-sm">暂无数据</p>
+                    <p className="text-[#888] text-sm">暂无数据</p>
                   )}
                 </div>
               </div>
 
-              {/* 打字测试 - 时间趋势图 */}
+              {/* 打字测试趋势 */}
               {monthTyping.length > 0 && (
                 <div className="mt-8">
-                  <h3 className="text-xl font-semibold text-gray-700 mb-4">打字测试趋势</h3>
-                  <div className="bg-white rounded-lg p-6 shadow-sm">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-gray-600 font-semibold">日期</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">速度(字/分钟)</th>
-                          <th className="text-center py-3 px-4 text-gray-600 font-semibold">正确率</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i) => (
-                          <tr key={i} className="border-b border-gray-100">
-                            <td className="py-3 px-4 font-medium text-gray-800">{t.date}</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{t.speed}</td>
-                            <td className="py-3 px-4 text-center text-gray-700">{t.accuracy}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                    打字测试趋势
+                  </h3>
+                  <div className="bg-[#F7F8FC] rounded-2xl p-6">
+                    <div className="space-y-2">
+                      {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i) => (
+                        <div key={i} className={`flex items-center justify-between py-3 px-5 rounded-xl ${i % 2 === 0 ? 'bg-white' : 'bg-transparent'}`}>
+                          <span className="font-medium text-[#333344] text-sm">{t.date}</span>
+                          <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#888]">速度</span>
+                              <span className="font-bold text-emerald-600">{t.speed}</span>
+                              <span className="text-xs text-[#888]">字/分</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#888]">正确率</span>
+                              <span className="font-bold text-blue-600">{t.accuracy}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     {typingImprovement !== 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          相比上期{typingImprovement > 0 ? '提升' : '下降'} {Math.abs(typingImprovement)}%
+                      <div className="mt-4 pt-4 border-t border-gray-200/50">
+                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                          相比上期{typingImprovement > 0 ? '↑ 提升' : '↓ 下降'} {Math.abs(typingImprovement)}%
                         </p>
                       </div>
                     )}
@@ -769,28 +790,40 @@ export default function ReportPage() {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* 第五页：成长建议 */}
-            <div className="p-12 min-h-[700px] bg-gradient-to-br from-yellow-50 to-orange-50">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-yellow-200">
-                <Target className="h-8 w-8 text-yellow-600" />
-                <h2 className="text-3xl font-bold text-gray-800">成长建议</h2>
+          {/* ========== 第五页：成长建议 ========== */}
+          <div className="rounded-[20px] shadow-xl shadow-amber-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #fffbeb, #fef3c7)' }}>
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-200/50">
+                  <Target className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">成长建议</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-amber-200 to-transparent ml-4"></div>
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">💡 提升Tip</h3>
+              <div className="space-y-5">
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
+                    <span className="text-lg">💡</span> 提升Tip
+                  </h3>
                   {teacherTags.growthSuggestions.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {teacherTags.growthSuggestions.map((sug, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className="text-blue-500 mt-0.5">●</span>
-                          <p className="text-gray-600">{sug}</p>
+                        <div key={i} className="flex items-start gap-3 py-2 px-4 rounded-xl bg-amber-50/50">
+                          <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
+                            <span className="text-amber-500 text-xs">{i + 1}</span>
+                          </div>
+                          <p className="text-[#555] text-sm leading-relaxed">{sug}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-600 leading-relaxed">
+                    <p className="text-[#555] leading-relaxed text-sm">
                       {weakPoints.length > 0 
                         ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
                         : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
@@ -798,109 +831,132 @@ export default function ReportPage() {
                   )}
                 </div>
 
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">🏠 家校Tip</h3>
-                  <p className="text-gray-600 leading-relaxed">
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
+                    <span className="text-lg">🏠</span> 家校Tip
+                  </h3>
+                  <p className="text-[#555] leading-relaxed text-sm">
                     鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
                   </p>
                 </div>
 
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3">🎯 冲刺Goal</h3>
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
+                    <span className="text-lg">🎯</span> 冲刺Goal
+                  </h3>
                   <Textarea
                     value={nextGoal}
                     onChange={(e) => setNextGoal(e.target.value)}
                     placeholder="写下下月学习目标..."
-                    className="min-h-[100px] resize-none"
+                    className="min-h-[100px] resize-none rounded-xl border-gray-200 bg-[#F7F8FC] focus-visible:ring-amber-200"
                   />
                   {autoSprintGoal && (
-                    <p className="text-xs text-gray-400 mt-2">自动推荐：{autoSprintGoal}</p>
+                    <p className="text-xs text-[#888] mt-2">自动推荐：{autoSprintGoal}</p>
                   )}
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* 第六页：课堂风采 */}
-            <div className="p-12 min-h-[700px]">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-pink-200">
-                <Camera className="h-8 w-8 text-pink-600" />
-                <h2 className="text-3xl font-bold text-gray-800">课堂风采</h2>
+          {/* ========== 第六页：课堂风采 ========== */}
+          <div className="rounded-[20px] bg-white shadow-xl shadow-pink-100/50 overflow-hidden">
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-200/50">
+                  <Camera className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">课堂风采</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-pink-200 to-transparent ml-4"></div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-5">
                 {classroomPhotos.map((photo, i) => (
-                  <div key={i} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                  <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                     <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
                 {classroomPhotos.length < 6 && (
                   <div 
-                    className="aspect-square bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #fdf2f8, #fce7f3)', border: '2px dashed #f9a8d4' }}
                     onClick={handleClassroomPhotoUpload}
                   >
-                    <div className="text-center text-gray-400">
-                      <Upload className="h-8 w-8 mx-auto mb-2" />
-                      <span className="text-sm">添加照片</span>
+                    <div className="text-center">
+                      <Upload className="h-8 w-8 text-pink-300 mx-auto mb-2" />
+                      <span className="text-sm text-pink-400">添加照片</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* 第七页：家校共育和下月计划 */}
-            <div className="p-12 min-h-[700px] bg-gradient-to-br from-purple-50 to-pink-50">
-              <div className="flex items-center gap-3 mb-8 pb-4 border-b-2 border-purple-200">
-                <Users className="h-8 w-8 text-purple-600" />
-                <h2 className="text-3xl font-bold text-gray-800">家校共育</h2>
+          {/* ========== 第七页：家校共育+老师寄语 ========== */}
+          <div className="rounded-[20px] shadow-xl shadow-indigo-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #eef2ff, #e0e7ff)' }}>
+            <div className="p-10">
+              {/* 标题 */}
+              <div className="flex items-center gap-4 mb-10">
+                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-[#333344]">家校共育</h2>
+                </div>
+                <div className="flex-1 h-px bg-gradient-to-r from-indigo-200 to-transparent ml-4"></div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 mb-8">
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-xl">💡</span> 陪伴创新
+              <div className="grid grid-cols-2 gap-5 mb-8">
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
+                    <span className="text-lg">💡</span> 陪伴创新
                   </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
+                  <p className="text-[#555] text-sm leading-relaxed">
                     鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
                   </p>
                 </div>
 
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-xl">📚</span> 学业跟进
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
+                    <span className="text-lg">📚</span> 学业跟进
                   </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
+                  <p className="text-[#555] text-sm leading-relaxed">
                     关注孩子的学习进度，定期检查作业完成情况。建议每天安排固定的编程练习时间，保持学习连贯性。
                   </p>
                 </div>
               </div>
 
               {/* 老师寄语 */}
-              <div className="mt-8">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-indigo-200">
-                  <MessageCircle className="h-8 w-8 text-indigo-600" />
-                  <h2 className="text-3xl font-bold text-gray-800">老师寄语</h2>
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-md shadow-indigo-200/50">
+                    <MessageCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-[#333344]">老师寄语</h2>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium text-gray-700">寄语内容</Label>
-                    <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)}>
+                    <Label className="text-sm font-medium text-[#555]">寄语内容</Label>
+                    <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)} className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50">
                       <Award className="mr-2 h-4 w-4" />
                       选择模板
                     </Button>
                   </div>
 
                   {showTemplates && (
-                    <div className="bg-white rounded-lg p-4 border border-gray-200 space-y-2">
-                      <p className="text-sm font-medium text-gray-700 mb-2">推荐模板：</p>
+                    <div className="bg-[#F7F8FC] rounded-2xl p-4 space-y-2 border border-indigo-100">
+                      <p className="text-sm font-medium text-[#555] mb-2">推荐模板：</p>
                       {COMMENT_TEMPLATES.map((template) => (
                         <button
                           key={template.id}
                           onClick={() => { setTeacherComment(template.content); setShowTemplates(false); }}
-                          className="w-full text-left p-3 rounded-md hover:bg-indigo-50 transition-colors border border-gray-100 hover:border-indigo-200"
+                          className="w-full text-left p-3 rounded-xl hover:bg-white transition-all duration-200 border border-transparent hover:border-indigo-200 hover:shadow-sm"
                         >
-                          <div className="font-medium text-sm text-gray-800">{template.name}</div>
-                          <div className="text-xs text-gray-600 mt-1 line-clamp-2">{template.content}</div>
+                          <div className="font-medium text-sm text-[#333344]">{template.name}</div>
+                          <div className="text-xs text-[#888] mt-1 line-clamp-2">{template.content}</div>
                         </button>
                       ))}
                     </div>
@@ -910,17 +966,19 @@ export default function ReportPage() {
                     value={teacherComment}
                     onChange={(e) => setTeacherComment(e.target.value)}
                     placeholder="写下您对学生的寄语和鼓励..."
-                    className="min-h-[150px] resize-none"
+                    className="min-h-[150px] resize-none rounded-xl border-gray-200 bg-[#F7F8FC] focus-visible:ring-indigo-200"
                   />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* 页脚 */}
-            <div className="bg-gray-800 text-white p-8 text-center">
-              <p className="text-lg font-semibold mb-2">战码编程</p>
-              <p className="text-sm opacity-80">快乐学习 · 收获成长</p>
-              <p className="text-xs opacity-60 mt-2">爱心施教 · 娃娃为王</p>
+          {/* 页脚 */}
+          <div className="rounded-[20px] overflow-hidden shadow-xl" style={{ background: 'linear-gradient(135deg, #3066FF 0%, #6B3FA0 50%, #9933FF 100%)' }}>
+            <div className="p-10 text-center text-white">
+              <p className="text-xl font-bold mb-2 tracking-wide">战码编程</p>
+              <p className="text-sm opacity-70">快乐学习 · 收获成长</p>
+              <p className="text-xs opacity-50 mt-2">爱心施教 · 娃娃为王</p>
             </div>
           </div>
         </div>

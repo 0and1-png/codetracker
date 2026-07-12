@@ -67,6 +67,76 @@ export default function ReportPage() {
   });
   const [monthlyQuote, setMonthlyQuote] = useState('所有的运气和惊喜，都来自你去年的努力和今年的坚持。');
   
+  // 时间轴模式：显示所有有数据的月份
+  const [timelineMode, setTimelineMode] = useState(false);
+  const [timelineQuotes, setTimelineQuotes] = useState<Record<string, string>>({});
+  
+  // 获取所有有数据的月份
+  const getAvailableMonths = useCallback(() => {
+    const months = new Set<string>();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // 从打字记录获取月份
+    allTyping.forEach(r => {
+      if (r.date) {
+        const d = new Date(r.date);
+        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    });
+    
+    // 从三刷记录获取月份
+    allRetry.forEach(r => {
+      if (r.date) {
+        const d = new Date(r.date);
+        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    });
+    
+    // 从作业记录获取月份
+    allHomework.forEach(r => {
+      if (r.date) {
+        const d = new Date(r.date);
+        months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+    });
+    
+    // 排序并转换为显示格式
+    return Array.from(months)
+      .sort()
+      .map(m => {
+        const [year, month] = m.split('-');
+        return {
+          key: m,
+          display: `${monthNames[parseInt(month) - 1]}-${year}`,
+          year: parseInt(year),
+          month: parseInt(month)
+        };
+      });
+  }, [allTyping, allRetry, allHomework]);
+  
+  // 获取某个月份的数据
+  const getMonthData = useCallback((monthKey: string) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0);
+    const startStr = start.toISOString().split('T')[0];
+    const endStr = end.toISOString().split('T')[0];
+    
+    const monthTyping = allTyping.filter(r => r.date >= startStr && r.date <= endStr);
+    const monthRetry = allRetry.filter(r => r.date >= startStr && r.date <= endStr);
+    const monthHomework = allHomework.filter(r => r.date >= startStr && r.date <= endStr);
+    
+    return {
+      typing: monthTyping,
+      retry: monthRetry,
+      homework: monthHomework,
+      typingSummary: calcTypingSummary(monthTyping),
+      retrySummary: calcRetrySummary(monthRetry, course || undefined),
+      learnedKnowledge: calcLearnedKnowledgeMastery(monthRetry, course || undefined),
+      teacherTags: collectTeacherTags(monthTyping, monthRetry, monthHomework),
+    };
+  }, [allTyping, allRetry, allHomework, course]);
+  
   const reportRef = useRef<HTMLDivElement>(null);
 
   const loadData = useCallback(async () => {
@@ -372,6 +442,15 @@ export default function ReportPage() {
                   </div>
                 )}
               </div>
+              {/* 时间轴模式切换 */}
+              <Button 
+                variant={timelineMode ? "default" : "outline"} 
+                onClick={() => setTimelineMode(!timelineMode)} 
+                className={`rounded-2xl transition-all duration-300 ${timelineMode ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-orange-200/50' : 'bg-white/80 border border-gray-200 text-[#333344] hover:bg-gray-50'}`}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                {timelineMode ? '时间轴模式' : '单月模式'}
+              </Button>
               <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-300/50 hover:-translate-y-0.5">
                 <Download className="mr-2 h-4 w-4" />
                 {exporting ? '导出中...' : '导出PDF'}
@@ -917,6 +996,201 @@ export default function ReportPage() {
               </div>
             </div>
           </div>
+
+          {/* ========== 时间轴模式：显示所有有数据的月份 ========== */}
+          {timelineMode && getAvailableMonths().filter(m => m.key !== selectedMonth).map((monthInfo) => {
+            const monthData = getMonthData(monthInfo.key);
+            const monthQuote = timelineQuotes[monthInfo.key] || '努力不懈，持续进步。';
+            
+            return (
+              <div key={monthInfo.key} className="rounded-[20px] overflow-hidden relative" style={{ background: '#f5f0e6' }}>
+                {/* 顶部黄色横幅 */}
+                <div 
+                  className="w-full px-8 pt-6 pb-5 flex flex-col items-center justify-center"
+                  style={{ background: '#e8b820' }}
+                >
+                  {/* 月份年份 */}
+                  <div className="text-center text-3xl font-black text-[#1a1a1a] tracking-wider mb-3" style={{ fontFamily: '"Arial Black", "Helvetica Neue", sans-serif' }}>
+                    {monthInfo.display}
+                  </div>
+                  {/* 励志文案 */}
+                  <textarea
+                    value={monthQuote}
+                    onChange={(e) => setTimelineQuotes({ ...timelineQuotes, [monthInfo.key]: e.target.value })}
+                    className="text-center text-sm text-white bg-transparent border-none outline-none resize-none w-full max-w-lg leading-relaxed"
+                    rows={2}
+                    placeholder="输入本月励志文案..."
+                  />
+                </div>
+
+                <div className="p-10">
+                  {/* 标题 */}
+                  <div className="flex items-center gap-4 mb-10">
+                    <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                      <BookOpen className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#333344]">本月课程内容</h2>
+                    </div>
+                    <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
+                  </div>
+                  
+                  <div className="space-y-8">
+                    {/* 知识点掌握情况 */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
+                        知识点掌握情况
+                      </h3>
+                      <div className="space-y-3">
+                        {monthData.learnedKnowledge.length > 0 ? (
+                          monthData.learnedKnowledge.map((kp) => (
+                            <div key={kp.knowledgePointId} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-purple-50">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <span className="font-semibold text-[#333344] text-base">{kp.knowledgePointName}</span>
+                                  <span className="text-xs px-2.5 py-1 bg-purple-50 text-purple-500 rounded-full">{kp.completedProblems}/{kp.totalProblems}题</span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="w-24 h-2 rounded-full bg-purple-100 overflow-hidden">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500" style={{ width: `${kp.completionPercent}%` }}></div>
+                                  </div>
+                                  <span className="text-xs text-[#888] w-10 text-right">{kp.completionPercent}%</span>
+                                  <div className="flex">{renderStars(kp.stars)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="bg-white rounded-2xl p-10 text-center">
+                            <p className="text-[#888]">暂无知识点学习记录</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 本月完成题目 */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+                        本月完成题目
+                      </h3>
+                      {(() => {
+                        const problemGroups = monthData.retry.reduce((acc, r) => {
+                          if (!acc[r.problemId]) acc[r.problemId] = [];
+                          acc[r.problemId].push(r);
+                          return acc;
+                        }, {} as Record<string, typeof monthData.retry>);
+
+                        const problems = Object.entries(problemGroups).map(([problemId, records]) => {
+                          const hasRetry = records.length > 1;
+                          const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
+                          const first = sorted[0];
+                          const problemDef = course?.problems?.find(p => p.id === problemId);
+                          const kpIds = problemDef
+                            ? [...(problemDef.knowledgePointIds || []), ...(problemDef.knowledgePointId ? [problemDef.knowledgePointId] : [])]
+                            : [];
+                          const kpNames: string[] = kpIds
+                            .map((id: string) => course!.knowledgePoints.find(k => k.id === id)?.name || '')
+                            .filter(Boolean);
+
+                          return { problemId, records: sorted, hasRetry, first, kpNames, problemName: first.problemName || problemId };
+                        }).sort((a, b) => a.first.date.localeCompare(b.first.date));
+
+                        const keyProblems = problems.filter(p => p.hasRetry);
+                        const normalProblems = problems.filter(p => !p.hasRetry);
+
+                        if (problems.length === 0) {
+                          return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">暂无完成题目记录</p></div>;
+                        }
+
+                        return (
+                          <div className="space-y-5">
+                            {/* 重点题型 */}
+                            {keyProblems.length > 0 && (
+                              <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-orange-400">
+                                <h4 className="text-base font-semibold text-orange-600 mb-5 flex items-center gap-2">
+                                  <AlertCircle className="h-5 w-5" /> 重点题型（多次练习）
+                                </h4>
+                                <div className="space-y-4">
+                                  {keyProblems.map((p) => (
+                                    <div key={p.problemId} className="rounded-2xl p-5 border border-orange-100" style={{ background: 'linear-gradient(135deg, #fffaf5, #fff5eb)' }}>
+                                      <div className="flex items-center justify-between mb-3">
+                                        <span className="font-bold text-[#333344] text-base">{p.problemName}</span>
+                                        <span className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded-full font-medium">
+                                          练习 {p.records.length} 次
+                                        </span>
+                                      </div>
+                                      {p.kpNames.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-4">
+                                          {p.kpNames.map(name => (
+                                            <span key={name} className="text-xs px-3 py-1 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      <div className="space-y-2">
+                                        {p.records.map((r, idx) => (
+                                          <div key={idx} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/70">
+                                            <span className="text-sm text-[#888]">第{r.attempt || idx + 1}次</span>
+                                            <span className="text-sm text-[#555]">{r.date}</span>
+                                            <span className="text-sm text-[#555]">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</span>
+                                            <span className="text-xs text-[#888]">{r.notes || '-'}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 普通题目 */}
+                            {normalProblems.length > 0 && (
+                              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                                <h4 className="text-base font-semibold text-[#555] mb-5">已完成题目</h4>
+                                <div className="space-y-2">
+                                  {normalProblems.map((p) => (
+                                    <div key={p.problemId} className="flex items-center justify-between py-3 px-5 rounded-2xl bg-[#F7F8FC] hover:bg-white hover:shadow-sm transition-all duration-200">
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
+                                          <span className="text-green-500 text-xs">✓</span>
+                                        </div>
+                                        <span className="text-[#333344] font-medium">{p.problemName}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {p.kpNames.map(name => (
+                                          <span key={name} className="text-xs px-3 py-1 bg-purple-50 text-purple-500 rounded-full">{name}</span>
+                                        ))}
+                                        <span className="text-xs text-[#888] ml-2">{p.first.date}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* 统计信息 */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { value: monthData.learnedKnowledge.length, label: '已学习知识点', color: 'from-purple-400 to-purple-600', shadow: 'shadow-purple-200/50' },
+                        { value: new Set(monthData.retry.map(r => r.problemId)).size, label: '本月完成编程题', color: 'from-blue-400 to-blue-600', shadow: 'shadow-blue-200/50' },
+                        { value: (() => { const pids = [...new Set(monthData.retry.map(r => r.problemId))]; return pids.filter(pid => monthData.retry.filter(r => r.problemId === pid).length > 1).length; })(), label: '重点题型', color: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-200/50' },
+                      ].map((stat, i) => (
+                        <div key={i} className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 text-center">
+                          <div className={`text-3xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</div>
+                          <div className="text-sm text-[#888] mt-2">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
           {/* ========== 第四页：能力反馈 ========== */}
           <div className="rounded-[20px] bg-white shadow-xl shadow-green-100/50 overflow-hidden">

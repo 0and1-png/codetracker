@@ -446,60 +446,150 @@ export default function ReportPage() {
           </div>
 
           {/* ========== 第二页：学生基本信息 ========== */}
-          <div className="rounded-[20px] bg-white shadow-xl shadow-gray-200/50 overflow-hidden">
+          <div className="rounded-[20px] overflow-hidden" style={{ background: '#f5f0e8', backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4c5a9\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
             <div className="p-10">
-              {/* 标题 */}
-              <div className="flex items-center gap-4 mb-10">
-                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-200/50">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-[#333344]">学生基本信息</h2>
-                </div>
-                <div className="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent ml-4"></div>
+              {/* 顶部标题 */}
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <div className="h-px w-12 bg-[#b8a88a]"></div>
+                <h2 className="text-xl font-bold text-[#4a4a5a] tracking-wider">战码少年——修炼手册</h2>
+                <div className="h-px w-12 bg-[#b8a88a]"></div>
               </div>
-              
-              <div className="grid grid-cols-[240px_1fr] gap-10">
-                {/* 左侧：学生照片 */}
-                <div className="flex flex-col items-center justify-start pt-2">
-                  <div 
-                    className="w-52 h-52 rounded-[20px] flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-blue-100/50 hover:-translate-y-1"
-                    style={{ background: 'linear-gradient(135deg, #f0f4ff, #e8eeff)', border: '2px solid #e0e7ff' }}
-                    onClick={() => handleImageUpload(setStudentPhoto)}
-                  >
-                    {studentPhoto ? (
-                      <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
-                    ) : (
+
+              {/* 核心展示区：圆形头像 + 姓名横幅 */}
+              <div className="flex flex-col items-center mb-10">
+                {/* 圆形头像 */}
+                <div 
+                  className="w-48 h-48 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+                  style={{ border: '6px solid #2c3e6b', boxShadow: '0 8px 32px rgba(44,62,107,0.2)' }}
+                  onClick={() => handleImageUpload(setStudentPhoto)}
+                >
+                  {studentPhoto ? (
+                    <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e8e0d4, #d4c8b8)' }}>
                       <div className="text-center">
-                        <Upload className="h-10 w-10 text-blue-300 mx-auto mb-2" />
-                        <span className="text-sm text-blue-400">点击上传照片</span>
+                        <Upload className="h-8 w-8 text-[#8b7d6b] mx-auto mb-1" />
+                        <span className="text-xs text-[#8b7d6b]">上传照片</span>
                       </div>
-                    )}
+                    </div>
+                  )}
+                </div>
+                {/* 姓名毛笔笔触横幅 */}
+                <div className="relative -mt-5 z-10">
+                  <div 
+                    className="px-10 py-3 flex items-center justify-center"
+                    style={{ 
+                      background: '#1a1a2e',
+                      clipPath: 'polygon(2% 15%, 98% 5%, 96% 85%, 4% 95%)',
+                      minHeight: '48px'
+                    }}
+                  >
+                    <span className="text-2xl font-bold text-white tracking-[0.3em]" style={{ fontFamily: 'serif' }}>
+                      {student.name || '学生姓名'}
+                    </span>
                   </div>
                 </div>
-                
-                {/* 右侧：基本信息 */}
-                <div className="space-y-5">
+              </div>
+
+              {/* 信息填写区：左右分栏 */}
+              <div className="grid grid-cols-[1fr_1fr] gap-8 mb-8">
+                {/* 左侧：姓名/年龄/学校 */}
+                <div className="space-y-4">
                   {[
-                    { label: '学生姓名', value: student.name, disabled: true, placeholder: '' },
+                    { label: '姓名', value: student.name, disabled: true },
                     { label: '年龄', value: studentAge, setter: setStudentAge, placeholder: '请输入年龄' },
                     { label: '学校', value: studentSchool, setter: setStudentSchool, placeholder: '请输入学校' },
-                    { label: '编程时间', value: programmingTime, setter: setProgrammingTime, placeholder: '例如：1年' },
-                    { label: '学习内容', value: learningContent, setter: setLearningContent, placeholder: '例如：Scratch图形化编程' },
-                    { label: '兴趣爱好', value: interests, setter: setInterests, placeholder: '例如：画画、游戏、音乐' },
                   ].map((field) => (
-                    <div key={field.label}>
-                      <Label className="text-sm font-medium text-[#555] mb-1.5 block">{field.label}</Label>
-                      <Input 
-                        value={field.value}
-                        onChange={field.setter ? (e: React.ChangeEvent<HTMLInputElement>) => field.setter(e.target.value) : undefined}
-                        disabled={field.disabled}
-                        placeholder={field.placeholder}
-                        className="rounded-xl border-gray-200 bg-[#F7F8FC] transition-all duration-200 hover:bg-white hover:shadow-md hover:border-blue-200 focus-visible:ring-blue-200 h-11"
-                      />
+                    <div key={field.label} className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-[#6b5d4d] whitespace-nowrap">{field.label}：</span>
+                      <div 
+                        className="flex-1 rounded-xl px-4 py-3 transition-all duration-200"
+                        style={{ 
+                          background: '#ede6d8',
+                          border: '1.5px solid #c4b59a',
+                        }}
+                      >
+                        <input 
+                          type="text"
+                          value={field.value}
+                          onChange={field.setter ? (e: React.ChangeEvent<HTMLInputElement>) => field.setter(e.target.value) : undefined}
+                          disabled={field.disabled}
+                          placeholder={field.placeholder || ''}
+                          className="w-full bg-transparent text-sm text-[#4a3d2e] placeholder:text-[#b8a88a] outline-none disabled:opacity-70"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {/* 右侧：黄色边框容器 */}
+                <div 
+                  className="rounded-2xl p-5 space-y-4"
+                  style={{ 
+                    border: '2.5px solid #f0c040',
+                    background: 'rgba(255,255,255,0.6)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  {/* 编程时间 */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #4ecdc4, #44a08d)' }}>
+                      <span className="text-lg">🤖</span>
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-[#888] block mb-0.5">编程时间</span>
+                      <input 
+                        type="text"
+                        value={programmingTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setProgrammingTime(e.target.value)}
+                        placeholder="例如：1年"
+                        className="w-full bg-transparent text-sm font-medium text-[#333] placeholder:text-[#bbb] outline-none"
+                      />
+                    </div>
+                  </div>
+                  {/* 学习内容 */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #43e97b, #38f9d7)' }}>
+                      <span className="text-lg">📖</span>
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-[#888] block mb-0.5">学习内容</span>
+                      <input 
+                        type="text"
+                        value={learningContent}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLearningContent(e.target.value)}
+                        placeholder="例如：Scratch图形化编程"
+                        className="w-full bg-transparent text-sm font-medium text-[#333] placeholder:text-[#bbb] outline-none"
+                      />
+                    </div>
+                  </div>
+                  {/* 兴趣爱好 */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #fa709a, #fee140)' }}>
+                      <span className="text-lg">🎨</span>
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-xs text-[#888] block mb-0.5">兴趣爱好</span>
+                      <input 
+                        type="text"
+                        value={interests}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInterests(e.target.value)}
+                        placeholder="例如：画画、游戏、音乐"
+                        className="w-full bg-transparent text-sm font-medium text-[#333] placeholder:text-[#bbb] outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 底部黄色横幅 */}
+              <div 
+                className="rounded-xl px-8 py-4 flex items-center justify-center gap-6"
+                style={{ background: 'linear-gradient(135deg, #f0c040, #e8a020)' }}
+              >
+                <span className="text-white font-bold text-base tracking-wider">快乐学习 · 收获成长</span>
+                <div className="w-px h-5 bg-white/50"></div>
+                <span className="text-white font-bold text-base tracking-wider">爱心施教 · 娃娃为王</span>
               </div>
             </div>
           </div>

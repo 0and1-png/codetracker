@@ -448,11 +448,22 @@ export default function ReportPage() {
           {/* ========== 第二页：学生基本信息 ========== */}
           <div className="rounded-[20px] overflow-hidden" style={{ background: '#f5f0e8', backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4c5a9\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
             <div className="p-10">
-              {/* 顶部标题 */}
+              {/* 顶部标题 - 笔刷风格 */}
               <div className="flex items-center justify-center gap-4 mb-8">
-                <div className="h-px w-12 bg-[#b8a88a]"></div>
-                <h2 className="text-xl font-bold text-[#4a4a5a] tracking-wider">战码少年——修炼手册</h2>
-                <div className="h-px w-12 bg-[#b8a88a]"></div>
+                <div className="h-0.5 w-16 rounded-full" style={{ background: 'linear-gradient(to right, transparent, #5a4a3a)' }}></div>
+                <h2 
+                  className="text-2xl font-black tracking-[0.15em]"
+                  style={{ 
+                    fontFamily: '"ZCOOL KuaiLe", "Ma Shan Zheng", "Liu Jian Mao Cao", cursive, serif',
+                    color: '#2c2c3a',
+                    textShadow: '2px 2px 0px rgba(90,74,58,0.15), -1px -1px 0px rgba(255,255,255,0.3)',
+                    letterSpacing: '0.2em',
+                    transform: 'rotate(-1deg)',
+                  }}
+                >
+                  战码少年<span className="mx-2 text-[#8b6914]">·</span>修炼手册
+                </h2>
+                <div className="h-0.5 w-16 rounded-full" style={{ background: 'linear-gradient(to left, transparent, #5a4a3a)' }}></div>
               </div>
 
               {/* 核心展示区：圆形头像 + 姓名横幅 */}
@@ -474,17 +485,32 @@ export default function ReportPage() {
                     </div>
                   )}
                 </div>
-                {/* 姓名毛笔笔触横幅 */}
-                <div className="relative -mt-5 z-10">
-                  <div 
-                    className="px-10 py-3 flex items-center justify-center"
-                    style={{ 
-                      background: '#1a1a2e',
-                      clipPath: 'polygon(2% 15%, 98% 5%, 96% 85%, 4% 95%)',
-                      minHeight: '48px'
-                    }}
-                  >
-                    <span className="text-2xl font-bold text-white tracking-[0.3em]" style={{ fontFamily: 'serif' }}>
+                {/* 姓名水墨风格横幅 */}
+                <div className="relative -mt-6 z-10">
+                  {/* 水墨笔触背景 */}
+                  <div className="relative px-12 py-4 flex items-center justify-center">
+                    {/* 水墨晕染效果背景 */}
+                    <div 
+                      className="absolute inset-0"
+                      style={{
+                        background: `
+                          radial-gradient(ellipse 80% 60% at 50% 50%, rgba(20,20,35,0.95) 0%, rgba(30,30,50,0.85) 40%, rgba(40,40,60,0.4) 70%, transparent 100%)
+                        `,
+                        filter: 'blur(0.5px)',
+                      }}
+                    />
+                    {/* 水墨飞溅装饰点 */}
+                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#1a1a2e] opacity-60" />
+                    <div className="absolute -right-5 top-1/3 w-1.5 h-1.5 rounded-full bg-[#1a1a2e] opacity-40" />
+                    <div className="absolute left-[15%] -bottom-2 w-1 h-1 rounded-full bg-[#1a1a2e] opacity-30" />
+                    {/* 姓名文字 */}
+                    <span 
+                      className="relative text-3xl font-black tracking-[0.4em] text-white"
+                      style={{ 
+                        fontFamily: '"Ma Shan Zheng", "ZCOOL KuaiLe", "STKaiti", "KaiTi", serif',
+                        textShadow: '0 0 20px rgba(255,255,255,0.3), 2px 2px 4px rgba(0,0,0,0.5)',
+                      }}
+                    >
                       {student.name || '学生姓名'}
                     </span>
                   </div>

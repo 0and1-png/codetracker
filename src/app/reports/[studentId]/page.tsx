@@ -1276,13 +1276,20 @@ export default function ReportPage() {
                     }
 
                     return (
-                      <div className="space-y-5">
+                      <div className="space-y-6">
                         {/* 重点题型 - 汇总表格 */}
                         {keyProblems.length > 0 && (
-                          <div className="bg-white rounded-2xl p-6 shadow-sm">
-                            <h4 className="text-base font-semibold text-orange-600 flex items-center gap-2 mb-4">
-                              <AlertCircle className="h-4 w-4" /> 重点题型汇总
-                            </h4>
+                          <div className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl p-6 shadow-sm border border-orange-100/50">
+                            <div className="flex items-center gap-3 mb-5">
+                              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-200/50">
+                                <AlertCircle className="h-4 w-4 text-white" />
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-bold text-[#333344]">重点题型汇总</h4>
+                                <p className="text-xs text-[#888]">三刷练习效率追踪</p>
+                              </div>
+                              <div className="flex-1 h-px bg-gradient-to-r from-orange-200 to-transparent ml-2"></div>
+                            </div>
                             <div className="overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
@@ -2112,20 +2119,24 @@ export default function ReportPage() {
               <div className="p-10">
                 {/* 标题 */}
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 to-violet-500 flex items-center justify-center shadow-lg shadow-purple-200/50">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-purple-400 via-violet-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-200/50">
                     <Calendar className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-[#333344]">月度出勤与作业</h2>
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">月度出勤与作业</h2>
+                    <p className="text-xs text-[#888]">修行勤勉 · 作业完成</p>
                   </div>
                   <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                   {/* 出勤统计 */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl p-6 shadow-sm border border-purple-100/50">
                     <h3 className="text-base font-semibold text-purple-600 mb-4 flex items-center gap-2">
-                      <Calendar className="h-4 w-4" /> 修行勤勉（出勤）
+                      <div className="h-6 w-6 rounded-lg bg-purple-100 flex items-center justify-center">
+                        <Calendar className="h-3.5 w-3.5 text-purple-500" />
+                      </div>
+                      修行勤勉（出勤）
                     </h3>
                     {(() => {
                       // Count unique dates from all records as attendance
@@ -2134,8 +2145,8 @@ export default function ReportPage() {
                       monthRetry.forEach(r => allDates.add(r.date));
                       monthHomework.forEach(h => allDates.add(h.date));
                       const attendanceCount = allDates.size;
-                      // 满勤标准：每月8天
-                      const FULL_ATTENDANCE_DAYS = 8;
+                      // 满勤标准：每月4天
+                      const FULL_ATTENDANCE_DAYS = 4;
                       const attendanceRate = Math.round(attendanceCount / FULL_ATTENDANCE_DAYS * 100);
                       const isFullAttendance = attendanceCount >= FULL_ATTENDANCE_DAYS;
                       return (
@@ -2173,9 +2184,12 @@ export default function ReportPage() {
                   </div>
 
                   {/* 作业完成统计 */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-base font-semibold text-violet-600 mb-4 flex items-center gap-2">
-                      <FileText className="h-4 w-4" /> 修炼日志（作业）
+                  <div className="bg-gradient-to-br from-white to-violet-50/30 rounded-2xl p-6 shadow-sm border border-violet-100/50">
+                    <h3 className="text-base font-bold text-violet-700 mb-4 flex items-center gap-2">
+                      <span className="w-8 h-8 bg-gradient-to-br from-violet-400 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                        <FileText className="h-4 w-4 text-white" />
+                      </span>
+                      修炼日志（作业）
                     </h3>
                     {(() => {
                       // 每月作业标准：4次

@@ -1111,36 +1111,46 @@ export default function ReportPage() {
                         {keyProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-orange-400">
                             <h4 className="text-base font-semibold text-orange-600 mb-5 flex items-center gap-2">
-                              <AlertCircle className="h-5 w-5" /> 重点题型（多次练习）
+                              <AlertCircle className="h-5 w-5" /> 重点题型（三刷练习）
                             </h4>
-                            <div className="space-y-4">
-                              {keyProblems.map((p) => (
-                                <div key={p.problemId} className="rounded-2xl p-5 border border-orange-100" style={{ background: 'linear-gradient(135deg, #fffaf5, #fff5eb)' }}>
-                                  <div className="flex items-center justify-between mb-3">
-                                    <span className="font-bold text-[#333344] text-base">{p.problemName}</span>
-                                    <span className="text-xs px-3 py-1 bg-orange-100 text-orange-600 rounded-full font-medium">
-                                      练习 {p.records.length} 次
-                                    </span>
-                                  </div>
-                                  {p.kpNames.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                      {p.kpNames.map(name => (
-                                        <span key={name} className="text-xs px-3 py-1 bg-blue-50 text-blue-500 rounded-full">{name}</span>
-                                      ))}
-                                    </div>
-                                  )}
-                                  <div className="space-y-2">
-                                    {p.records.map((r, idx) => (
-                                      <div key={idx} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/70">
-                                        <span className="text-sm text-[#888]">第{r.attempt || idx + 1}次</span>
-                                        <span className="text-sm text-[#555]">{r.date}</span>
-                                        <span className="text-sm text-[#555]">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</span>
-                                        <span className="text-xs text-[#888]">{r.notes || '-'}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
+                            {/* 表格布局 */}
+                            <div className="overflow-hidden rounded-xl border border-orange-100">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-gradient-to-r from-orange-50 to-amber-50">
+                                    <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">题目</th>
+                                    <th className="text-left py-3 px-4 text-sm font-semibold text-orange-700">知识点</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">一刷时间</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">二刷时间</th>
+                                    <th className="text-center py-3 px-4 text-sm font-semibold text-orange-700">三刷时间</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {keyProblems.map((p, idx) => (
+                                    <tr key={p.problemId} className={idx % 2 === 0 ? 'bg-white' : 'bg-orange-50/30'}>
+                                      <td className="py-3 px-4">
+                                        <span className="font-medium text-[#333344] text-sm">{p.problemName}</span>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <div className="flex flex-wrap gap-1">
+                                          {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                            <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                          )) : <span className="text-xs text-[#888]">-</span>}
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <span className="text-sm text-[#555]">{p.records[0]?.date || '-'}</span>
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <span className="text-sm text-[#555]">{p.records[1]?.date || '-'}</span>
+                                      </td>
+                                      <td className="py-3 px-4 text-center">
+                                        <span className="text-sm text-[#555]">{p.records[2]?.date || '-'}</span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
                           </div>
                         )}

@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, Eye, EyeOff } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
 import {
   getStudents,
   getTypingByStudent,
@@ -70,6 +71,21 @@ export default function ReportPage() {
   const [newCompName, setNewCompName] = useState('');
   const [newCompDate, setNewCompDate] = useState('');
   const [newCompCategory, setNewCompCategory] = useState('');
+
+  // 月度侧重点
+  type MonthFocus = 'regular' | 'exam' | 'competition' | 'typing';
+  const [monthFocus, setMonthFocus] = useState<MonthFocus>('regular');
+
+  // 老师寄语多选
+  const TEACHER_COMMENT_PRESETS = [
+    { id: 'encourage', label: '鼓励肯定', text: '本月表现优秀，继续保持！' },
+    { id: 'practice', label: '加强练习', text: '建议增加课后练习时间，巩固所学知识。' },
+    { id: 'thinking', label: '培养思维', text: '注重逻辑思维训练，多思考解题思路。' },
+    { id: 'challenge', label: '挑战进阶', text: '可以尝试更有挑战性的题目，突破自我。' },
+    { id: 'foundation', label: '夯实基础', text: '基础知识点需要进一步巩固，打好根基。' },
+    { id: 'competition', label: '备赛建议', text: '建议针对近期赛事进行专项训练。' },
+  ];
+  const [selectedCommentPresets, setSelectedCommentPresets] = useState<string[]>([]);
   const [courseGespLevels, setCourseGespLevels] = useState<GESPLlevelDef[]>([]);
   const [showAllGesp, setShowAllGesp] = useState(false);
   const [showAllCompetitions, setShowAllCompetitions] = useState(false);
@@ -676,6 +692,34 @@ export default function ReportPage() {
                 <Calendar className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 {mergeMode ? '合并报告' : '合并'}
               </Button>
+              {/* 月度侧重点 */}
+              <div className="relative group/focus">
+                <Button 
+                  variant="outline" 
+                  className={`rounded-2xl transition-all duration-300 font-medium bg-white/90 border border-purple-100/50 text-[#333344] hover:bg-purple-50/50 hover:border-purple-200/50`}
+                >
+                  <Target className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                  {monthFocus === 'regular' ? '常规' : monthFocus === 'exam' ? '考级' : monthFocus === 'competition' ? '赛事' : '打字'}
+                </Button>
+                <div className="absolute top-full right-0 mt-2 bg-white rounded-2xl shadow-xl border border-purple-100/50 p-2 min-w-[140px] opacity-0 invisible group-hover/focus:opacity-100 group-hover/focus:visible transition-all duration-200 z-50">
+                  {([
+                    { value: 'regular', label: '常规学习', icon: BookOpen, color: 'text-blue-500' },
+                    { value: 'exam', label: '考级冲刺', icon: GraduationCap, color: 'text-amber-500' },
+                    { value: 'competition', label: '赛事备战', icon: Trophy, color: 'text-orange-500' },
+                    { value: 'typing', label: '打字突破', icon: TrendingUp, color: 'text-emerald-500' },
+                  ] as const).map(item => (
+                    <button
+                      key={item.value}
+                      onClick={() => setMonthFocus(item.value)}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${monthFocus === item.value ? 'bg-purple-50 text-purple-700 font-medium' : 'text-[#555] hover:bg-gray-50'}`}
+                    >
+                      <item.icon className={`h-4 w-4 ${monthFocus === item.value ? 'text-purple-500' : item.color}`} strokeWidth={1.5} />
+                      {item.label}
+                      {monthFocus === item.value && <Check className="h-3.5 w-3.5 ml-auto text-purple-500" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-400/50 hover:-translate-y-0.5 font-medium">
                 <Download className="mr-2 h-4 w-4" strokeWidth={1.5} />
                 {exporting ? '导出中...' : '导出PDF'}
@@ -751,6 +795,39 @@ export default function ReportPage() {
         
         <div ref={reportRef} className="max-w-4xl mx-auto space-y-8">
           
+          {/* 月度侧重点标识 */}
+          {monthFocus !== 'regular' && (
+            <div className={`rounded-2xl p-4 flex items-center gap-4 ${
+              monthFocus === 'exam' ? 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50' :
+              monthFocus === 'competition' ? 'bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50' :
+              'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/50'
+            }`}>
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+                monthFocus === 'exam' ? 'bg-gradient-to-br from-amber-400 to-orange-500' :
+                monthFocus === 'competition' ? 'bg-gradient-to-br from-orange-400 to-red-500' :
+                'bg-gradient-to-br from-emerald-400 to-teal-500'
+              }`}>
+                {monthFocus === 'exam' ? <GraduationCap className="h-5 w-5 text-white" /> :
+                 monthFocus === 'competition' ? <Trophy className="h-5 w-5 text-white" /> :
+                 <TrendingUp className="h-5 w-5 text-white" />}
+              </div>
+              <div>
+                <p className={`font-bold text-sm ${
+                  monthFocus === 'exam' ? 'text-amber-700' :
+                  monthFocus === 'competition' ? 'text-orange-700' :
+                  'text-emerald-700'
+                }`}>
+                  本月侧重：{monthFocus === 'exam' ? '考级冲刺' : monthFocus === 'competition' ? '赛事备战' : '打字突破'}
+                </p>
+                <p className="text-xs text-[#888] mt-0.5">
+                  {monthFocus === 'exam' ? '本月重点准备GESP考级，加油！' :
+                   monthFocus === 'competition' ? '本月重点备战编程赛事，冲刺佳绩！' :
+                   '本月重点突破打字速度与正确率！'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ========== 第一页：封面 ========== */}
           <div 
             className="rounded-[20px] overflow-hidden relative"
@@ -1264,6 +1341,41 @@ export default function ReportPage() {
                           </div>
                         )}
 
+                        {/* 三刷练习统计图表 */}
+                        {keyProblems.length > 0 && (
+                          <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-blue-400">
+                            <h4 className="text-base font-semibold text-blue-600 mb-5 flex items-center gap-2">
+                              <TrendingUp className="h-5 w-5" /> 三刷练习效率趋势
+                            </h4>
+                            <div className="h-[260px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                  data={keyProblems.map(p => ({
+                                    name: p.problemName.length > 8 ? p.problemName.slice(0, 8) + '...' : p.problemName,
+                                    一刷: p.records[0] ? Math.round(p.records[0].timeSpent / 60 * 10) / 10 : 0,
+                                    二刷: p.records[1] ? Math.round(p.records[1].timeSpent / 60 * 10) / 10 : 0,
+                                    三刷: p.records[2] ? Math.round(p.records[2].timeSpent / 60 * 10) / 10 : 0,
+                                  }))}
+                                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                                >
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888' }} />
+                                  <YAxis tick={{ fontSize: 11, fill: '#888' }} label={{ value: '用时(分钟)', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
+                                  <Tooltip 
+                                    contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                                    formatter={(value: number) => [`${value} 分钟`]}
+                                  />
+                                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                  <Bar dataKey="一刷" fill="#f97316" radius={[4, 4, 0, 0]} />
+                                  <Bar dataKey="二刷" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                  <Bar dataKey="三刷" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <p className="text-xs text-[#888] mt-3 text-center">柱状图展示每道题各刷次用时对比，用时递减代表掌握度提升</p>
+                          </div>
+                        )}
+
                         {/* 普通题目 */}
                         {normalProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -1768,34 +1880,71 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* 打字测试趋势 */}
+              {/* 打字测试趋势图表 */}
               {monthTyping.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                     打字测试趋势
                   </h3>
-                  <div className="bg-[#F7F8FC] rounded-2xl p-6">
-                    <div className="space-y-2">
+                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    {/* 折线图 */}
+                    <div className="h-[240px] mb-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map(t => ({
+                            date: t.date.slice(5), // MM-DD format
+                            速度: t.speed,
+                            正确率: t.accuracy,
+                          }))}
+                          margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                        >
+                          <defs>
+                            <linearGradient id="colorSpeed" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorAccuracy" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888' }} />
+                          <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
+                          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#888' }} domain={[0, 100]} label={{ value: '正确率%', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#888' } }} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                          <Area yAxisId="left" type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" />
+                          <Area yAxisId="right" type="monotone" dataKey="正确率" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorAccuracy)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* 数据明细 */}
+                    <div className="space-y-1.5 border-t border-gray-100 pt-4">
                       {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i) => (
-                        <div key={i} className={`flex items-center justify-between py-3 px-5 rounded-xl ${i % 2 === 0 ? 'bg-white' : 'bg-transparent'}`}>
-                          <span className="font-medium text-[#333344] text-sm">{t.date}</span>
-                          <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-2">
+                        <div key={i} className="flex items-center justify-between py-2 px-4 rounded-lg bg-[#F7F8FC]/50">
+                          <span className="font-medium text-[#333344] text-xs">{t.date}</span>
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
                               <span className="text-xs text-[#888]">速度</span>
-                              <span className="font-bold text-emerald-600">{t.speed}</span>
+                              <span className="font-bold text-emerald-600 text-sm">{t.speed}</span>
                               <span className="text-xs text-[#888]">字/分</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-blue-400"></span>
                               <span className="text-xs text-[#888]">正确率</span>
-                              <span className="font-bold text-blue-600">{t.accuracy}%</span>
+                              <span className="font-bold text-blue-600 text-sm">{t.accuracy}%</span>
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
                     {typingImprovement !== 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-200/50">
+                      <div className="mt-3 pt-3 border-t border-gray-100">
                         <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                           相比上期{typingImprovement > 0 ? '↑ 提升' : '↓ 下降'} {Math.abs(typingImprovement)}%
                         </p>
@@ -2250,11 +2399,44 @@ export default function ReportPage() {
                 </div>
 
                 <div className="space-y-4">
+                  {/* 快捷标签多选 */}
+                  <div>
+                    <Label className="text-sm font-medium text-[#555] mb-3 block">快捷评语（可多选，自动组合到寄语）</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {TEACHER_COMMENT_PRESETS.map(preset => {
+                        const isSelected = selectedCommentPresets.includes(preset.id);
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => {
+                              const newPresets = isSelected
+                                ? selectedCommentPresets.filter(id => id !== preset.id)
+                                : [...selectedCommentPresets, preset.id];
+                              setSelectedCommentPresets(newPresets);
+                              // Auto-compose comment from selected presets
+                              const selectedTexts = newPresets.map(id => TEACHER_COMMENT_PRESETS.find(p => p.id === id)?.text).filter(Boolean);
+                              setTeacherComment(selectedTexts.join('\n'));
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
+                              isSelected 
+                                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-transparent shadow-md shadow-indigo-200/50' 
+                                : 'bg-white text-[#555] border-gray-200 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50'
+                            }`}
+                          >
+                            {isSelected && <Check className="inline h-3.5 w-3.5 mr-1" />}
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 完整模板 */}
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium text-[#555]">寄语内容</Label>
+                    <Label className="text-sm font-medium text-[#555]">或选择完整模板</Label>
                     <Button variant="outline" size="sm" onClick={() => setShowTemplates(!showTemplates)} className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50">
                       <Award className="mr-2 h-4 w-4" />
-                      选择模板
+                      {showTemplates ? '收起模板' : '展开模板'}
                     </Button>
                   </div>
 
@@ -2264,7 +2446,7 @@ export default function ReportPage() {
                       {COMMENT_TEMPLATES.map((template) => (
                         <button
                           key={template.id}
-                          onClick={() => { setTeacherComment(template.content); setShowTemplates(false); }}
+                          onClick={() => { setTeacherComment(template.content); setSelectedCommentPresets([]); }}
                           className="w-full text-left p-3 rounded-xl hover:bg-white transition-all duration-200 border border-transparent hover:border-indigo-200 hover:shadow-sm"
                         >
                           <div className="font-medium text-sm text-[#333344]">{template.name}</div>
@@ -2274,12 +2456,16 @@ export default function ReportPage() {
                     </div>
                   )}
 
-                  <Textarea
-                    value={teacherComment}
-                    onChange={(e) => setTeacherComment(e.target.value)}
-                    placeholder="写下您对学生的寄语和鼓励..."
-                    className="min-h-[150px] resize-none rounded-xl border-gray-200 bg-[#F7F8FC] focus-visible:ring-indigo-200"
-                  />
+                  {/* 自定义编辑 */}
+                  <div>
+                    <Label className="text-sm font-medium text-[#555] mb-2 block">自定义编辑</Label>
+                    <Textarea
+                      value={teacherComment}
+                      onChange={(e) => setTeacherComment(e.target.value)}
+                      placeholder="写下您对学生的寄语和鼓励..."
+                      className="min-h-[120px] resize-none rounded-xl border-gray-200 bg-[#F7F8FC] focus-visible:ring-indigo-200"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

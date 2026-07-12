@@ -446,69 +446,78 @@ export default function ReportPage() {
           </div>
 
           {/* ========== 第二页：学生基本信息 ========== */}
-          <div className="rounded-[20px] overflow-hidden" style={{ background: '#f5f0e8', backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4c5a9\' fill-opacity=\'0.08\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
-            <div className="p-10">
-              {/* 顶部标题 - 笔刷风格 */}
-              <div className="flex items-center justify-center gap-4 mb-8">
-                <div className="h-0.5 w-16 rounded-full" style={{ background: 'linear-gradient(to right, transparent, #5a4a3a)' }}></div>
+          <div 
+            className="rounded-[20px] overflow-hidden relative"
+            style={{ 
+              background: '#f5f0e6',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8b898' fill-opacity='0.12'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          >
+            {/* 亚麻布料纹理叠加 */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px)`,
+              }}
+            />
+            <div className="relative p-10 pt-8">
+              {/* 顶部标题 - 浅蓝书法字体 */}
+              <div className="text-center mb-8">
                 <h2 
-                  className="text-2xl font-black tracking-[0.15em]"
+                  className="text-xl tracking-[0.3em]"
                   style={{ 
-                    fontFamily: '"ZCOOL KuaiLe", "Ma Shan Zheng", "Liu Jian Mao Cao", cursive, serif',
-                    color: '#2c2c3a',
-                    textShadow: '2px 2px 0px rgba(90,74,58,0.15), -1px -1px 0px rgba(255,255,255,0.3)',
-                    letterSpacing: '0.2em',
-                    transform: 'rotate(-1deg)',
+                    fontFamily: '"Ma Shan Zheng", "ZCOOL KuaiLe", "STKaiti", "KaiTi", serif',
+                    color: '#7ba4c7',
+                    fontWeight: 400,
+                    letterSpacing: '0.25em',
                   }}
                 >
-                  战码少年<span className="mx-2 text-[#8b6914]">·</span>修炼手册
+                  战码少年——修炼手册
                 </h2>
-                <div className="h-0.5 w-16 rounded-full" style={{ background: 'linear-gradient(to left, transparent, #5a4a3a)' }}></div>
               </div>
 
-              {/* 核心展示区：圆形头像 + 姓名横幅 */}
+              {/* 核心展示区：圆形头像 + 姓名泼墨横幅 */}
               <div className="flex flex-col items-center mb-10">
-                {/* 圆形头像 */}
+                {/* 圆形头像 - 浅蓝粗边框 */}
                 <div 
-                  className="w-48 h-48 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
-                  style={{ border: '6px solid #2c3e6b', boxShadow: '0 8px 32px rgba(44,62,107,0.2)' }}
+                  className="w-52 h-52 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl"
+                  style={{ border: '6px solid #7ba4c7', boxShadow: '0 4px 20px rgba(123,164,199,0.25)' }}
                   onClick={() => handleImageUpload(setStudentPhoto)}
                 >
                   {studentPhoto ? (
                     <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e8e0d4, #d4c8b8)' }}>
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: '#ede6d8' }}>
                       <div className="text-center">
-                        <Upload className="h-8 w-8 text-[#8b7d6b] mx-auto mb-1" />
-                        <span className="text-xs text-[#8b7d6b]">上传照片</span>
+                        <Upload className="h-8 w-8 text-[#b8a88a] mx-auto mb-1" />
+                        <span className="text-xs text-[#b8a88a]">上传照片</span>
                       </div>
                     </div>
                   )}
                 </div>
-                {/* 姓名水墨风格横幅 */}
-                <div className="relative -mt-6 z-10">
-                  {/* 水墨笔触背景 */}
-                  <div className="relative px-12 py-4 flex items-center justify-center">
-                    {/* 水墨晕染效果背景 */}
+
+                {/* 姓名黑色泼墨笔触横幅 */}
+                <div className="relative -mt-7 z-10 flex items-center justify-center">
+                  <div className="relative px-14 py-3 flex items-center justify-center">
+                    {/* 泼墨不规则背景 - 使用clipPath模拟毛笔刷边 */}
                     <div 
                       className="absolute inset-0"
                       style={{
-                        background: `
-                          radial-gradient(ellipse 80% 60% at 50% 50%, rgba(20,20,35,0.95) 0%, rgba(30,30,50,0.85) 40%, rgba(40,40,60,0.4) 70%, transparent 100%)
-                        `,
-                        filter: 'blur(0.5px)',
+                        background: '#1a1a1a',
+                        clipPath: 'polygon(3% 20%, 8% 5%, 15% 18%, 25% 2%, 35% 15%, 45% 0%, 55% 12%, 65% 3%, 75% 16%, 85% 5%, 92% 18%, 97% 8%, 100% 25%, 98% 45%, 100% 65%, 97% 80%, 100% 92%, 92% 85%, 82% 98%, 72% 88%, 62% 100%, 52% 90%, 42% 98%, 32% 88%, 22% 100%, 12% 90%, 5% 95%, 0% 82%, 2% 65%, 0% 45%, 2% 30%)',
                       }}
                     />
-                    {/* 水墨飞溅装饰点 */}
-                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#1a1a2e] opacity-60" />
-                    <div className="absolute -right-5 top-1/3 w-1.5 h-1.5 rounded-full bg-[#1a1a2e] opacity-40" />
-                    <div className="absolute left-[15%] -bottom-2 w-1 h-1 rounded-full bg-[#1a1a2e] opacity-30" />
-                    {/* 姓名文字 */}
+                    {/* 泼墨飞溅小点 */}
+                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-2.5 h-1.5 rounded-full bg-[#1a1a1a] opacity-70" style={{ borderRadius: '50%' }} />
+                    <div className="absolute -right-3 top-1/3 w-2 h-2 rounded-full bg-[#1a1a1a] opacity-50" />
+                    <div className="absolute left-[10%] -bottom-3 w-1.5 h-1 rounded-full bg-[#1a1a1a] opacity-40" />
+                    <div className="absolute right-[15%] -bottom-2 w-1 h-1.5 rounded-full bg-[#1a1a1a] opacity-35" />
+                    {/* 姓名文字 - 白色毛笔书法 */}
                     <span 
-                      className="relative text-3xl font-black tracking-[0.4em] text-white"
+                      className="relative text-3xl font-bold tracking-[0.35em] text-white"
                       style={{ 
                         fontFamily: '"Ma Shan Zheng", "ZCOOL KuaiLe", "STKaiti", "KaiTi", serif',
-                        textShadow: '0 0 20px rgba(255,255,255,0.3), 2px 2px 4px rgba(0,0,0,0.5)',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
                       }}
                     >
                       {student.name || '学生姓名'}
@@ -519,51 +528,52 @@ export default function ReportPage() {
 
               {/* 信息填写区：左右分栏 */}
               <div className="grid grid-cols-[1fr_1fr] gap-8 mb-8">
-                {/* 左侧：姓名/年龄/学校 */}
+                {/* 左侧：三个手绘黑色方框 */}
                 <div className="space-y-4">
                   {[
                     { label: '姓名', value: student.name, disabled: true },
                     { label: '年龄', value: studentAge, setter: setStudentAge, placeholder: '请输入年龄' },
                     { label: '学校', value: studentSchool, setter: setStudentSchool, placeholder: '请输入学校' },
                   ].map((field) => (
-                    <div key={field.label} className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-[#6b5d4d] whitespace-nowrap">{field.label}：</span>
-                      <div 
-                        className="flex-1 rounded-xl px-4 py-3 transition-all duration-200"
-                        style={{ 
-                          background: '#ede6d8',
-                          border: '1.5px solid #c4b59a',
-                        }}
-                      >
+                    <div 
+                      key={field.label}
+                      className="relative px-4 py-3"
+                      style={{
+                        border: '2.5px solid #2a2a2a',
+                        borderRadius: '8px 12px 10px 14px',
+                        background: 'rgba(245,240,230,0.6)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#3a3a3a] whitespace-nowrap" style={{ fontFamily: '"STSong", "SimSun", serif' }}>{field.label}：</span>
                         <input 
                           type="text"
                           value={field.value}
                           onChange={field.setter ? (e: React.ChangeEvent<HTMLInputElement>) => field.setter(e.target.value) : undefined}
                           disabled={field.disabled}
                           placeholder={field.placeholder || ''}
-                          className="w-full bg-transparent text-sm text-[#4a3d2e] placeholder:text-[#b8a88a] outline-none disabled:opacity-70"
+                          className="flex-1 bg-transparent text-sm text-[#3a3a3a] placeholder:text-[#b8a88a] outline-none disabled:opacity-70"
                         />
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* 右侧：黄色边框容器 */}
+                {/* 右侧：黄色粗边框大框 */}
                 <div 
-                  className="rounded-2xl p-5 space-y-4"
+                  className="rounded-xl p-5 space-y-4"
                   style={{ 
-                    border: '2.5px solid #f0c040',
-                    background: 'rgba(255,255,255,0.6)',
-                    backdropFilter: 'blur(10px)'
+                    border: '3px solid #e8b820',
+                    background: 'rgba(255,252,240,0.5)',
                   }}
                 >
                   {/* 编程时间 */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #4ecdc4, #44a08d)' }}>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #4ecdc4, #44a08d)' }}>
                       <span className="text-lg">🤖</span>
                     </div>
                     <div className="flex-1">
-                      <span className="text-xs text-[#888] block mb-0.5">编程时间</span>
+                      <span className="text-xs text-[#666] block mb-0.5" style={{ fontFamily: '"STSong", "SimSun", serif' }}>编程时间：</span>
                       <input 
                         type="text"
                         value={programmingTime}
@@ -575,11 +585,11 @@ export default function ReportPage() {
                   </div>
                   {/* 学习内容 */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #43e97b, #38f9d7)' }}>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #43e97b, #38f9d7)' }}>
                       <span className="text-lg">📖</span>
                     </div>
                     <div className="flex-1">
-                      <span className="text-xs text-[#888] block mb-0.5">学习内容</span>
+                      <span className="text-xs text-[#666] block mb-0.5" style={{ fontFamily: '"STSong", "SimSun", serif' }}>学习内容：</span>
                       <input 
                         type="text"
                         value={learningContent}
@@ -589,33 +599,19 @@ export default function ReportPage() {
                       />
                     </div>
                   </div>
-                  {/* 兴趣爱好 */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #fa709a, #fee140)' }}>
-                      <span className="text-lg">🎨</span>
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-xs text-[#888] block mb-0.5">兴趣爱好</span>
-                      <input 
-                        type="text"
-                        value={interests}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInterests(e.target.value)}
-                        placeholder="例如：画画、游戏、音乐"
-                        className="w-full bg-transparent text-sm font-medium text-[#333] placeholder:text-[#bbb] outline-none"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              {/* 底部黄色横幅 */}
+              {/* 底部黄色横幅 - 全宽 */}
               <div 
-                className="rounded-xl px-8 py-4 flex items-center justify-center gap-6"
-                style={{ background: 'linear-gradient(135deg, #f0c040, #e8a020)' }}
+                className="px-8 py-4 flex items-center justify-center"
+                style={{ background: '#e8b820' }}
               >
-                <span className="text-white font-bold text-base tracking-wider">快乐学习 · 收获成长</span>
-                <div className="w-px h-5 bg-white/50"></div>
-                <span className="text-white font-bold text-base tracking-wider">爱心施教 · 娃娃为王</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-[#555] text-sm tracking-wider" style={{ fontFamily: '"STSong", "SimSun", serif' }}>快乐学习 · 收获成长</span>
+                  <div className="w-px h-4 bg-[#888]/40"></div>
+                  <span className="text-[#555] text-sm tracking-wider" style={{ fontFamily: '"STSong", "SimSun", serif' }}>爱心施教 · 娃娃为王</span>
+                </div>
               </div>
             </div>
           </div>

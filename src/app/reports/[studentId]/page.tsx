@@ -71,8 +71,8 @@ export default function ReportPage() {
   const [newCompDate, setNewCompDate] = useState('');
   const [newCompCategory, setNewCompCategory] = useState('');
   const [courseGespLevels, setCourseGespLevels] = useState<GESPLlevelDef[]>([]);
-  const [isEditingGesp, setIsEditingGesp] = useState(false);
-  const [isEditingCompetition, setIsEditingCompetition] = useState(false);
+  const [showAllGesp, setShowAllGesp] = useState(false);
+  const [showAllCompetitions, setShowAllCompetitions] = useState(false);
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -1887,41 +1887,39 @@ export default function ReportPage() {
                         <div className="flex items-center gap-2">
                           <GraduationCap className="h-4 w-4 text-blue-600" strokeWidth={1.5} />
                           <span className="text-sm font-semibold text-blue-800">GESP 考级</span>
-                          <span className="text-xs text-blue-600/70 ml-auto">{course?.name || ''}对应考级</span>
+                          <span className="text-xs text-blue-600/70">{course?.name || ''}对应</span>
                           {sprintGespLevels.length > 0 && (
                             <button
-                              onClick={() => setIsEditingGesp(!isEditingGesp)}
-                              className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors ml-2"
+                              onClick={() => setShowAllGesp(!showAllGesp)}
+                              className="ml-auto text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
                             >
-                              {isEditingGesp ? '完成' : '编辑'}
+                              {showAllGesp ? '仅显示已选' : '显示全部'}
                             </button>
                           )}
                         </div>
                       </div>
                       <div className="p-4">
-                        {/* 已选择的考级（非编辑模式） */}
-                        {!isEditingGesp && sprintGespLevels.length > 0 ? (
+                        {/* 无选择时：显示全部可选 */}
+                        {sprintGespLevels.length === 0 ? (
                           <div className="space-y-2">
-                            {courseGespLevels
-                              .filter(g => sprintGespLevels.includes(g.level as GESPLlevel))
-                              .map(gesp => (
-                                <div key={gesp.level} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
-                                  <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{gesp.level}</div>
-                                  <div>
-                                    <div className="text-xs font-medium">{gesp.name}</div>
-                                    <div className="text-[10px] text-blue-100">{gesp.desc}</div>
-                                  </div>
-                                  <button
-                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
-                                    className="ml-auto h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
+                            {courseGespLevels.map((gesp) => (
+                              <button
+                                key={gesp.level}
+                                onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
+                              >
+                                <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
+                                  {gesp.level}
                                 </div>
-                              ))}
+                                <div className="flex-1">
+                                  <div className="text-xs font-medium">{gesp.name}</div>
+                                  <div className="text-[10px] text-gray-400">{gesp.desc}</div>
+                                </div>
+                              </button>
+                            ))}
                           </div>
-                        ) : (
-                          /* 编辑模式：显示所有可选等级 */
+                        ) : showAllGesp ? (
+                          /* 有选择 + 显示全部模式 */
                           <div className="space-y-2">
                             {courseGespLevels.map((gesp) => {
                               const isSelected = sprintGespLevels.includes(gesp.level as GESPLlevel);
@@ -1932,7 +1930,7 @@ export default function ReportPage() {
                                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
                                     isSelected
                                       ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
-                                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                      : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 opacity-60'
                                   }`}
                                 >
                                   <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -1942,30 +1940,33 @@ export default function ReportPage() {
                                   </div>
                                   <div className="flex-1">
                                     <div className="text-xs font-medium">{gesp.name}</div>
-                                    <div className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
-                                      {gesp.desc}
-                                    </div>
+                                    <div className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>{gesp.desc}</div>
                                   </div>
                                 </button>
                               );
                             })}
-                            {sprintGespLevels.length > 0 && (
-                              <button
-                                onClick={() => setIsEditingGesp(false)}
-                                className="w-full py-2 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                              >
-                                完成选择
-                              </button>
-                            )}
                           </div>
-                        )}
-                        {!isEditingGesp && sprintGespLevels.length === 0 && (
-                          <button
-                            onClick={() => setIsEditingGesp(true)}
-                            className="w-full py-3 text-xs text-blue-500 hover:text-blue-600 border border-dashed border-blue-200 rounded-lg hover:bg-blue-50/50 transition-colors"
-                          >
-                            + 选择目标考级等级
-                          </button>
+                        ) : (
+                          /* 有选择 + 仅显示已选模式 */
+                          <div className="space-y-2">
+                            {courseGespLevels
+                              .filter(g => sprintGespLevels.includes(g.level as GESPLlevel))
+                              .map(gesp => (
+                                <div key={gesp.level} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
+                                  <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{gesp.level}</div>
+                                  <div className="flex-1">
+                                    <div className="text-xs font-medium">{gesp.name}</div>
+                                    <div className="text-[10px] text-blue-100">{gesp.desc}</div>
+                                  </div>
+                                  <button
+                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                    className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1976,12 +1977,20 @@ export default function ReportPage() {
                         <div className="flex items-center gap-2">
                           <Trophy className="h-4 w-4 text-purple-600" strokeWidth={1.5} />
                           <span className="text-sm font-semibold text-purple-800">赛事活动</span>
+                          {sprintCompetitionIds.length > 0 && (
+                            <button
+                              onClick={() => setShowAllCompetitions(!showAllCompetitions)}
+                              className="ml-auto text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                            >
+                              {showAllCompetitions ? '仅显示已选' : '显示全部'}
+                            </button>
+                          )}
                           <button
                             onClick={() => setShowAddCompetition(!showAddCompetition)}
-                            className="ml-auto text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
+                            className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
                           >
                             <Plus className="h-3 w-3" />
-                            自定义添加
+                            添加
                           </button>
                         </div>
                       </div>
@@ -2028,46 +2037,98 @@ export default function ReportPage() {
                           </div>
                         )}
 
-                        {/* 赛事列表 */}
-                        <div className="grid grid-cols-2 gap-2">
-                          {allCompetitions.map((comp) => {
-                            const isSelected = sprintCompetitionIds.includes(comp.id);
-                            const isCustom = comp.id.startsWith('comp_custom_');
-                            return (
-                              <div
-                                key={comp.id}
-                                className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
-                                  isSelected
-                                    ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-purple-400 shadow-md shadow-purple-200/50'
-                                    : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
-                                }`}
-                                onClick={() => toggleCompetition(comp.id)}
-                              >
-                                <div className={`h-4 w-4 rounded flex items-center justify-center border ${
-                                  isSelected ? 'bg-white/20 border-white/40' : 'border-gray-300'
-                                }`}>
-                                  {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={2} />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-xs font-medium truncate">{comp.name}</div>
-                                  <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>
-                                    {comp.category}
+                        {/* 无选择时：显示全部可选 */}
+                        {sprintCompetitionIds.length === 0 ? (
+                          <div className="space-y-2">
+                            {allCompetitions.map((comp) => {
+                              const isCustom = comp.id.startsWith('comp_custom_');
+                              return (
+                                <div
+                                  key={comp.id}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200 cursor-pointer"
+                                  onClick={() => toggleCompetition(comp.id)}
+                                >
+                                  <div className="h-4 w-4 rounded border border-gray-300 flex items-center justify-center" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium truncate">{comp.name}</div>
+                                    <div className="text-[10px] text-gray-400 truncate">{comp.category}</div>
                                   </div>
+                                  {isCustom && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
+                                      className="h-4 w-4 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
+                                    >
+                                      <X className="h-2.5 w-2.5" />
+                                    </button>
+                                  )}
                                 </div>
-                                {isCustom && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
-                                    className={`h-4 w-4 rounded-full flex items-center justify-center ${
-                                      isSelected ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
-                                    }`}
-                                  >
-                                    <X className="h-2.5 w-2.5" />
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        ) : showAllCompetitions ? (
+                          /* 有选择 + 显示全部模式 */
+                          <div className="space-y-2">
+                            {allCompetitions.map((comp) => {
+                              const isSelected = sprintCompetitionIds.includes(comp.id);
+                              const isCustom = comp.id.startsWith('comp_custom_');
+                              return (
+                                <div
+                                  key={comp.id}
+                                  className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-purple-400 shadow-md shadow-purple-200/50'
+                                      : 'bg-white text-gray-400 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 opacity-60'
+                                  }`}
+                                  onClick={() => toggleCompetition(comp.id)}
+                                >
+                                  <div className={`h-4 w-4 rounded flex items-center justify-center border ${
+                                    isSelected ? 'bg-white/20 border-white/40' : 'border-gray-300'
+                                  }`}>
+                                    {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={2} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium truncate">{comp.name}</div>
+                                    <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>{comp.category}</div>
+                                  </div>
+                                  {isCustom && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
+                                      className={`h-4 w-4 rounded-full flex items-center justify-center ${
+                                        isSelected ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
+                                      }`}
+                                    >
+                                      <X className="h-2.5 w-2.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          /* 有选择 + 仅显示已选模式 */
+                          <div className="space-y-2">
+                            {allCompetitions
+                              .filter(c => sprintCompetitionIds.includes(c.id))
+                              .map(comp => {
+                                const isCustom = comp.id.startsWith('comp_custom_');
+                                return (
+                                  <div key={comp.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-sm">
+                                    <Trophy className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-medium truncate">{comp.name}</div>
+                                      <div className="text-[10px] text-purple-100 truncate">{comp.category}{comp.date ? ` · ${comp.date}` : ''}</div>
+                                    </div>
+                                    <button
+                                      onClick={() => toggleCompetition(comp.id)}
+                                      className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
                       </div>
                     </div>
 

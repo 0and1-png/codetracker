@@ -33,6 +33,9 @@ export interface ProblemDef {
   name: string;
   knowledgePointId?: string;      // Legacy single KP link
   knowledgePointIds?: string[];   // Multiple KP links (new)
+  description?: string;           // Problem description
+  codeExample?: string;           // Code example / solution
+  difficulty?: 'easy' | 'medium' | 'hard';  // Difficulty level
 }
 
 export interface Course {

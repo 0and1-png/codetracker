@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, BookOpen, Plus, Trash2, X, ChevronDown, ChevronRight,
-  FileText, Code, Palette, Edit3,
+  FileText, Code, Palette, Edit3, Upload,
   FolderOpen, Tag, ChevronUp,
   Sparkles, Scroll, Flame, Swords,
 } from 'lucide-react';
@@ -121,6 +121,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [expandedKpId, setExpandedKpId] = useState<string | null>(null);
   const [newProblemName, setNewProblemName] = useState('');
   const [newProblemKpId, setNewProblemKpId] = useState<string>('');
+
+  // Batch upload state
+  const [batchUploadOpen, setBatchUploadOpen] = useState(false);
+  const [batchUploadKpId, setBatchUploadKpId] = useState<string>('');
+  const [batchUploadText, setBatchUploadText] = useState('');
+  const [batchUploadResult, setBatchUploadResult] = useState<{ success: number; failed: number } | null>(null);
+
+  // Problem detail state
+  const [problemDetailOpen, setProblemDetailOpen] = useState(false);
+
+  // Problem detail state
+  const [selectedProblem, setSelectedProblem] = useState<{ problem: ProblemDef; kpName: string } | null>(null);
 
   // Add node dialog
   const [addNodeDialogOpen, setAddNodeDialogOpen] = useState(false);
@@ -325,6 +337,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     save({ ...course, problems: [...course.problems, problem] });
     setNewProblemName('');
     setNewProblemKpId('');
+  };
+
+  const batchUploadProblems = () => {
+    if (!course || !batchUploadText.trim() || !batchUploadKpId) return;
+    const lines = batchUploadText.split('\n').filter((l) => l.trim());
+    const newProblems: ProblemDef[] = lines.map((line) => ({
+      id: uuidv4(),
+      name: line.trim(),
+      knowledgePointId: batchUploadKpId,
+    }));
+    save({ ...course, problems: [...course.problems, ...newProblems] });
+    setBatchUploadText('');
+    setBatchUploadKpId('');
+    setBatchUploadOpen(false);
   };
 
   const removeProblem = (id: string) => {
@@ -776,7 +802,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 <div className="space-y-1.5">
                                   {kpProblems.map((p) => (
                                     <div key={p.id} className="flex items-center justify-between bg-emerald-900/20 rounded-lg px-3 py-2">
-                                      <span className="text-sm text-emerald-300">{p.name}</span>
+                                      <span
+                                        className="text-sm text-emerald-300 cursor-pointer hover:text-emerald-200 hover:underline flex-1 truncate"
+                                        onClick={() => { setSelectedProblem({ problem: p, kpName: kp.name }); setProblemDetailOpen(true); }}
+                                        title="点击查看详情"
+                                      >
+                                        {p.name}
+                                      </span>
                                       <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-red-900/30 hover:text-red-400" onClick={() => removeProblem(p.id)}>
                                         <X className="h-3 w-3" />
                                       </Button>
@@ -794,6 +826,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 />
                                 <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 h-8" onClick={() => addProblem(kp.id)} disabled={!newProblemName.trim()}>
                                   <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-purple-700 text-purple-400 hover:bg-purple-900/30 h-8 text-xs"
+                                  onClick={() => { setBatchUploadKpId(kp.id); setBatchUploadOpen(true); }}
+                                >
+                                  <Upload className="h-3 w-3 mr-1" />
+                                  批量
                                 </Button>
                               </div>
                             </div>
@@ -922,6 +963,92 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             <Button onClick={confirmAddNode} disabled={!newNodeTitle.trim()} className="xian-btn-primary">
               添加
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 批量上传题库弹窗 */}
+      <Dialog open={batchUploadOpen} onOpenChange={setBatchUploadOpen}>
+        <DialogContent className="max-w-2xl bg-xian-surface border-amber-800/50">
+          <DialogHeader>
+            <DialogTitle className="xian-text-gold font-serif">批量上传题库</DialogTitle>
+            <DialogDescription className="text-amber-400">
+              每行一道题，格式：题号 | 题目名称 | 题目描述 | 代码示例（可选）
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block text-amber-300">题目列表</label>
+              <Textarea
+                value={batchUploadText}
+                onChange={(e) => setBatchUploadText(e.target.value)}
+                placeholder={`1001 | A+B问题 | 计算两个整数的和 | #include <stdio.h>\nint main() {\n  int a, b;\n  scanf("%d %d", &a, &b);\n  printf("%d", a+b);\n  return 0;\n}\n\n1002 | Hello World | 输出Hello World | `}
+                className="bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700 min-h-[200px] font-mono text-sm"
+              />
+            </div>
+            {batchUploadResult && (
+              <div className={`p-3 rounded-lg text-sm ${batchUploadResult.success > 0 ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'bg-red-900/30 text-red-400 border border-red-800/50'}`}>
+                成功导入 {batchUploadResult.success} 道题目{batchUploadResult.failed > 0 ? `，${batchUploadResult.failed} 道失败` : ''}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-amber-700 text-amber-400" onClick={() => { setBatchUploadOpen(false); setBatchUploadText(''); setBatchUploadResult(null); }}>取消</Button>
+            <Button onClick={batchUploadProblems} className="xian-btn-primary">
+              上传
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 题目详情弹窗 */}
+      <Dialog open={problemDetailOpen} onOpenChange={setProblemDetailOpen}>
+        <DialogContent className="max-w-2xl bg-xian-surface border-amber-800/50">
+          <DialogHeader>
+            <DialogTitle className="xian-text-gold font-serif flex items-center gap-2">
+              <FileText className="h-5 w-5 text-amber-500" />
+              {selectedProblem?.problem.name || '题目详情'}
+            </DialogTitle>
+            <DialogDescription className="text-amber-400">
+              {selectedProblem?.problem.id && <span className="text-xs bg-amber-900/30 px-2 py-0.5 rounded">ID: {selectedProblem.problem.id}</span>}
+              {selectedProblem?.kpName && <span className="text-xs bg-purple-900/30 px-2 py-0.5 rounded ml-2">法门: {selectedProblem.kpName}</span>}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProblem && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block text-amber-300">题目描述</label>
+                <div className="p-3 rounded-lg bg-xian-input border border-amber-800/50 text-amber-100 text-sm whitespace-pre-wrap min-h-[60px]">
+                  {selectedProblem.problem.description || '暂无描述'}
+                </div>
+              </div>
+              {selectedProblem.problem.codeExample && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block text-amber-300">代码示例</label>
+                  <pre className="p-3 rounded-lg bg-gray-900 border border-amber-800/50 text-emerald-400 text-sm overflow-x-auto">
+                    <code>{selectedProblem.problem.codeExample}</code>
+                  </pre>
+                </div>
+              )}
+              {selectedProblem.problem.knowledgePointIds && selectedProblem.problem.knowledgePointIds.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block text-amber-300">关联知识点</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedProblem.problem.knowledgePointIds.map((kpId: string) => {
+                      const kp = course?.curriculum.find(k => k.id === kpId);
+                      return kp ? (
+                        <span key={kpId} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-900/30 text-purple-300 border border-purple-800/50">
+                          {kp.title}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="border-amber-700 text-amber-400" onClick={() => setProblemDetailOpen(false)}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

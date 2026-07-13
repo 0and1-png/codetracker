@@ -36,6 +36,8 @@ export default function ReportPage() {
 
   const [student, setStudent] = useState<Student | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
+  // 是否为图形化课程（图形化课程报告侧重知识点和进步点，无三刷练习）
+  const isVisualCourse = course?.id === 'course_visual';
   const [allTyping, setAllTyping] = useState<TypingRecord[]>([]);
   const [allRetry, setAllRetry] = useState<ProblemRetryRecord[]>([]);
   const [allHomework, setAllHomework] = useState<HomeworkRecord[]>([]);
@@ -1277,8 +1279,48 @@ export default function ReportPage() {
 
                     return (
                       <div className="space-y-6">
-                        {/* 重点题型 - 汇总表格 */}
-                        {keyProblems.length > 0 && (
+                        {/* 图形化课程：知识点掌握情况 */}
+                        {isVisualCourse && (
+                          <div className="bg-gradient-to-br from-white to-violet-50/30 rounded-2xl p-6 shadow-sm border border-violet-100/50">
+                            <div className="flex items-center gap-3 mb-5">
+                              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-md shadow-violet-200/50">
+                                <BookOpen className="h-4 w-4 text-white" />
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-bold text-[#333344]">知识点掌握情况</h4>
+                                <p className="text-xs text-[#888]">图形化编程学习进度</p>
+                              </div>
+                              <div className="flex-1 h-px bg-gradient-to-r from-violet-200 to-transparent ml-2"></div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              {knowledgeMastery.map((km, idx) => (
+                                <div key={idx} className="bg-white rounded-xl p-3 border border-violet-50">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-[#333]">{km.knowledgePointName}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      km.status === 'mastered' ? 'bg-green-100 text-green-700' :
+                                      km.status === 'learning' ? 'bg-amber-100 text-amber-700' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      {km.status === 'mastered' ? '已掌握' : km.status === 'learning' ? '学习中' : '未开始'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {Array.from({ length: 10 }).map((_, i) => (
+                                      <div key={i} className={`h-1.5 flex-1 rounded-full ${
+                                        i < Math.floor(km.masteryPercent / 10) ? 'bg-gradient-to-r from-violet-400 to-purple-500' : 'bg-gray-100'
+                                      }`} />
+                                    ))}
+                                  </div>
+                                  <p className="text-xs text-[#888] mt-2">掌握度 {km.masteryPercent}%</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* C++/Python课程：重点题型 - 汇总表格 */}
+                        {!isVisualCourse && keyProblems.length > 0 && (
                           <div className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl p-6 shadow-sm border border-orange-100/50">
                             <div className="flex items-center gap-3 mb-5">
                               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-200/50">
@@ -1357,8 +1399,8 @@ export default function ReportPage() {
                           </div>
                         )}
 
-                        {/* 重点题型 - 每道题独立卡片+迷你图表 */}
-                        {keyProblems.length > 0 && (
+                        {/* C++/Python课程：重点题型 - 每道题独立卡片+迷你图表 */}
+                        {!isVisualCourse && keyProblems.length > 0 && (
                           <div className="space-y-4">
                             <h4 className="text-base font-semibold text-orange-600 flex items-center gap-2 px-1">
                               <AlertCircle className="h-5 w-5" /> 重点题型（三刷练习）
@@ -1447,8 +1489,8 @@ export default function ReportPage() {
                           </div>
                         )}
 
-                        {/* 普通题目 */}
-                        {normalProblems.length > 0 && (
+                        {/* C++/Python课程：普通题目 */}
+                        {!isVisualCourse && normalProblems.length > 0 && (
                           <div className="bg-white rounded-2xl p-6 shadow-sm">
                             <h4 className="text-base font-semibold text-[#555] flex items-center gap-2 mb-4">
                               <CheckCircle className="h-4 w-4 text-green-500" /> 已完成题目
@@ -2008,8 +2050,8 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              {/* 打字测试 - 表格+图表 */}
-              {monthTyping.length > 0 && (
+              {/* C++/Python课程：打字测试 - 表格+图表 */}
+              {!isVisualCourse && monthTyping.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>

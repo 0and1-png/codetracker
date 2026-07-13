@@ -76,7 +76,7 @@ export default function HomePage() {
   const [importOpen, setImportOpen] = useState(false);
 
   const [newName, setNewName] = useState('');
-  const [newClassName, setNewClassName] = useState('');
+  const [newCourseId, setNewCourseId] = useState('course_cpp');
   const [newNotes, setNewNotes] = useState('');
   const [importText, setImportText] = useState('');
 
@@ -193,13 +193,13 @@ export default function HomePage() {
   };
 
   const handleAddStudent = () => {
-    if (!newName.trim() || !selectedCourseId) return;
+    if (!newName.trim() || !newCourseId) return;
     addStudent({
-      id: uuidv4(), name: newName.trim(), courseId: selectedCourseId,
-      className: newClassName.trim() || undefined, notes: newNotes.trim() || undefined,
+      id: uuidv4(), name: newName.trim(), courseId: newCourseId,
+      notes: newNotes.trim() || undefined,
       createdAt: new Date().toISOString(),
     });
-    setNewName(''); setNewClassName(''); setNewNotes('');
+    setNewName(''); setNewCourseId('course_cpp'); setNewNotes('');
     setAddStudentOpen(false); loadStudents();
   };
 
@@ -859,7 +859,16 @@ export default function HomePage() {
           </DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-amber-300">{XIAN.student}姓名</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="输入姓名" className="xian-input mt-1" /></div>
-            <div><Label className="text-amber-300">班级/门派</Label><Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="如：入门班" className="xian-input mt-1" /></div>
+            <div><Label className="text-amber-300">课程</Label>
+              <Select value={newCourseId} onValueChange={setNewCourseId}>
+                <SelectTrigger className="xian-input mt-1 w-full"><SelectValue placeholder="选择课程" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="course_cpp">C++ 信奥</SelectItem>
+                  <SelectItem value="course_python">Python</SelectItem>
+                  <SelectItem value="course_visual">图形化编程</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label className="text-amber-300">备注</Label><Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="备注信息" className="xian-input mt-1" /></div>
             <Button className="w-full xian-btn-gold" onClick={handleAddStudent} disabled={!newName.trim()}>确认收入门下</Button>
           </div>

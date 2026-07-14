@@ -342,11 +342,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const batchUploadProblems = () => {
     if (!course || !batchUploadText.trim() || !batchUploadKpId) return;
     const lines = batchUploadText.split('\n').filter((l) => l.trim());
-    const newProblems: ProblemDef[] = lines.map((line) => ({
-      id: uuidv4(),
-      name: line.trim(),
-      knowledgePointId: batchUploadKpId,
-    }));
+    const newProblems: ProblemDef[] = lines.map((line) => {
+      const parts = line.trim().split(/\s+/);
+      const name = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}` : line.trim();
+      return {
+        id: uuidv4(),
+        name,
+        knowledgePointId: batchUploadKpId,
+      };
+    });
     save({ ...course, problems: [...course.problems, ...newProblems] });
     setBatchUploadText('');
     setBatchUploadKpId('');
@@ -973,7 +977,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <DialogHeader>
             <DialogTitle className="xian-text-gold font-serif">批量上传题库</DialogTitle>
             <DialogDescription className="text-amber-400">
-              每行一道题，格式：题号 | 题目名称 | 题目描述 | 代码示例（可选）
+              每行一道题，格式：题号 题目名称（空格隔开）
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -982,7 +986,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               <Textarea
                 value={batchUploadText}
                 onChange={(e) => setBatchUploadText(e.target.value)}
-                placeholder={`1001 | A+B问题 | 计算两个整数的和 | #include <stdio.h>\nint main() {\n  int a, b;\n  scanf("%d %d", &a, &b);\n  printf("%d", a+b);\n  return 0;\n}\n\n1002 | Hello World | 输出Hello World | `}
+                placeholder={`1059 津津的储蓄计划\n1060 津津的开心一天\n1061 津津的烦恼`}
                 className="bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700 min-h-[200px] font-mono text-sm"
               />
             </div>

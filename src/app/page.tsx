@@ -96,6 +96,12 @@ export default function HomePage() {
   const [tagFilter, setTagFilter] = useState<'all' | 'highlight' | 'weakness'>('all');
   const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});
 
+  // 三刷批量上传
+  const [showBatchRetry, setShowBatchRetry] = useState(false);
+  const [batchRetryStudentId, setBatchRetryStudentId] = useState<string>('');
+  const [batchRetryText, setBatchRetryText] = useState('');
+  const [batchRetryResult, setBatchRetryResult] = useState<{ success: number; failed: number } | null>(null);
+
   const loadData = useCallback(() => {
     const courseList = getCourses();
     setCourses(courseList);
@@ -280,6 +286,67 @@ export default function HomePage() {
     const prev = allRetries.find((r) => r.problemId === problemId && r.attempt === attempt - 1);
     if (prev) return Math.round(((prev.timeSpent - currentTime) / prev.timeSpent) * 100);
     return null;
+  };
+
+  // 三刷批量上传处理
+  const handleBatchRetryUpload = (studentId: string) => {
+    if (!batchRetryText.trim() || !activeCourse) return;
+    const lines = batchRetryText.trim().split('\n').filter(l => l.trim());
+    let success = 0;
+    let failed = 0;
+
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 2) { failed++; continue; }
+
+      // 最后一部分是题目名称（可能包含空格），前面是数字
+      // 格式: 题目名称 一刷耗时 [二刷耗时] [三刷耗时]
+      // 从后往前找，找到连续的数字部分作为耗时
+      const numbers: number[] = [];
+      const nameParts: string[] = [];
+      
+      // 从末尾开始提取数字
+      let i = parts.length - 1;
+      const tempNums: string[] = [];
+      while (i >= 1 && /^\d+(\.\d+)?$/.test(parts[i])) {
+        tempNums.unshift(parts[i]);
+        i--;
+      }
+      
+      // 剩余部分作为题目名称
+      const problemName = parts.slice(0, i + 1).join(' ');
+      const times = tempNums.map(Number);
+      
+      if (!problemName || times.length === 0) { failed++; continue; }
+
+      // 在课程题目中查找匹配的题目
+      const matchedProblem = activeCourse.problems.find(
+        p => p.name === problemName || p.id === problemName || problemName.includes(p.name) || p.name.includes(problemName)
+      );
+
+      if (!matchedProblem) { failed++; continue; }
+
+      // 为每个耗时创建一条记录
+      times.forEach((time, idx) => {
+        if (time > 0) {
+          addRetryRecord({
+            id: uuidv4(),
+            studentId,
+            courseId: selectedCourseId,
+            date: recordDate,
+            problemId: matchedProblem.id,
+            problemName: matchedProblem.name,
+            attempt: idx + 1,
+            timeSpent: time,
+          });
+          success++;
+        }
+      });
+    }
+
+    setBatchRetryResult({ success, failed });
+    setBatchRetryText('');
+    setTimeout(() => setBatchRetryResult(null), 3000);
   };
 
   const loadHistory = (studentId: string) => {
@@ -683,6 +750,18 @@ export default function HomePage() {
                               }
                               return null;
                             })()}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs gap-1 text-amber-500 hover:bg-xianjin/10 hover:text-amber-300 ml-auto"
+                              onClick={() => {
+                                setBatchRetryStudentId(student.id);
+                                setShowBatchRetry(true);
+                              }}
+                            >
+                              <Upload className="h-3.5 w-3.5" />
+                              批量上传
+                            </Button>
                           </div>
                         )}
 
@@ -885,6 +964,60 @@ export default function HomePage() {
           <div className="space-y-3">
             <Textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder={'张三,入门班\n李四,进阶班\n王五'} className="xian-input min-h-[120px]" />
             <Button className="w-full xian-btn-gold" onClick={handleImport} disabled={!importText.trim()}>确认收入</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 三刷批量上传 Dialog */}
+      <Dialog open={showBatchRetry} onOpenChange={(open) => {
+        setShowBatchRetry(open);
+        if (!open) {
+          setBatchRetryText('');
+          setBatchRetryResult(null);
+        }
+      }}>
+        <DialogContent className="bg-anye border-xianjin/20 max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="xian-text-gold font-serif flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              批量{XIAN.retry}上传
+            </DialogTitle>
+            <DialogDescription className="text-amber-600">
+              为「{courseStudents.find(s => s.id === batchRetryStudentId)?.name}」批量录入{XIAN.retry}记录
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-xianjin/15 bg-xianjin/5 p-3">
+              <p className="text-xs text-amber-400 font-medium mb-1">格式说明：</p>
+              <p className="text-xs text-amber-600">每行一条记录，空格分隔：</p>
+              <p className="text-xs text-amber-500 font-mono mt-1">题目名称 一刷耗时 二刷耗时 三刷耗时</p>
+              <p className="text-xs text-amber-700 mt-2">耗时单位为分钟，只填一刷耗时则为首次练习</p>
+              <div className="mt-2 pt-2 border-t border-xianjin/10">
+                <p className="text-xs text-amber-600">示例：</p>
+                <p className="text-xs text-amber-500 font-mono mt-1">津津的储蓄计划 30 20 15</p>
+                <p className="text-xs text-amber-500 font-mono">买铅笔 10 8</p>
+                <p className="text-xs text-amber-500 font-mono">猜数游戏 5</p>
+              </div>
+            </div>
+            <Textarea
+              value={batchRetryText}
+              onChange={(e) => setBatchRetryText(e.target.value)}
+              placeholder={'津津的储蓄计划 30 20 15\n买铅笔 10 8\n猜数游戏 5'}
+              className="xian-input min-h-[160px] font-mono text-sm"
+            />
+            {batchRetryResult && (
+              <div className={`text-sm rounded-lg px-3 py-2 ${batchRetryResult.success > 0 ? 'bg-green-900/20 text-green-400 border border-green-800/30' : 'bg-red-900/20 text-red-400 border border-red-800/30'}`}>
+                成功录入 {batchRetryResult.success} 条{batchRetryResult.failed > 0 ? `，${batchRetryResult.failed} 条格式错误或未匹配到题目` : ''}
+              </div>
+            )}
+            <Button
+              className="w-full xian-btn-gold"
+              onClick={() => handleBatchRetryUpload(batchRetryStudentId)}
+              disabled={!batchRetryText.trim()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              确认上传
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

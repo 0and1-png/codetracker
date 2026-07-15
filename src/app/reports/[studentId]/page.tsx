@@ -510,35 +510,13 @@ export default function ReportPage() {
     if (!reportRef.current || !student) return;
     setExporting(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
+      const { domToCanvas } = await import('modern-screenshot');
       const { jsPDF } = await import('jspdf');
-      const canvas = await html2canvas(reportRef.current, {
+      
+      // modern-screenshot supports oklch/color-mix/modern CSS natively
+      const canvas = await domToCanvas(reportRef.current, {
         scale: 2,
-        useCORS: true,
         backgroundColor: '#ffffff',
-        onclone: (_doc: Document, element: HTMLElement) => {
-          // Fix: html2canvas doesn't support lab() color function from Tailwind CSS 4
-          // Replace all gradient backgrounds with solid colors in the cloned DOM
-          const allElements = element.querySelectorAll('*');
-          allElements.forEach((el: Element) => {
-            const htmlEl = el as HTMLElement;
-            const computed = window.getComputedStyle(htmlEl);
-            const bg = computed.backgroundImage;
-            if (bg && (bg.includes('lab(') || bg.includes('oklab('))) {
-              htmlEl.style.backgroundImage = 'none';
-              htmlEl.style.backgroundColor = computed.backgroundColor || '#ffffff';
-            }
-            // Also fix border colors that might use lab()
-            const borderColor = computed.borderColor;
-            if (borderColor && borderColor.includes('lab(')) {
-              htmlEl.style.borderColor = '#d1d5db';
-            }
-            const color = computed.color;
-            if (color && color.includes('lab(')) {
-              htmlEl.style.color = '#1f2937';
-            }
-          });
-        }
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');

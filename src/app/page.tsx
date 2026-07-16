@@ -120,6 +120,8 @@ export default function HomePage() {
   const [moveStudentOpen, setMoveStudentOpen] = useState(false);
   const [moveStudentId, setMoveStudentId] = useState('');
   const [moveStudentClass, setMoveStudentClass] = useState('');
+  const [classRetryProblemId, setClassRetryProblemId] = useState('');
+  const [classProblemSearch, setClassProblemSearch] = useState('');
 
   const loadData = useCallback(() => {
     const courseList = getCourses();
@@ -275,7 +277,26 @@ export default function HomePage() {
     if (!student) return;
     const updated = { ...student, className: newClass || undefined };
     updateStudent(updated);
-    loadData();
+    loadStudents();
+  };
+
+  // Class-level problem selection: add problem to all selected students
+  const handleClassProblemSelect = (problemId: string) => {
+    setClassRetryProblemId(problemId);
+    selectedStudents.forEach((student: Student) => {
+      const rows = getRetryForm(student.id);
+      // Check if this problem already exists in the student's retry rows
+      const existingRow = rows.find(r => r.problemId === problemId);
+      if (!existingRow) {
+        // Add the problem to this student's retry rows
+        addRetryRow(student.id);
+        // The new row is added at the end, set its problemId
+        const newRows = getRetryForm(student.id);
+        if (newRows.length > 0) {
+          updateRetryRow(student.id, newRows.length - 1, 'problemId', problemId);
+        }
+      }
+    });
   };
 
   // Batch import - auto-assign course based on class name
@@ -626,6 +647,64 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* Class-level problem selector for retry tab */}
+          {activeTab === 'retry' && selectedClass !== 'all' && selectedStudents.length > 1 && (
+            <div className="bg-blue-50 border-b border-blue-100 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded">班级统一选题</span>
+                  <span className="text-xs text-gray-500">{selectedStudents.length}名学员共用此题</span>
+                </div>
+                <div className="flex-1">
+                  {activeCourse && activeCourse.problems.length > 0 ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-8 text-sm w-full max-w-xs justify-between bg-white">
+                          {classRetryProblemId ? (
+                            <span className="truncate text-gray-700">
+                              {activeCourse.problems.find(p => p.id === classRetryProblemId)?.name || '选择题目'}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">选择统一题目</span>
+                          )}
+                          <ChevronDown className="h-3 w-3 text-gray-400 ml-1 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0 bg-white border-gray-200" align="start">
+                        <div className="p-2 border-b border-gray-100">
+                          <Input placeholder="搜索题号或题目名..." className="h-7 text-xs"
+                            value={classProblemSearch} onChange={(e) => setClassProblemSearch(e.target.value)} />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {activeCourse.problems
+                            .filter(p => {
+                              if (!classProblemSearch) return true;
+                              const s = classProblemSearch.toLowerCase();
+                              return p.name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s);
+                            })
+                            .map((p) => (
+                              <div key={p.id}
+                                className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors ${
+                                  classRetryProblemId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                }`}
+                                onClick={() => {
+                                  handleClassProblemSelect(p.id);
+                                  setClassProblemSearch('');
+                                }}>
+                                {p.name}
+                              </div>
+                            ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <span className="text-xs text-gray-400">请先在课程管理中添加题目</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Content area */}
           <div className="flex-1 overflow-y-auto p-4">

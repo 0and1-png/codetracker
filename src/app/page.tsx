@@ -72,20 +72,22 @@ const GROWTH_SUGGESTION_PRESETS = [
 ] as const;
 
 // ==================== 考级 Tab 组件 ====================
+interface ExamSet {
+  id: string;
+  level: number;
+  examDate: string;
+  results: ExamQuestionResult[];
+}
+
 function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
-  const [examLevel, setExamLevel] = useState(1);
-  const [examDate, setExamDate] = useState('');
-  const [examResults, setExamResults] = useState<ExamQuestionResult[]>([]);
-  const [wrongNoteIdx, setWrongNoteIdx] = useState<number | null>(null);
-  const [wrongNoteText, setWrongNoteText] = useState('');
+  const [examSets, setExamSets] = useState<ExamSet[]>([]);
+  const [activeSetIdx, setActiveSetIdx] = useState(0);
+  const [wrongNoteMap, setWrongNoteMap] = useState<Record<number, string>>({});
 
   const isVisual = selectedCourseId === 'course_visual';
   const totalQuestions = isVisual ? 17 : 27;
-  const mcCount = isVisual ? 10 : 15; // 选择题
-  const tfCount = isVisual ? 5 : 10;  // 判断题
-  const progCount = 2; // 编程题
 
-  // 生成GESP考级月份选项 (每年3/6/9/12月)
+  // 生成GESP考级月份选项
   const examDateOptions = useMemo(() => {
     const options: string[] = [];
     const currentYear = new Date().getFullYear();
@@ -97,129 +99,190 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
     return options;
   }, []);
 
-  // 初始化题目结果
-  useEffect(() => {
+  // 添加新试卷
+  const addExamSet = useCallback(() => {
     const results: ExamQuestionResult[] = [];
     for (let i = 1; i <= totalQuestions; i++) {
       results.push({ questionIndex: i, isCorrect: true });
     }
-    setExamResults(results);
-  }, [totalQuestions]);
+    setExamSets(prev => [...prev, {
+      id: `set_${Date.now()}`,
+      level: 1,
+      examDate: examDateOptions[0] || '',
+      results,
+    }]);
+    setActiveSetIdx(examSets.length);
+    setWrongNoteMap({});
+  }, [totalQuestions, examDateOptions, examSets.length]);
+
+  // 初始化第一套试卷
+  useEffect(() => {
+    if (examSets.length === 0) addExamSet();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeSet = examSets[activeSetIdx];
 
   // 切换对错
-  const toggleQuestion = (idx: number) => {
-    setExamResults(prev => prev.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r));
-  };
+  const toggleQuestion = useCallback((idx: number) => {
+    setExamSets(prev => prev.map((set, si) => {
+      if (si !== activeSetIdx) return set;
+      return {
+        ...set,
+        results: set.results.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r),
+      };
+    }));
+  }, [activeSetIdx]);
 
-  // 保存错题详情
-  const saveWrongNote = (idx: number) => {
-    setExamResults(prev => prev.map((r, i) => i === idx ? { ...r, note: wrongNoteText } : r));
-    setWrongNoteIdx(null);
-    setWrongNoteText('');
-  };
+  // 更新试卷属性
+  const updateSet = useCallback((field: 'level' | 'examDate', value: number | string) => {
+    setExamSets(prev => prev.map((set, si) => si === activeSetIdx ? { ...set, [field]: value } : set));
+  }, [activeSetIdx]);
+
+  // 保存错题备注
+  const updateWrongNote = useCallback((idx: number, note: string) => {
+    setWrongNoteMap(prev => ({ ...prev, [idx]: note }));
+  }, []);
 
   // 保存考级记录
   const handleSaveExam = useCallback((studentId: string) => {
-    const correctCount = examResults.filter(r => r.isCorrect).length;
+    if (!activeSet) return;
+    const correctCount = activeSet.results.filter(r => r.isCorrect).length;
     const record: ExamRecord = {
-      id: `exam_${studentId}_${examDate}_${Date.now()}`,
+      id: `exam_${studentId}_${activeSet.examDate}_${Date.now()}`,
       studentId,
       courseId: selectedCourseId,
-      level: examLevel,
-      examDate,
+      level: activeSet.level,
+      examDate: activeSet.examDate,
       totalQuestions,
       correctCount,
       wrongCount: totalQuestions - correctCount,
-      results: examResults,
+      results: activeSet.results.map(r => ({
+        ...r,
+        note: wrongNoteMap[r.questionIndex - 1] || r.note,
+      })),
       createdAt: new Date().toISOString(),
     };
     saveExamRecord(record);
-  }, [examResults, examDate, selectedCourseId, examLevel, totalQuestions]);
+  }, [activeSet, selectedCourseId, totalQuestions, wrongNoteMap]);
 
   const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
-
   if (selectedStudents.length === 0) {
-    return <div className="flex items-center justify-center h-32 text-gray-400 text-sm">请在左侧选择学员</div>;
+    return <div className="flex items-center justify-center h-48 text-gray-400 text-sm">请在左侧选择学员</div>;
   }
 
   return (
-    <div className="space-y-4">
-      {/* 考级信息 */}
-      <div className="flex items-center gap-4">
-        <div>
-          <Label className="text-xs text-gray-500">考级级别</Label>
-          <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
-            <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
-                <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-xs text-gray-500">考级时间</Label>
-          <Select value={examDate} onValueChange={setExamDate}>
-            <SelectTrigger className="mt-1 h-8 w-32 text-sm"><SelectValue placeholder="选择月份" /></SelectTrigger>
-            <SelectContent>
-              {examDateOptions.map(opt => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-xs text-gray-400 ml-auto">
-          选择题{mcCount}道 | 判断题{tfCount}道 | 编程题{progCount}道 | 共{totalQuestions}道
-        </div>
+    <div className="flex flex-col h-full">
+      {/* 试卷切换栏 */}
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+        {examSets.map((set, idx) => (
+          <button key={set.id} onClick={() => setActiveSetIdx(idx)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              idx === activeSetIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            第{idx + 1}套 · GESP {set.level}级 · {set.examDate}
+          </button>
+        ))}
+        <button onClick={addExamSet}
+          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
+          <Plus className="w-3.5 h-3.5" /> 添加试卷
+        </button>
       </div>
 
-      {/* 每个学员的答题网格 */}
-      {selectedStudents.map(student => (
-        <div key={student.id} className="border border-gray-200 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-medium text-sm text-gray-800">{student.name}</span>
-            <Button size="sm" onClick={() => handleSaveExam(student.id)} disabled={!examDate}>保存记录</Button>
-          </div>
-          {/* 题目网格 - 每行10题 */}
-          <div className="space-y-1">
-            {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
-              <div key={rowIdx} className="flex items-center gap-1">
-                <div className="flex gap-1 flex-wrap">
-                  {examResults.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
-                    const idx = rowIdx * 10 + colIdx;
-                    return (
-                      <div key={idx} className="flex flex-col items-center">
-                        <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
-                        <button
-                          onClick={() => toggleQuestion(idx)}
-                          className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-all ${
-                            result.isCorrect
-                              ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                              : 'bg-red-100 text-red-600 hover:bg-red-200'
-                          }`}>
-                          {result.isCorrect ? '✓' : '✗'}
-                        </button>
-                        {result.note && (
-                          <span className="text-[9px] text-amber-500" title={result.note}>注</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* 错题详情输入 */}
-          {wrongNoteIdx !== null && (
-            <div className="mt-2 flex gap-2">
-              <Input value={wrongNoteText} onChange={e => setWrongNoteText(e.target.value)}
-                placeholder={`第${examResults[wrongNoteIdx]?.questionIndex}题错因...`} className="h-7 text-xs flex-1" />
-              <Button size="sm" variant="outline" onClick={() => saveWrongNote(wrongNoteIdx)}>确定</Button>
+      {activeSet && (
+        <>
+          {/* 考级信息 */}
+          <div className="flex items-center gap-6 mb-4">
+            <div>
+              <Label className="text-xs text-gray-500 mb-1 block">考级级别</Label>
+              <Select value={String(activeSet.level)} onValueChange={v => updateSet('level', Number(v))}>
+                <SelectTrigger className="h-9 w-28 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
+                    <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          <div className="mt-2 text-xs text-gray-400">点击题目切换对错，错题可添加错因说明</div>
-        </div>
-      ))}
+            <div>
+              <Label className="text-xs text-gray-500 mb-1 block">考级时间</Label>
+              <Select value={activeSet.examDate} onValueChange={v => updateSet('examDate', v)}>
+                <SelectTrigger className="h-9 w-36 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {examDateOptions.map(opt => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-xs text-gray-400 ml-auto">
+              选择题{isVisual ? 10 : 15}道 | 判断题{isVisual ? 5 : 10}道 | 编程题2道 | 共{totalQuestions}道
+            </div>
+          </div>
+
+          {/* 答题网格区域 - 铺满 */}
+          <div className="flex-1 overflow-auto">
+            {selectedStudents.map(student => {
+              const correctCount = activeSet.results.filter(r => r.isCorrect).length;
+              const wrongCount = totalQuestions - correctCount;
+              return (
+                <div key={student.id} className="border border-gray-200 rounded-xl p-4 mb-4 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-base text-gray-800">{student.name}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                        正确 {correctCount}/{totalQuestions}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+                        错误 {wrongCount}
+                      </span>
+                    </div>
+                    <Button size="sm" onClick={() => handleSaveExam(student.id)} disabled={!activeSet.examDate}
+                      className="bg-blue-500 hover:bg-blue-600">保存记录</Button>
+                  </div>
+
+                  {/* 题目网格 - 每行10题 */}
+                  <div className="space-y-2">
+                    {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
+                      <div key={rowIdx} className="flex items-start gap-1">
+                        {activeSet.results.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
+                          const idx = rowIdx * 10 + colIdx;
+                          const hasNote = wrongNoteMap[idx] || result.note;
+                          return (
+                            <div key={idx} className="flex flex-col items-center min-w-[44px]">
+                              <span className="text-[11px] text-gray-400 mb-1">{result.questionIndex}</span>
+                              <button
+                                onClick={() => toggleQuestion(idx)}
+                                className={`w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-all border-2 ${
+                                  result.isCorrect
+                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                    : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                                }`}>
+                                {result.isCorrect ? '✓' : ''}
+                              </button>
+                              {/* 错题备注输入 */}
+                              {!result.isCorrect && (
+                                <input
+                                  value={wrongNoteMap[idx] || ''}
+                                  onChange={e => updateWrongNote(idx, e.target.value)}
+                                  placeholder="错因..."
+                                  className="mt-1 w-full h-6 text-[10px] px-1 rounded border border-gray-200 focus:border-blue-300 focus:outline-none text-center"
+                                />
+                              )}
+                              {hasNote && result.isCorrect && (
+                                <span className="text-[9px] text-amber-500 mt-0.5" title={hasNote}>注</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -325,7 +388,11 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   const [honorType, setHonorType] = useState<'exam' | 'competition'>('exam');
   const [examLevel, setExamLevel] = useState(1);
   const [honorTitle, setHonorTitle] = useState('');
-  const [honorDate, setHonorDate] = useState('');
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+  const [honorDate, setHonorDate] = useState(todayStr);
 
   const isVisual = selectedCourseId === 'course_visual';
   const maxLevel = isVisual ? 6 : 8;

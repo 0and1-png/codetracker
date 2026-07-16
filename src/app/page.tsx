@@ -1078,8 +1078,7 @@ export default function HomePage() {
 
   // Get unique classes from students
   const courseClasses = getCourseClasses(selectedCourseId);
-  const studentClasses = Array.from(new Set(courseStudents.map(s => s.className || '').filter(Boolean)));
-  const classList = Array.from(new Set([...courseClasses, ...studentClasses])).sort();
+  const classList = [...courseClasses].sort();
   const filteredByClass = selectedClass === 'all' ? courseStudents : courseStudents.filter(s => (s.className || '') === selectedClass);
 
   const filteredStudents = filteredByClass.filter((s) => {
@@ -1206,26 +1205,23 @@ export default function HomePage() {
   // Batch import - auto-assign course based on class name
   const handleImport = () => {
     if (!importText.trim()) return;
-    const result = Papa.parse(importText.trim(), { header: false, skipEmptyLines: true });
-    const rows = result.data as string[][];
-    for (const row of rows) {
-      const name = (row[0] || '').trim();
+    const lines = importText.trim().split('\n');
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      const name = (parts[0] || '').trim();
       if (!name) continue;
-      const className = (row[1] || '').trim();
-      // Auto-detect course from class name
+      const courseName = (parts[1] || '').toLowerCase();
+      // Map course name to course ID
       let courseId = selectedCourseId;
-      const cnLower = className.toLowerCase();
-      if (cnLower.includes('c++') || cnLower.includes('信奥') || cnLower.includes('csp')) {
+      if (courseName === 'c++' || courseName === 'c++信奥') {
         courseId = 'course_cpp';
-      } else if (cnLower.includes('python') || cnLower.includes('python')) {
+      } else if (courseName === 'python') {
         courseId = 'course_python';
-      } else if (cnLower.includes('图形化') || cnLower.includes('scratch') || cnLower.includes('编程启蒙')) {
+      } else if (courseName === '图形化') {
         courseId = 'course_visual';
       }
       addStudent({
         id: uuidv4(), name, courseId,
-        className: className || undefined,
-        notes: (row[2] || '').trim() || undefined,
         createdAt: new Date().toISOString(),
       });
     }
@@ -1720,13 +1716,13 @@ export default function HomePage() {
           <DialogHeader>
             <DialogTitle className="text-gray-800">{XIAN.importCSV}</DialogTitle>
             <DialogDescription className="text-gray-500">
-              每行一名学员，格式：姓名, 班级, 备注<br/>
-              系统会根据班级名称自动分配课程（含C++/信奥→C++课程，含Python→Python课程，含图形化/Scratch→图形化课程）
+              每行一名学员，格式：姓名 课程<br/>
+              课程填写：c++、python、图形化（三选一）
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Textarea value={importText} onChange={(e) => setImportText(e.target.value)}
-              placeholder={'张三, C++入门班, 备注\n李四, Python基础班\n王五, 图形化启蒙班'} className="min-h-[140px] text-sm" />
+              placeholder={'张三 c++\n李四 python\n王五 图形化'} className="min-h-[140px] text-sm" />
             <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={handleImport} disabled={!importText.trim()}>
               确认导入
             </Button>

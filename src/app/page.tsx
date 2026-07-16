@@ -516,10 +516,16 @@ export default function HomePage() {
                           <div className="text-xs text-gray-400 truncate">{student.className}</div>
                         )}
                       </div>
-                      <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
-                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <Link href={`/reports/${student.id}`} className="p-1 hover:bg-blue-50 rounded opacity-60 hover:opacity-100 transition-all"
+                          title="查看成长报告" onClick={(e) => e.stopPropagation()}>
+                          <FileText className="h-3 w-3 text-blue-500" />
+                        </Link>
+                        <button className="p-1 hover:bg-red-50 rounded opacity-60 hover:opacity-100 transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
+                          <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -742,7 +748,7 @@ function StudentRecordCard({
   onUpdateHomework, onSave, onLoadHistory, onBatchRetry,
 }: StudentRecordCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm xian-animate-in">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Card header */}
       <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">

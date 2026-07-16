@@ -880,7 +880,7 @@ export default function ReportPage() {
                   {/* 黄色下划线（短） */}
                   <div className="mt-1 ml-1 h-[3px] w-40 rounded-full" style={{ background: '#e8b820' }}></div>
                 </div>
-                {/* 修炼手册 - 红色毛笔书法，右侧 */}
+                {/* 成长报告 - 红色毛笔书法，右侧 */}
                 <div>
                   <h2 
                     className="text-4xl font-black inline-block"
@@ -890,7 +890,7 @@ export default function ReportPage() {
                       letterSpacing: '0.15em',
                     }}
                   >
-                    修炼手册
+                    成长报告
                   </h2>
                   {/* 黄色下划线（长） */}
                   <div className="mt-1 ml-1 h-[3px] w-52 rounded-full" style={{ background: '#e8b820' }}></div>
@@ -1004,7 +1004,7 @@ export default function ReportPage() {
                     letterSpacing: '0.25em',
                   }}
                 >
-                  战码少年——修炼手册
+                  战码少年——成长报告
                 </h2>
               </div>
 
@@ -2209,7 +2209,7 @@ export default function ReportPage() {
                       <span className="w-8 h-8 bg-gradient-to-br from-violet-400 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
                         <FileText className="h-4 w-4 text-white" />
                       </span>
-                      修炼日志（作业）
+                      作业记录
                     </h3>
                     {(() => {
                       // 每月作业标准：4次

@@ -390,7 +390,7 @@ export default function StudentDetailPage() {
         <Tabs defaultValue="timeline" className="space-y-6">
           <TabsList className="bg-[#161b22] border border-[#30363d]">
             <TabsTrigger value="timeline" className="data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-[#8b949e]">
-              修炼纪事
+              学习记录
             </TabsTrigger>
             <TabsTrigger value="charts" className="data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-[#8b949e]">
               境界图谱
@@ -408,10 +408,10 @@ export default function StudentDetailPage() {
                   <Hourglass className="h-8 w-8 text-[#d4a853]/40" />
                 </div>
                 <h3 className="text-lg font-medium text-[#8b949e] mb-2">
-                  {monthLabel}尚无修炼记录
+                  {monthLabel}尚无学习记录
                 </h3>
                 <p className="text-sm text-[#484f58]">
-                  返回修炼台录入修炼纪事
+                  返回工作台录入学习记录
                 </p>
               </div>
             ) : (
@@ -463,7 +463,7 @@ export default function StudentDetailPage() {
                             <AlertDialogContent className="bg-[#161b22] border-[#30363d]">
                               <AlertDialogHeader>
                                 <AlertDialogTitle className="text-[#e6edf3]">确认删除</AlertDialogTitle>
-                                <AlertDialogDescription className="text-[#8b949e]">确定要删除该条修炼记录吗？此操作不可逆。</AlertDialogDescription>
+                                <AlertDialogDescription className="text-[#8b949e]">确定要删除该条学习记录吗？此操作不可逆。</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel className="bg-[#21262d] text-[#e6edf3] border-[#30363d]">取消</AlertDialogCancel>
@@ -560,7 +560,7 @@ export default function StudentDetailPage() {
                             {item.data.imageUrl && (
                               <img
                                 src={item.data.imageUrl}
-                                alt="修炼成果"
+                                alt="学习成果"
                                 className="max-w-full max-h-40 rounded-lg border border-[#30363d] mt-2"
                               />
                             )}
@@ -635,7 +635,7 @@ export default function StudentDetailPage() {
                           <th className="px-4 py-2 text-left text-[#d4a853] font-medium">周次</th>
                           <th className="px-4 py-2 text-center text-[#d4a853] font-medium">平均速度</th>
                           <th className="px-4 py-2 text-center text-[#d4a853] font-medium">平均正确率</th>
-                          <th className="px-4 py-2 text-center text-[#d4a853] font-medium">修炼次数</th>
+                          <th className="px-4 py-2 text-center text-[#d4a853] font-medium">学习次数</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -723,11 +723,11 @@ export default function StudentDetailPage() {
             <div className="flex items-center gap-4 mb-4 text-sm">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded-full bg-[#30363d]" />
-                <span className="text-[#484f58]">未修炼</span>
+                <span className="text-[#484f58]">未开始</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded-full bg-[#d4a853]" />
-                <span className="text-[#484f58]">修炼中</span>
+                <span className="text-[#484f58]">学习中</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded-full bg-[#4ade80]" />

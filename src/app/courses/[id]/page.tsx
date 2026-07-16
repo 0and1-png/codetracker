@@ -40,9 +40,9 @@ const COURSE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const NODE_TYPE_CONFIG: Record<CurriculumNodeType, { label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
-  chapter: { label: '卷', icon: <Scroll className="h-3.5 w-3.5" />, color: 'text-amber-400', bgColor: 'bg-amber-900/30' },
+  chapter: { label: '章', icon: <Scroll className="h-3.5 w-3.5" />, color: 'text-gray-700', bgColor: 'bg-gray-100' },
   section: { label: '篇', icon: <BookOpen className="h-3.5 w-3.5" />, color: 'text-sky-400', bgColor: 'bg-sky-900/30' },
-  topic: { label: '法门', icon: <Tag className="h-3.5 w-3.5" />, color: 'text-emerald-400', bgColor: 'bg-emerald-900/30' },
+  topic: { label: '知识点', icon: <Tag className="h-3.5 w-3.5" />, color: 'text-emerald-400', bgColor: 'bg-emerald-900/30' },
 };
 
 const LANGUAGES = ['C++', 'Python', 'JavaScript', 'Java', 'HTML/CSS', '其他'];
@@ -374,8 +374,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   if (!mounted || !course) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-xian-bg">
-        <div className="animate-pulse text-amber-600">古籍加载中...</div>
+      <div className="min-h-screen flex items-center justify-center bg-bg-gray-50">
+        <div className="animate-pulse text-gray-700">加载中...</div>
       </div>
     );
   }
@@ -397,7 +397,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       <div key={node.id}>
         <div
           className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors text-sm
-            ${isSelected ? 'bg-amber-900/30 text-amber-200 font-medium' : 'hover:bg-white/5 text-amber-100/70'}
+            ${isSelected ? 'bg-gray-100 text-gray-700 font-medium' : 'hover:bg-white/5 text-gray-700/70'}
           `}
           style={{ paddingLeft: `${depth * 20 + 8}px` }}
           onClick={() => {
@@ -410,7 +410,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               className="shrink-0 p-0.5 hover:bg-white/10 rounded"
               onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}
             >
-              {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-amber-500" /> : <ChevronRight className="h-3.5 w-3.5 text-amber-500" />}
+              {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-700" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-700" />}
             </button>
           ) : (
             <span className="w-5 shrink-0" />
@@ -420,7 +420,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <span className="truncate flex-1">{node.title}</span>
 
           {node.knowledgePointId && (
-            <Tag className="h-3 w-3 text-amber-500 shrink-0" />
+            <Tag className="h-3 w-3 text-gray-700 shrink-0" />
           )}
           {(node.problemIds?.length || 0) > 0 && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-emerald-900/30 text-emerald-400 border-emerald-800 shrink-0">
@@ -436,16 +436,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
             {idx > 0 && (
               <button className="p-0.5 hover:bg-white/10 rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'up'); }} title="上移">
-                <ChevronUp className="h-3 w-3 text-amber-500" />
+                <ChevronUp className="h-3 w-3 text-gray-700" />
               </button>
             )}
             {idx < siblings.length - 1 && (
               <button className="p-0.5 hover:bg-white/10 rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'down'); }} title="下移">
-                <ChevronDown className="h-3 w-3 text-amber-500" />
+                <ChevronDown className="h-3 w-3 text-gray-700" />
               </button>
             )}
-            <button className="p-0.5 hover:bg-amber-900/30 rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子法门">
-              <Plus className="h-3 w-3 text-amber-500" />
+            <button className="p-0.5 hover:bg-gray-100 rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子知识点">
+              <Plus className="h-3 w-3 text-gray-700" />
             </button>
             <button className="p-0.5 hover:bg-red-900/30 rounded" onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} title="删除">
               <Trash2 className="h-3 w-3 text-red-400" />
@@ -466,10 +466,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const renderNodeDetail = () => {
     if (!selectedNode) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-amber-600 py-20">
+        <div className="flex flex-col items-center justify-center h-full text-gray-700 py-20">
           <Scroll className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-sm">选择左侧法门查看详情</p>
-          <p className="text-xs mt-1">或点击「添加卷章」开始构建修炼体系</p>
+          <p className="text-sm">选择左侧知识点查看详情</p>
+          <p className="text-xs mt-1">或点击「添加卷章」开始构建课程体系</p>
         </div>
       );
     }
@@ -498,12 +498,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 onChange={(e) => updateNodeField(selectedNode.id, 'title', e.target.value)}
                 onBlur={() => setEditingNodeId(null)}
                 onKeyDown={(e) => { if (e.key === 'Enter') setEditingNodeId(null); }}
-                className="h-8 text-base font-semibold bg-xian-input border-amber-800 text-amber-100"
+                className="h-8 text-base font-semibold bg-bg-white border-gray-200 border-gray-200 text-gray-700"
                 autoFocus
               />
             ) : (
               <h3
-                className="text-base font-semibold cursor-pointer text-amber-200 hover:text-amber-100 transition-colors"
+                className="text-base font-semibold cursor-pointer text-gray-700 hover:text-gray-700 transition-colors"
                 onClick={() => setEditingNodeId(selectedNode.id)}
               >
                 {selectedNode.title}
@@ -514,29 +514,29 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <Button
             size="sm"
             variant="outline"
-            className="border-amber-700 text-amber-400 hover:bg-amber-900/30 h-7"
+            className="border-gray-200 text-gray-700 hover:bg-gray-100 h-7"
             onClick={() => openAddNodeDialog(selectedNode.id)}
           >
-            <Plus className="h-3.5 w-3.5 mr-1" />添加子法门
+            <Plus className="h-3.5 w-3.5 mr-1" />添加子知识点
           </Button>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-amber-500 mb-1.5 block">知识点描述</label>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">知识点描述</label>
           <Textarea
             value={selectedNode.content || ''}
             onChange={(e) => updateNodeField(selectedNode.id, 'content', e.target.value)}
-            placeholder="输入修炼要诀、教学要点、备课笔记..."
+            placeholder="输入教学要点、教学要点、备课笔记..."
             rows={6}
-            className="text-sm bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
+            className="text-sm bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-amber-500 mb-1.5 block">关联法门</label>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">关联知识点</label>
           {linkedKp ? (
             <div className="flex items-center gap-2">
-              <Badge className="bg-amber-900/30 text-amber-400 border-amber-700">
+              <Badge className="bg-gray-100 text-gray-700 border-gray-200">
                 <Tag className="h-3 w-3 mr-1" />
                 {linkedKp.name}
               </Badge>
@@ -551,8 +551,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             </div>
           ) : (
             <Select onValueChange={(val) => linkKnowledgePoint(selectedNode.id, val)}>
-              <SelectTrigger className="h-8 w-64 border-dashed border-amber-700 bg-xian-input text-amber-200">
-                <SelectValue placeholder="选择关联法门..." />
+              <SelectTrigger className="h-8 w-64 border-dashed border-gray-200 bg-bg-white border-gray-200 text-gray-700">
+                <SelectValue placeholder="选择关联知识点..." />
               </SelectTrigger>
               <SelectContent>
                 {course.knowledgePoints.map((kp) => (
@@ -565,7 +565,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-amber-500">法术代码</label>
+            <label className="text-xs font-medium text-gray-700">代码示例</label>
             <Button
               size="sm"
               variant="outline"
@@ -576,7 +576,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             </Button>
           </div>
           {(selectedNode.codeBlocks || []).length === 0 ? (
-            <div className="text-xs text-amber-700 italic py-2">暂无法术代码</div>
+            <div className="text-xs text-gray-700 italic py-2">暂无代码示例</div>
           ) : (
             <div className="space-y-3">
               {(selectedNode.codeBlocks || []).map((block) => (
@@ -599,7 +599,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                       value={block.description || ''}
                       onChange={(e) => updateCodeBlock(selectedNode.id, block.id, 'description', e.target.value)}
                       placeholder="法术说明（可选）"
-                      className="h-6 flex-1 text-xs border-0 bg-transparent p-0 text-amber-200"
+                      className="h-6 flex-1 text-xs border-0 bg-transparent p-0 text-gray-700"
                     />
                     <Button
                       variant="ghost"
@@ -613,7 +613,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   <Textarea
                     value={block.code}
                     onChange={(e) => updateCodeBlock(selectedNode.id, block.id, 'code', e.target.value)}
-                    placeholder={`// 输入${block.language}法术代码...`}
+                    placeholder={`// 输入${block.language}代码示例...`}
                     rows={5}
                     className="font-mono text-xs bg-gray-950 text-green-400 border-0 rounded-none min-h-[80px]"
                   />
@@ -624,7 +624,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div>
-          <label className="text-xs font-medium text-amber-500 mb-1.5 block">练习题目</label>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">练习题目</label>
           {linkedProblems.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {linkedProblems.map((p) => (
@@ -641,7 +641,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           )}
           {unlinkedProblems.length > 0 ? (
             <Select onValueChange={(val) => toggleProblemLink(selectedNode.id, val)}>
-              <SelectTrigger className="h-7 w-48 text-xs border-dashed border-emerald-700 bg-xian-input text-amber-200">
+              <SelectTrigger className="h-7 w-48 text-xs border-dashed border-emerald-700 bg-bg-white border-gray-200 text-gray-700">
                 <SelectValue placeholder="关联题目..." />
               </SelectTrigger>
               <SelectContent>
@@ -651,7 +651,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </SelectContent>
             </Select>
           ) : (
-            <p className="text-xs text-amber-700 italic">所有试炼已关联（在「法门」Tab 可添加新试炼）</p>
+            <p className="text-xs text-gray-700 italic">所有题目已关联（在「知识点」Tab 可添加新题目）</p>
           )}
         </div>
       </div>
@@ -659,23 +659,23 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   };
 
   return (
-    <div className="min-h-screen bg-xian-bg">
+    <div className="min-h-screen bg-bg-gray-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-xian-surface/80 backdrop-blur-md border-b border-amber-900/30">
+      <header className="sticky top-0 z-50 bg-bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/courses" className="text-amber-600 hover:text-amber-400 transition-colors">
+            <Link href="/courses" className="text-gray-700 hover:text-gray-700 transition-colors">
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="inline-flex p-1.5 rounded-lg text-white"
               style={{ background: `linear-gradient(135deg, ${colors.from}, ${colors.to})` }}>
               {icon}
             </div>
-            <h1 className="text-lg font-bold xian-text-gold font-serif">
+            <h1 className="text-lg font-bold text-gray-800 ">
               {course.name}
             </h1>
-            <Badge variant="outline" className="text-xs text-amber-600 border-amber-800">
-              {totalNodes} 个法门
+            <Badge variant="outline" className="text-xs text-gray-700 border-gray-200">
+              {totalNodes} 个知识点
             </Badge>
           </div>
         </div>
@@ -684,12 +684,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 bg-xian-surface border-amber-900/30">
-            <TabsTrigger value="curriculum" className="gap-1.5 data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-200">
+          <TabsList className="mb-4 bg-bg-white border-gray-200">
+            <TabsTrigger value="curriculum" className="gap-1.5 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-700">
               <Scroll className="h-4 w-4" />
               {XIAN.curriculum}
             </TabsTrigger>
-            <TabsTrigger value="knowledge" className="gap-1.5 data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-200">
+            <TabsTrigger value="knowledge" className="gap-1.5 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-700">
               <BookOpen className="h-4 w-4" />
               {XIAN.knowledgePoints}
             </TabsTrigger>
@@ -699,13 +699,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <TabsContent value="curriculum">
             <div className="flex gap-4 h-[calc(100vh-180px)]">
               {/* Left: Tree navigation */}
-              <div className="w-72 shrink-0 xian-card rounded-xl overflow-hidden flex flex-col">
-                <div className="px-3 py-2.5 border-b border-amber-900/30 flex items-center justify-between bg-amber-900/10">
-                  <span className="text-xs font-medium text-amber-400">修炼大纲</span>
+              <div className="w-72 shrink-0 bg-white border border-gray-200 rounded-xl rounded-xl overflow-hidden flex flex-col">
+                <div className="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between bg-gray-100">
+                  <span className="text-xs font-medium text-gray-700">课程大纲</span>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-6 text-xs border-amber-700 text-amber-400 hover:bg-amber-900/30"
+                    className="h-6 text-xs border-gray-200 text-gray-700 hover:bg-gray-100"
                     onClick={() => openAddNodeDialog(null)}
                   >
                     <Plus className="h-3 w-3 mr-1" />添加卷章
@@ -713,13 +713,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
                   {course.curriculum.length === 0 ? (
-                    <div className="text-center py-10 text-amber-600">
+                    <div className="text-center py-10 text-gray-700">
                       <Scroll className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-xs">尚无法门心要</p>
+                      <p className="text-xs">尚无知识点心要</p>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="mt-2 h-7 text-xs border-amber-700 text-amber-400 hover:bg-amber-900/30"
+                        className="mt-2 h-7 text-xs border-gray-200 text-gray-700 hover:bg-gray-100"
                         onClick={() => openAddNodeDialog(null)}
                       >
                         <Plus className="h-3 w-3 mr-1" />添加第一卷
@@ -732,7 +732,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               {/* Right: Node detail editor */}
-              <div className="flex-1 xian-card rounded-xl overflow-y-auto">
+              <div className="flex-1 bg-white border border-gray-200 rounded-xl rounded-xl overflow-y-auto">
                 <div className="p-5">
                   {renderNodeDetail()}
                 </div>
@@ -743,18 +743,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           {/* ====== Tab 2: Knowledge Points ====== */}
           <TabsContent value="knowledge">
             <div className="space-y-4">
-              <div className="xian-card rounded-xl p-6">
+              <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Flame className="h-4 w-4 text-amber-500" />
-                  <h2 className="text-base font-semibold xian-text-gold font-serif">法门管理</h2>
+                  <Flame className="h-4 w-4 text-gray-700" />
+                  <h2 className="text-base font-semibold text-gray-800 ">知识点管理</h2>
                 </div>
 
                 <div className="flex gap-2 mb-4">
                   <Input
                     value={newKpName}
                     onChange={(e) => setNewKpName(e.target.value)}
-                    placeholder="新法门名称"
-                    className="flex-1 bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
+                    placeholder="新知识点名称"
+                    className="flex-1 bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') { e.preventDefault(); addKnowledgePoint(); }
                     }}
@@ -763,31 +763,31 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     size="sm"
                     onClick={addKnowledgePoint}
                     disabled={!newKpName.trim()}
-                    className="xian-btn-primary"
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
-                    <Plus className="h-4 w-4 mr-1" />添加法门
+                    <Plus className="h-4 w-4 mr-1" />添加知识点
                   </Button>
                 </div>
 
                 {course.knowledgePoints.length === 0 ? (
-                  <div className="text-center py-8 text-amber-600">暂无法门，请添加</div>
+                  <div className="text-center py-8 text-gray-700">暂无知识点，请添加</div>
                 ) : (
                   <div className="space-y-2">
                     {course.knowledgePoints.map((kp) => {
                       const kpProblems = getProblemsForKp(kp.id);
                       const isExpanded = expandedKpId === kp.id;
                       return (
-                        <div key={kp.id} className="border border-amber-900/30 rounded-xl overflow-hidden">
+                        <div key={kp.id} className="border border-gray-200 rounded-xl overflow-hidden">
                           <div
-                            className="flex items-center justify-between px-4 py-3 bg-amber-900/10 cursor-pointer hover:bg-amber-900/20 transition-colors"
+                            className="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
                             onClick={() => setExpandedKpId(isExpanded ? null : kp.id)}
                           >
                             <div className="flex items-center gap-2">
-                              {isExpanded ? <ChevronDown className="h-4 w-4 text-amber-500" /> : <ChevronRight className="h-4 w-4 text-amber-500" />}
-                              <span className="font-medium text-sm text-amber-300">{kp.name}</span>
+                              {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-700" /> : <ChevronRight className="h-4 w-4 text-gray-700" />}
+                              <span className="font-medium text-sm text-gray-700">{kp.name}</span>
                               {kpProblems.length > 0 && (
-                                <Badge variant="outline" className="bg-amber-900/20 text-amber-500 border-amber-800 text-xs">
-                                  {kpProblems.length} 试炼
+                                <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200 text-xs">
+                                  {kpProblems.length} 题目
                                 </Badge>
                               )}
                             </div>
@@ -801,7 +801,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                             </Button>
                           </div>
                           {isExpanded && (
-                            <div className="px-4 pb-3 pt-1 space-y-2 bg-xian-surface">
+                            <div className="px-4 pb-3 pt-1 space-y-2 bg-bg-white">
                               {kpProblems.length > 0 && (
                                 <div className="space-y-1.5">
                                   {kpProblems.map((p) => (
@@ -825,7 +825,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                   value={newProblemName}
                                   onChange={(e) => setNewProblemName(e.target.value)}
                                   placeholder="添加练习题..."
-                                  className="flex-1 h-8 text-sm bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
+                                  className="flex-1 h-8 text-sm bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addProblem(kp.id); } }}
                                 />
                                 <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-400 hover:bg-emerald-900/30 h-8" onClick={() => addProblem(kp.id)} disabled={!newProblemName.trim()}>
@@ -851,11 +851,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
                 {getUnassignedProblems().length > 0 && (
                   <div className="mt-6">
-                    <h3 className="text-sm font-medium text-amber-500 mb-2">未关联法门的试炼</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">未关联知识点的题目</h3>
                     <div className="space-y-1.5">
                       {getUnassignedProblems().map((p) => (
-                        <div key={p.id} className="flex items-center justify-between bg-amber-900/10 rounded-lg px-3 py-2">
-                          <span className="text-sm text-amber-200">{p.name}</span>
+                        <div key={p.id} className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2">
+                          <span className="text-sm text-gray-700">{p.name}</span>
                           <div className="flex items-center gap-1">
                             <Select
                               value={p.knowledgePointId || ''}
@@ -866,8 +866,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 save({ ...course, problems: updated });
                               }}
                             >
-                              <SelectTrigger className="h-7 w-28 text-xs border-amber-700 bg-xian-input text-amber-200">
-                                <SelectValue placeholder="关联法门" />
+                              <SelectTrigger className="h-7 w-28 text-xs border-gray-200 bg-bg-white border-gray-200 text-gray-700">
+                                <SelectValue placeholder="关联知识点" />
                               </SelectTrigger>
                               <SelectContent>
                                 {course.knowledgePoints.map((kp) => (
@@ -885,19 +885,19 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
 
-                <div className="mt-6 pt-4 border-t border-amber-900/30">
-                  <h3 className="text-sm font-medium text-amber-500 mb-2">添加试炼（选择关联法门）</h3>
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">添加题目（选择关联知识点）</h3>
                   <div className="flex gap-2">
                     <Input
                       value={newProblemName}
                       onChange={(e) => setNewProblemName(e.target.value)}
-                      placeholder="试炼名称"
-                      className="bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
+                      placeholder="题目名称"
+                      className="bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addProblem(); } }}
                     />
                     <Select value={newProblemKpId} onValueChange={setNewProblemKpId}>
-                      <SelectTrigger className="w-40 border-amber-700 bg-xian-input text-amber-200">
-                        <SelectValue placeholder="关联法门" />
+                      <SelectTrigger className="w-40 border-gray-200 bg-bg-white border-gray-200 text-gray-700">
+                        <SelectValue placeholder="关联知识点" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">不关联</SelectItem>
@@ -907,7 +907,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                       </SelectContent>
                     </Select>
                     <Button size="sm" variant="outline" className="border-emerald-700 text-emerald-400 hover:bg-emerald-900/30" onClick={() => addProblem()} disabled={!newProblemName.trim()}>
-                      <Plus className="h-4 w-4 mr-1" />添加试炼
+                      <Plus className="h-4 w-4 mr-1" />添加题目
                     </Button>
                   </div>
                 </div>
@@ -919,18 +919,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
       {/* Add Node Dialog */}
       <Dialog open={addNodeDialogOpen} onOpenChange={setAddNodeDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-xian-surface border-amber-900/50">
+        <DialogContent className="sm:max-w-md bg-bg-white border-gray-200">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif">添加{addNodeParentId ? '子' : ''}法门</DialogTitle>
-            <DialogDescription className="text-amber-600">
+            <DialogTitle className="text-gray-800 ">添加{addNodeParentId ? '子' : ''}知识点</DialogTitle>
+            <DialogDescription className="text-gray-700">
               {addNodeParentId
-                ? `在「${findNodeById(course.curriculum, addNodeParentId)?.title || ''}」下添加子法门`
+                ? `在「${findNodeById(course.curriculum, addNodeParentId)?.title || ''}」下添加子知识点`
                 : '添加新的顶层卷章'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-amber-300">法门类型</label>
+              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点类型</label>
               <div className="flex gap-2">
                 {(['chapter', 'section', 'topic'] as CurriculumNodeType[]).map((type) => {
                   const cfg = NODE_TYPE_CONFIG[type];
@@ -940,7 +940,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                       className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors
                         ${newNodeType === type
                           ? `${cfg.bgColor} ${cfg.color} border-current`
-                          : 'border-amber-800 text-amber-600 hover:border-amber-700'}`}
+                          : 'border-gray-200 text-gray-700 hover:border-gray-200'}`}
                       onClick={() => setNewNodeType(type)}
                     >
                       {cfg.icon}
@@ -951,20 +951,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-amber-300">法门名称</label>
+              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点名称</label>
               <Input
                 value={newNodeTitle}
                 onChange={(e) => setNewNodeTitle(e.target.value)}
-                placeholder="输入法门名称"
-                className="bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700"
+                placeholder="输入知识点名称"
+                className="bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmAddNode(); } }}
                 autoFocus
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-amber-700 text-amber-400" onClick={() => setAddNodeDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmAddNode} disabled={!newNodeTitle.trim()} className="xian-btn-primary">
+            <Button variant="outline" className="border-gray-200 text-gray-700" onClick={() => setAddNodeDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmAddNode} disabled={!newNodeTitle.trim()} className="bg-blue-500 hover:bg-blue-600 text-white">
               添加
             </Button>
           </DialogFooter>
@@ -973,21 +973,21 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
       {/* 批量上传题库弹窗 */}
       <Dialog open={batchUploadOpen} onOpenChange={setBatchUploadOpen}>
-        <DialogContent className="max-w-2xl bg-xian-surface border-amber-800/50">
+        <DialogContent className="max-w-2xl bg-bg-white border-gray-200">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif">批量上传题库</DialogTitle>
-            <DialogDescription className="text-amber-400">
+            <DialogTitle className="text-gray-800 ">批量上传题库</DialogTitle>
+            <DialogDescription className="text-gray-700">
               每行一道题，格式：题号 题目名称（空格隔开）
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-amber-300">题目列表</label>
+              <label className="text-sm font-medium mb-1.5 block text-gray-700">题目列表</label>
               <Textarea
                 value={batchUploadText}
                 onChange={(e) => setBatchUploadText(e.target.value)}
                 placeholder={`1059 津津的储蓄计划\n1060 津津的开心一天\n1061 津津的烦恼`}
-                className="bg-xian-input border-amber-800 text-amber-100 placeholder:text-amber-700 min-h-[200px] font-mono text-sm"
+                className="bg-bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700 min-h-[200px] font-mono text-sm"
               />
             </div>
             {batchUploadResult && (
@@ -997,8 +997,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-amber-700 text-amber-400" onClick={() => { setBatchUploadOpen(false); setBatchUploadText(''); setBatchUploadResult(null); }}>取消</Button>
-            <Button onClick={batchUploadProblems} className="xian-btn-primary">
+            <Button variant="outline" className="border-gray-200 text-gray-700" onClick={() => { setBatchUploadOpen(false); setBatchUploadText(''); setBatchUploadResult(null); }}>取消</Button>
+            <Button onClick={batchUploadProblems} className="bg-blue-500 hover:bg-blue-600 text-white">
               上传
             </Button>
           </DialogFooter>
@@ -1007,36 +1007,36 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
       {/* 题目详情弹窗 */}
       <Dialog open={problemDetailOpen} onOpenChange={setProblemDetailOpen}>
-        <DialogContent className="max-w-2xl bg-xian-surface border-amber-800/50">
+        <DialogContent className="max-w-2xl bg-bg-white border-gray-200">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif flex items-center gap-2">
-              <FileText className="h-5 w-5 text-amber-500" />
+            <DialogTitle className="text-gray-800  flex items-center gap-2">
+              <FileText className="h-5 w-5 text-gray-700" />
               {selectedProblem?.problem.name || '题目详情'}
             </DialogTitle>
-            <DialogDescription className="text-amber-400">
-              {selectedProblem?.problem.id && <span className="text-xs bg-amber-900/30 px-2 py-0.5 rounded">ID: {selectedProblem.problem.id}</span>}
-              {selectedProblem?.kpName && <span className="text-xs bg-purple-900/30 px-2 py-0.5 rounded ml-2">法门: {selectedProblem.kpName}</span>}
+            <DialogDescription className="text-gray-700">
+              {selectedProblem?.problem.id && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">ID: {selectedProblem.problem.id}</span>}
+              {selectedProblem?.kpName && <span className="text-xs bg-purple-900/30 px-2 py-0.5 rounded ml-2">知识点: {selectedProblem.kpName}</span>}
             </DialogDescription>
           </DialogHeader>
           {selectedProblem && (
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1 block text-amber-300">题目描述</label>
-                <div className="p-3 rounded-lg bg-xian-input border border-amber-800/50 text-amber-100 text-sm whitespace-pre-wrap min-h-[60px]">
+                <label className="text-sm font-medium mb-1 block text-gray-700">题目描述</label>
+                <div className="p-3 rounded-lg bg-bg-white border-gray-200 border border-gray-200 text-gray-700 text-sm whitespace-pre-wrap min-h-[60px]">
                   {selectedProblem.problem.description || '暂无描述'}
                 </div>
               </div>
               {selectedProblem.problem.codeExample && (
                 <div>
-                  <label className="text-sm font-medium mb-1 block text-amber-300">代码示例</label>
-                  <pre className="p-3 rounded-lg bg-gray-900 border border-amber-800/50 text-emerald-400 text-sm overflow-x-auto">
+                  <label className="text-sm font-medium mb-1 block text-gray-700">代码示例</label>
+                  <pre className="p-3 rounded-lg bg-gray-900 border border-gray-200 text-emerald-400 text-sm overflow-x-auto">
                     <code>{selectedProblem.problem.codeExample}</code>
                   </pre>
                 </div>
               )}
               {selectedProblem.problem.knowledgePointIds && selectedProblem.problem.knowledgePointIds.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium mb-1 block text-amber-300">关联知识点</label>
+                  <label className="text-sm font-medium mb-1 block text-gray-700">关联知识点</label>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedProblem.problem.knowledgePointIds.map((kpId: string) => {
                       const kp = course?.curriculum.find(k => k.id === kpId);
@@ -1052,7 +1052,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" className="border-amber-700 text-amber-400" onClick={() => setProblemDetailOpen(false)}>关闭</Button>
+            <Button variant="outline" className="border-gray-200 text-gray-700" onClick={() => setProblemDetailOpen(false)}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

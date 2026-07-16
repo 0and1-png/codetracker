@@ -7,7 +7,7 @@ import {
   Plus, Upload, Search, Trash2, FileText, Code2, Settings,
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
-  ChevronRight, ChevronLeft, Eye, EyeOff, Edit, Award,
+  ChevronRight, ChevronLeft, Eye, EyeOff, Edit,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -80,90 +80,87 @@ interface ExamSet {
 }
 
 function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
+  const [examYears, setExamYears] = useState<number[]>([new Date().getFullYear()]);
+  const [activeYear, setActiveYear] = useState<number>(new Date().getFullYear());
+  const [examLevel, setExamLevel] = useState(1);
+  // 4套试卷: 3月/6月/9月/12月
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
-  const [activeSetIdx, setActiveSetIdx] = useState(0);
-  const [wrongNoteMap, setWrongNoteMap] = useState<Record<number, string>>({});
+  const [wrongNoteMap, setWrongNoteMap] = useState<Record<string, Record<number, string>>>({});
 
   const isVisual = selectedCourseId === 'course_visual';
   const totalQuestions = isVisual ? 17 : 27;
+  const months = [3, 6, 9, 12];
 
-  // 生成GESP考级月份选项
-  const examDateOptions = useMemo(() => {
-    const options: string[] = [];
-    const currentYear = new Date().getFullYear();
-    for (let y = currentYear - 1; y <= currentYear + 2; y++) {
-      for (const m of [3, 6, 9, 12]) {
-        options.push(`${y}年${m}月`);
-      }
-    }
-    return options;
-  }, []);
-
-  // 添加新试卷
-  const addExamSet = useCallback(() => {
-    const results: ExamQuestionResult[] = [];
-    for (let i = 1; i <= totalQuestions; i++) {
-      results.push({ questionIndex: i, isCorrect: true });
-    }
-    setExamSets(prev => [...prev, {
-      id: `set_${Date.now()}`,
-      level: 1,
-      examDate: examDateOptions[0] || '',
-      results,
-    }]);
-    setActiveSetIdx(examSets.length);
-    setWrongNoteMap({});
-  }, [totalQuestions, examDateOptions, examSets.length]);
-
-  // 初始化第一套试卷
+  // 初始化4套试卷
   useEffect(() => {
-    if (examSets.length === 0) addExamSet();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const sets: ExamSet[] = months.map((m, idx) => {
+      const results: ExamQuestionResult[] = [];
+      for (let i = 1; i <= totalQuestions; i++) {
+        results.push({ questionIndex: i, isCorrect: true });
+      }
+      return {
+        id: `set_${activeYear}_${m}`,
+        level: examLevel,
+        examDate: `${activeYear}年${m}月`,
+        results,
+      };
+    });
+    setExamSets(sets);
+    setWrongNoteMap({});
+  }, [activeYear, examLevel, totalQuestions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const activeSet = examSets[activeSetIdx];
+  // 添加年份
+  const addYear = useCallback(() => {
+    const maxYear = Math.max(...examYears);
+    const newYear = maxYear + 1;
+    setExamYears(prev => [...prev, newYear]);
+    setActiveYear(newYear);
+  }, [examYears]);
 
   // 切换对错
-  const toggleQuestion = useCallback((idx: number) => {
+  const toggleQuestion = useCallback((setIdx: number, qIdx: number) => {
     setExamSets(prev => prev.map((set, si) => {
-      if (si !== activeSetIdx) return set;
+      if (si !== setIdx) return set;
       return {
         ...set,
-        results: set.results.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r),
+        results: set.results.map((r, i) => i === qIdx ? { ...r, isCorrect: !r.isCorrect } : r),
       };
     }));
-  }, [activeSetIdx]);
-
-  // 更新试卷属性
-  const updateSet = useCallback((field: 'level' | 'examDate', value: number | string) => {
-    setExamSets(prev => prev.map((set, si) => si === activeSetIdx ? { ...set, [field]: value } : set));
-  }, [activeSetIdx]);
-
-  // 保存错题备注
-  const updateWrongNote = useCallback((idx: number, note: string) => {
-    setWrongNoteMap(prev => ({ ...prev, [idx]: note }));
   }, []);
 
+  // 保存错题备注
+  const updateWrongNote = useCallback((setIdx: number, qIdx: number, note: string) => {
+    const key = `${activeYear}_${setIdx}`;
+    setWrongNoteMap(prev => ({
+      ...prev,
+      [key]: { ...(prev[key] || {}), [qIdx]: note },
+    }));
+  }, [activeYear]);
+
   // 保存考级记录
-  const handleSaveExam = useCallback((studentId: string) => {
+  const handleSaveExam = useCallback((studentId: string, setIdx: number) => {
+    const activeSet = examSets[setIdx];
     if (!activeSet) return;
     const correctCount = activeSet.results.filter(r => r.isCorrect).length;
+    const key = `${activeYear}_${setIdx}`;
+    const notes = wrongNoteMap[key] || {};
     const record: ExamRecord = {
       id: `exam_${studentId}_${activeSet.examDate}_${Date.now()}`,
       studentId,
       courseId: selectedCourseId,
-      level: activeSet.level,
+      level: examLevel,
       examDate: activeSet.examDate,
       totalQuestions,
       correctCount,
       wrongCount: totalQuestions - correctCount,
       results: activeSet.results.map(r => ({
         ...r,
-        note: wrongNoteMap[r.questionIndex - 1] || r.note,
+        note: notes[r.questionIndex - 1] || r.note,
       })),
       createdAt: new Date().toISOString(),
     };
     saveExamRecord(record);
-  }, [activeSet, selectedCourseId, totalQuestions, wrongNoteMap]);
+  }, [examSets, examLevel, selectedCourseId, totalQuestions, wrongNoteMap, activeYear]);
 
   const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
   if (selectedStudents.length === 0) {
@@ -172,117 +169,110 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
 
   return (
     <div className="flex flex-col h-full">
-      {/* 试卷切换栏 */}
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-        {examSets.map((set, idx) => (
-          <button key={set.id} onClick={() => setActiveSetIdx(idx)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              idx === activeSetIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}>
-            第{idx + 1}套 · GESP {set.level}级 · {set.examDate}
+      {/* 顶部控制栏 */}
+      <div className="flex items-center gap-4 mb-4 pb-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">年份</span>
+          {examYears.map(y => (
+            <button key={y} onClick={() => setActiveYear(y)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                y === activeYear ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}>
+              {y}年
+            </button>
+          ))}
+          <button onClick={addYear}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
+            <Plus className="w-3.5 h-3.5" /> 添加年份
           </button>
-        ))}
-        <button onClick={addExamSet}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
-          <Plus className="w-4 h-4" /> 添加试卷
-        </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">级别</span>
+          {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
+            <button key={l} onClick={() => setExamLevel(l)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                l === examLevel ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}>
+              {l}级
+            </button>
+          ))}
+        </div>
+        <div className="text-xs text-gray-400 ml-auto">
+          选择题{isVisual ? 10 : 15}道 | 判断题{isVisual ? 5 : 10}道 | 编程题2道 | 共{totalQuestions}道
+        </div>
       </div>
 
-      {activeSet && (
-        <>
-          {/* 考级信息 */}
-          <div className="flex items-center gap-6 mb-5">
-            <div>
-              <Label className="text-xs text-gray-500 mb-1 block">考级级别</Label>
-              <Select value={String(activeSet.level)} onValueChange={v => updateSet('level', Number(v))}>
-                <SelectTrigger className="h-10 w-32 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
-                    <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-gray-500 mb-1 block">考级时间</Label>
-              <Select value={activeSet.examDate} onValueChange={v => updateSet('examDate', v)}>
-                <SelectTrigger className="h-10 w-40 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {examDateOptions.map(opt => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="text-sm text-gray-400 ml-auto">
-              选择题{isVisual ? 10 : 15}道 | 判断题{isVisual ? 5 : 10}道 | 编程题2道 | 共{totalQuestions}道
-            </div>
-          </div>
-
-          {/* 答题网格区域 - 铺满 */}
-          <div className="flex-1 overflow-auto">
-            {selectedStudents.map(student => {
-              const correctCount = activeSet.results.filter(r => r.isCorrect).length;
-              const wrongCount = totalQuestions - correctCount;
-              return (
-                <div key={student.id} className="border border-gray-200 rounded-xl p-5 mb-5 bg-white shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg text-gray-800">{student.name}</span>
-                      <span className="text-sm px-3 py-1 rounded-full bg-green-50 text-green-600 font-medium">
-                        正确 {correctCount}/{totalQuestions}
-                      </span>
-                      <span className="text-sm px-3 py-1 rounded-full bg-red-50 text-red-500 font-medium">
-                        错误 {wrongCount}
-                      </span>
-                    </div>
-                    <Button size="sm" onClick={() => handleSaveExam(student.id)} disabled={!activeSet.examDate}
-                      className="bg-blue-500 hover:bg-blue-600 h-9 px-4">保存记录</Button>
-                  </div>
-
-                  {/* 题目网格 - 每行10题，更大 */}
-                  <div className="space-y-3">
-                    {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
-                      <div key={rowIdx} className="flex items-start gap-2">
-                        {activeSet.results.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
-                          const idx = rowIdx * 10 + colIdx;
-                          const hasNote = wrongNoteMap[idx] || result.note;
-                          return (
-                            <div key={idx} className="flex flex-col items-center min-w-[56px]">
-                              <span className="text-xs text-gray-500 mb-1.5 font-medium">{result.questionIndex}</span>
-                              <button
-                                onClick={() => toggleQuestion(idx)}
-                                className={`w-11 h-11 rounded-xl text-base font-bold flex items-center justify-center transition-all border-2 ${
-                                  result.isCorrect
-                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 shadow-sm'
-                                    : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100 shadow-sm'
-                                }`}>
-                                {result.isCorrect ? '✓' : '✗'}
-                              </button>
-                              {/* 错题备注输入 */}
-                              {!result.isCorrect && (
-                                <input
-                                  value={wrongNoteMap[idx] || ''}
-                                  onChange={e => updateWrongNote(idx, e.target.value)}
-                                  placeholder="错因..."
-                                  className="mt-1.5 w-full h-7 text-xs px-1.5 rounded-md border border-gray-200 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-100 text-center"
-                                />
-                              )}
-                              {hasNote && result.isCorrect && (
-                                <span className="text-[10px] text-amber-500 mt-1 font-medium" title={hasNote}>注</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
+      {/* 4套试卷并列 */}
+      <div className="flex-1 overflow-auto">
+        <div className="grid grid-cols-2 gap-4">
+          {examSets.map((set, setIdx) => {
+            const correctCount = set.results.filter(r => r.isCorrect).length;
+            const wrongCount = totalQuestions - correctCount;
+            const key = `${activeYear}_${setIdx}`;
+            const notes = wrongNoteMap[key] || {};
+            return (
+              <div key={set.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-base text-blue-600">{set.examDate}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                      正确 {correctCount}/{totalQuestions}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+                      错误 {wrongCount}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+
+                {/* 题目网格 */}
+                <div className="space-y-2 mb-3">
+                  {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
+                    <div key={rowIdx} className="flex items-start gap-1">
+                      {set.results.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
+                        const idx = rowIdx * 10 + colIdx;
+                        const hasNote = notes[idx] || result.note;
+                        return (
+                          <div key={idx} className="flex flex-col items-center min-w-[36px]">
+                            <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
+                            <button
+                              onClick={() => toggleQuestion(setIdx, idx)}
+                              className={`w-7 h-7 rounded text-xs font-bold flex items-center justify-center transition-all border ${
+                                result.isCorrect
+                                  ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                  : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                              }`}>
+                              {result.isCorrect ? '✓' : '✗'}
+                            </button>
+                            {!result.isCorrect && (
+                              <input
+                                value={notes[idx] || ''}
+                                onChange={e => updateWrongNote(setIdx, idx, e.target.value)}
+                                placeholder="错因"
+                                className="mt-0.5 w-full h-5 text-[9px] px-0.5 rounded border border-gray-200 focus:border-blue-300 focus:outline-none text-center"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 学员保存按钮 */}
+                <div className="border-t border-gray-100 pt-2 space-y-1.5">
+                  {selectedStudents.map(student => (
+                    <div key={student.id} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700">{student.name}</span>
+                      <Button size="sm" onClick={() => handleSaveExam(student.id, setIdx)}
+                        className="bg-blue-500 hover:bg-blue-600 h-7 text-xs px-3">保存</Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -428,38 +418,35 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   }
 
   return (
-    <div className="space-y-6">
-      {/* 添加荣誉 - 高级感设计 */}
-      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-amber-800 mb-4 flex items-center gap-2">
-          <Award className="w-4 h-4" /> 添加荣誉记录
-        </h3>
-        <div className="flex items-end gap-4 flex-wrap">
+    <div className="space-y-4">
+      {/* 添加荣誉 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-4">
           <div>
-            <Label className="text-xs text-gray-500 mb-1.5 block">荣誉类型</Label>
+            <Label className="text-xs text-gray-500">类型</Label>
             <Select value={honorType} onValueChange={v => setHonorType(v as 'exam' | 'competition')}>
-              <SelectTrigger className="h-10 w-28 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="exam">🏆 考级</SelectItem>
-                <SelectItem value="competition">🎯 赛事</SelectItem>
+                <SelectItem value="exam">考级</SelectItem>
+                <SelectItem value="competition">赛事</SelectItem>
               </SelectContent>
             </Select>
           </div>
           {honorType === 'exam' ? (
             <div>
-              <Label className="text-xs text-gray-500 mb-1.5 block">考级级别</Label>
+              <Label className="text-xs text-gray-500">级别</Label>
               <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
-                <SelectTrigger className="h-10 w-28 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: maxLevel }, (_, i) => i + 1).map(l => (
-                    <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
+                    <SelectItem key={l} value={String(l)}>{l}级</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           ) : (
-            <div className="flex-1 min-w-[200px]">
-              <Label className="text-xs text-gray-500 mb-1.5 block">赛事名称</Label>
+            <div className="flex-1">
+              <Label className="text-xs text-gray-500">赛事名称</Label>
               <Input value={honorTitle} onChange={e => setHonorTitle(e.target.value)} placeholder="赛事名称" className="mt-1 h-8 text-sm" />
             </div>
           )}
@@ -491,12 +478,10 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                       {Array.from({ length: maxLevel }, (_, i) => i + 1).map(level => {
                         const passed = isLevelPassed(honors, level);
                         return (
-                          <div key={level} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                            passed
-                              ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-white shadow-md border border-amber-300'
-                              : 'bg-gray-50 text-gray-400 border border-gray-200'
+                          <div key={level} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                            passed ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-200'
                           }`}>
-                            {passed && <span className="mr-1">🏆</span>}{level}级
+                            {level}级 {passed && '✓'}
                           </div>
                         );
                       })}
@@ -504,14 +489,14 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                   </div>
                 )}
                 {/* 所有荣誉列表 */}
-                <div className="space-y-2 mt-3">
+                <div className="space-y-1">
                   {honors.map(h => (
-                    <div key={h.id} className="flex items-center gap-3 text-sm bg-white rounded-lg px-3 py-2 border border-gray-100 shadow-sm">
-                      <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${h.type === 'exam' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
-                        {h.type === 'exam' ? ' 考级' : '🎯 赛事'}
+                    <div key={h.id} className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-0.5 rounded ${h.type === 'exam' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                        {h.type === 'exam' ? '考级' : '赛事'}
                       </span>
-                      <span className="text-gray-800 font-medium">{h.title}</span>
-                      <span className="text-gray-400 text-xs ml-auto">{h.achievedDate}</span>
+                      <span className="text-gray-700">{h.title}</span>
+                      <span className="text-gray-400">{h.achievedDate}</span>
                     </div>
                   ))}
                 </div>

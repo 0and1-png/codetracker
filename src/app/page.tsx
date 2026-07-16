@@ -404,7 +404,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   const [uploadStudentId, setUploadStudentId] = useState<string>('');
   const [certificateImg, setCertificateImg] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
+  const [expandedLevel, setExpandedLevel] = useState<string | null>(null); // key: `${studentId}_${level}`
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -529,9 +529,10 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                   <div key={levelDef.level}>
                     <div
                       onClick={() => {
+                        const key = `${student.id}_${levelDef.level}`;
                         if (certImg) {
                           // 已有证书，切换显示/隐藏
-                          setExpandedLevel(expandedLevel === levelDef.level ? null : levelDef.level);
+                          setExpandedLevel(expandedLevel === key ? null : key);
                         } else {
                           // 无证书，打开上传对话框
                           setUploadStudentId(student.id);
@@ -566,8 +567,8 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                       <div className={`text-[10px] shrink-0 flex items-center gap-1 ${passed ? 'text-green-500' : 'text-gray-300'}`}>
                         {certImg ? (
                           <>
-                            <span>{expandedLevel === levelDef.level ? '收起' : '查看证书'}</span>
-                            <ChevronDown className={`h-3 w-3 transition-transform ${expandedLevel === levelDef.level ? 'rotate-180' : ''}`} />
+                            <span>{expandedLevel === `${student.id}_${levelDef.level}` ? '收起' : '查看证书'}</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform ${expandedLevel === `${student.id}_${levelDef.level}` ? 'rotate-180' : ''}`} />
                           </>
                         ) : (
                           <span>{passed ? '已上传' : '点击上传'}</span>
@@ -575,7 +576,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                       </div>
                     </div>
                     {/* 证书大图展示 - 点击后展开 */}
-                    {certImg && expandedLevel === levelDef.level && (
+                    {certImg && expandedLevel === `${student.id}_${levelDef.level}` && (
                       <div className="mt-2 ml-10 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
                         <img src={certImg} alt={`${levelDef.name}证书`} className="w-full max-h-80 object-contain" />
                       </div>

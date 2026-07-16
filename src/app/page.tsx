@@ -425,10 +425,39 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
     reader.readAsDataURL(file);
   };
 
-  const handleConfirmUpload = useCallback(() => {
+  // 压缩图片（用于证书上传）
+  const compressImage = (base64: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(base64);
+        }
+      };
+      img.onerror = () => resolve(base64);
+      img.src = base64;
+    });
+  };
+
+  const handleConfirmUpload = useCallback(async () => {
     if (!uploadStudentId || uploadLevel === null) return;
     const levelDef = levels.find(l => l.level === uploadLevel);
     if (!levelDef) return;
+
+    // 压缩证书图片
+    let compressedImg = certificateImg;
+    if (certificateImg) {
+      compressedImg = await compressImage(certificateImg);
+    }
+
     const record: HonorRecord = {
       id: `honor_${uploadStudentId}_${uploadLevel}_${Date.now()}`,
       studentId: uploadStudentId,
@@ -437,7 +466,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
       title: honorType === 'exam' ? levelDef.name : levelDef.name,
       level: uploadLevel,
       achievedDate: honorDate,
-      certificateUrl: certificateImg || undefined,
+      certificateUrl: compressedImg || undefined,
       createdAt: new Date().toISOString(),
     };
     saveHonorRecord(record);
@@ -459,7 +488,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
 
   // 获取某级别的证书图片
   const getLevelCertificate = (honors: HonorRecord[], level: number) => {
-    const honor = honors.find(h => h.type === 'exam' && h.level === level);
+    const honor = honors.find(h => h.level === level && h.certificateUrl);
     return honor?.certificateUrl || null;
   };
 

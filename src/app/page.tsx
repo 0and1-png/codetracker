@@ -641,7 +641,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
         >
-          考级
+          考级练习
         </button>
         <button
           onClick={() => setHonorType('competition')}
@@ -651,7 +651,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
         >
-          赛事
+          赛事练习
         </button>
       </div>
 
@@ -1532,11 +1532,11 @@ export default function HomePage() {
                 </button>
                 <button onClick={() => setActiveTab('exam')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'exam' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  考级
+                  考级练习
                 </button>
                 <button onClick={() => setActiveTab('competition')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'competition' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  赛事
+                  赛事练习
                 </button>
                 <button onClick={() => setActiveTab('honor')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'honor' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>

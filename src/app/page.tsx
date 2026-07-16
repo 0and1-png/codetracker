@@ -608,6 +608,22 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                     {certImg && expandedLevel === `${student.id}_${levelDef.level}` && (
                       <div className="mt-2 ml-10 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
                         <img src={certImg} alt={`${levelDef.name}证书`} className="w-full max-h-80 object-contain" />
+                        <div className="p-2 border-t border-gray-200 bg-white flex justify-end">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUploadStudentId(student.id);
+                              setUploadLevel(levelDef.level);
+                              setCertificateImg(certImg);
+                              setShowUploadDialog(true);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            <Upload className="h-3 w-3" />
+                            更换证书
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

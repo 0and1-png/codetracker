@@ -7,6 +7,7 @@ import {
   Plus, Upload, Search, Trash2, FileText, Code2, Settings,
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
+  ChevronRight, ChevronLeft, Eye, EyeOff,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,6 +38,7 @@ import {
   getCourses, getStudentsByCourse, addStudent, deleteStudent,
   addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
   getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
+  getCourses as getCoursesForUpdate,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -45,11 +47,15 @@ import {
 } from '@/lib/analytics';
 import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS } from '@/lib/constants';
 
-type RecordTab = 'typing' | 'retry' | 'homework';
+type RecordTab = 'retry' | 'typing' | 'homework';
 
-interface TypingForm { speed: string; accuracy: string; praiseTags: string[]; improveTags: string[] }
-interface RetryForm { problemId: string; attempt: string; timeSpent: string; notes: string; praiseTags: string[]; improveTags: string[]; growthSuggestions: string[] }
-interface HomeworkForm { title: string; content: string; score: string; comment: string; imageUrl: string; praiseTags: string[]; improveTags: string[]; growthSuggestions: string[] }
+interface RetryRowForm {
+  problemId: string;
+  times: [string, string, string]; // [一刷, 二刷, 三刷]
+}
+
+interface TypingForm { speed: string; praiseTags: string[]; improveTags: string[] }
+interface HomeworkForm { content: string; completion: string; comment: string }
 
 // Growth suggestion presets
 const GROWTH_SUGGESTION_PRESETS = [
@@ -69,36 +75,37 @@ export default function HomePage() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [courseStudents, setCourseStudents] = useState<Student[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [studentPopoverOpen, setStudentPopoverOpen] = useState(false);
   const [search, setSearch] = useState('');
 
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-
   const [newName, setNewName] = useState('');
   const [newCourseId, setNewCourseId] = useState('course_cpp');
+  const [newClassName, setNewClassName] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [importText, setImportText] = useState('');
 
-  const [activeTab, setActiveTab] = useState<RecordTab>('typing');
+  const [activeTab, setActiveTab] = useState<RecordTab>('retry');
   const [recordDate, setRecordDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
 
+  // Per-student forms
   const [typingForms, setTypingForms] = useState<Record<string, TypingForm>>({});
-  const [retryForms, setRetryForms] = useState<Record<string, RetryForm>>({});
+  const [retryForms, setRetryForms] = useState<Record<string, RetryRowForm[]>>({});
   const [homeworkForms, setHomeworkForms] = useState<Record<string, HomeworkForm>>({});
-  const [problemSearch, setProblemSearch] = useState<string>('');
+
+  // Class filter
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [showTags, setShowTags] = useState(false);
+  const [problemSearch, setProblemSearch] = useState('');
 
   const [savedStudents, setSavedStudents] = useState<Set<string>>(new Set());
-
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [historyRecords, setHistoryRecords] = useState<{ typing: TypingRecord[]; retry: ProblemRetryRecord[]; homework: HomeworkRecord[] }>({ typing: [], retry: [], homework: [] });
-
   const [tagFilter, setTagFilter] = useState<'all' | 'highlight' | 'weakness'>('all');
-  const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});
 
-  // 三刷批量上传
+  // Batch retry upload
   const [showBatchRetry, setShowBatchRetry] = useState(false);
-  const [batchRetryStudentId, setBatchRetryStudentId] = useState<string>('');
+  const [batchRetryStudentId, setBatchRetryStudentId] = useState('');
   const [batchRetryText, setBatchRetryText] = useState('');
   const [batchRetryResult, setBatchRetryResult] = useState<{ success: number; failed: number } | null>(null);
 
@@ -114,38 +121,31 @@ export default function HomePage() {
     if (!selectedCourseId) return;
     const students = getStudentsByCourse(selectedCourseId);
     setCourseStudents(students);
-
+    const course = getCourses().find((c) => c.id === selectedCourseId);
     const hints: Record<string, { lastSpeed?: number; lastAccuracy?: number }> = {};
     const month = format(new Date(), 'yyyy-MM');
     const curRange = getMonthRange(month);
     const prevRange = getPreviousMonthRange(month);
-    const course = getCourses().find((c) => c.id === selectedCourseId);
 
     students.forEach((s) => {
       const typing = getTypingByStudent(s.id);
       const retry = getRetryByStudent(s.id);
       const homework = getHomeworkByStudent(s.id);
       const knowledge = getKnowledgeByStudent(s.id);
-
       const lastTyping = typing.sort((a, b) => b.date.localeCompare(a.date))[0];
-      if (lastTyping) {
-        hints[s.id] = { lastSpeed: lastTyping.speed, lastAccuracy: lastTyping.accuracy };
-      }
-
+      if (lastTyping) hints[s.id] = { lastSpeed: lastTyping.speed, lastAccuracy: lastTyping.accuracy };
       const curTypingRecs = getRecordsInPeriod(typing, curRange.start, curRange.end);
       const prevTypingRecs = getRecordsInPeriod(typing, prevRange.start, prevRange.end);
       const curRetryRecs = getRecordsInPeriod(retry, curRange.start, curRange.end);
       const prevRetryRecs = getRecordsInPeriod(retry, prevRange.start, prevRange.end);
       const curHomeworkRecs = getRecordsInPeriod(homework, curRange.start, curRange.end);
-
-      const curTypingSum = calcTypingSummary(curTypingRecs);
-      const prevTypingSum = calcTypingSummary(prevTypingRecs);
-      const curRetrySum = calcRetrySummary(curRetryRecs, course || undefined);
-      const prevRetrySum = calcRetrySummary(prevRetryRecs, course || undefined);
-      const curHomeworkSum = calcHomeworkSummary(curHomeworkRecs);
-      const mastery = calcKnowledgeMastery(knowledge, retry, course || undefined);
-
-      const tags = generateAutoTags(curTypingSum, prevTypingSum, curRetrySum, prevRetrySum, curHomeworkSum, mastery);
+      const tags = generateAutoTags(
+        calcTypingSummary(curTypingRecs), calcTypingSummary(prevTypingRecs),
+        calcRetrySummary(curRetryRecs, course || undefined),
+        calcRetrySummary(prevRetryRecs, course || undefined),
+        calcHomeworkSummary(curHomeworkRecs),
+        calcKnowledgeMastery(knowledge, retry, course || undefined),
+      );
       (s as Student & { _autoTags?: AutoTag[] })._autoTags = tags;
     });
     setLastRecordHints(hints);
@@ -154,15 +154,35 @@ export default function HomePage() {
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadStudents(); }, [loadStudents, selectedCourseId]);
 
+  const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});
+
+  const activeCourse = courses.find((c) => c.id === selectedCourseId);
+
+  // Get unique classes from students
+  const classList = Array.from(new Set(courseStudents.map(s => s.className || '未分类').filter(Boolean))).sort();
+  const filteredByClass = selectedClass === 'all' ? courseStudents : courseStudents.filter(s => (s.className || '未分类') === selectedClass);
+
+  const filteredStudents = filteredByClass.filter((s) => {
+    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
+      (s.className || '').toLowerCase().includes(search.toLowerCase());
+    if (!matchSearch) return false;
+    if (tagFilter === 'all') return true;
+    const tags = (s as Student & { _autoTags?: AutoTag[] })._autoTags || [];
+    if (tagFilter === 'highlight') return tags.some((t) => t.type === 'highlight');
+    if (tagFilter === 'weakness') return tags.some((t) => t.type === 'weakness');
+    return true;
+  });
+
+  const selectedStudents = courseStudents.filter((s) => selectedStudentIds.includes(s.id));
+
   const handleCourseChange = (courseId: string) => {
     setSelectedCourseId(courseId);
     setSelectedStudentIds([]);
+    setSelectedClass('all');
     setTypingForms({});
     setRetryForms({});
     setHomeworkForms({});
   };
-
-  const activeCourse = courses.find((c) => c.id === selectedCourseId);
 
   const toggleStudent = (id: string) => {
     setSelectedStudentIds((prev) => {
@@ -176,49 +196,86 @@ export default function HomePage() {
     });
   };
 
-  const selectAllStudents = () => {
-    if (selectedStudentIds.length === courseStudents.length) {
-      setSelectedStudentIds([]);
+  const selectAllInClass = () => {
+    const classIds = filteredStudents.map(s => s.id);
+    const allSelected = classIds.every(id => selectedStudentIds.includes(id));
+    if (allSelected) {
+      setSelectedStudentIds(prev => prev.filter(id => !classIds.includes(id)));
     } else {
-      setSelectedStudentIds(courseStudents.map((s) => s.id));
+      setSelectedStudentIds(prev => [...new Set([...prev, ...classIds])]);
     }
   };
 
-  const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', accuracy: '', praiseTags: [], improveTags: [] };
-  const getRetryForm = (id: string): RetryForm => retryForms[id] || { problemId: '', attempt: '1', timeSpent: '', notes: '', praiseTags: [], improveTags: [], growthSuggestions: [] };
-  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { title: '', content: '', score: '', comment: '', imageUrl: '', praiseTags: [], improveTags: [], growthSuggestions: [] };
+  // Form helpers
+  const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', praiseTags: [], improveTags: [] };
+  const getRetryForm = (id: string): RetryRowForm[] => retryForms[id] || [{ problemId: '', times: ['', '', ''] }];
+  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { content: '', completion: '', comment: '' };
 
-  const updateTypingForm = (id: string, field: keyof TypingForm, value: string) => {
+  const updateTypingForm = (id: string, field: keyof TypingForm, value: string | string[]) => {
     setTypingForms((prev) => ({ ...prev, [id]: { ...getTypingForm(id), [field]: value } }));
-  };
-  const updateRetryForm = (id: string, field: keyof RetryForm, value: string) => {
-    setRetryForms((prev) => ({ ...prev, [id]: { ...getRetryForm(id), [field]: value } }));
   };
   const updateHomeworkForm = (id: string, field: keyof HomeworkForm, value: string) => {
     setHomeworkForms((prev) => ({ ...prev, [id]: { ...getHomeworkForm(id), [field]: value } }));
   };
 
+  const updateRetryRow = (studentId: string, rowIndex: number, field: 'problemId' | 'times', value: string | [string, string, string]) => {
+    setRetryForms(prev => {
+      const rows = [...(prev[studentId] || [{ problemId: '', times: ['', '', ''] }])];
+      rows[rowIndex] = { ...rows[rowIndex], [field]: value };
+      return { ...prev, [studentId]: rows };
+    });
+  };
+
+  const addRetryRow = (studentId: string) => {
+    setRetryForms(prev => {
+      const rows = [...(prev[studentId] || []), { problemId: '', times: ['', '', ''] as [string, string, string] }];
+      return { ...prev, [studentId]: rows };
+    });
+  };
+
+  const removeRetryRow = (studentId: string, rowIndex: number) => {
+    setRetryForms(prev => {
+      const rows = (prev[studentId] || []).filter((_, i) => i !== rowIndex);
+      if (rows.length === 0) rows.push({ problemId: '', times: ['', '', ''] });
+      return { ...prev, [studentId]: rows };
+    });
+  };
+
+  // Add student
   const handleAddStudent = () => {
     if (!newName.trim() || !newCourseId) return;
     addStudent({
       id: uuidv4(), name: newName.trim(), courseId: newCourseId,
+      className: newClassName.trim() || undefined,
       notes: newNotes.trim() || undefined,
       createdAt: new Date().toISOString(),
     });
-    setNewName(''); setNewCourseId('course_cpp'); setNewNotes('');
+    setNewName(''); setNewCourseId('course_cpp'); setNewClassName(''); setNewNotes('');
     setAddStudentOpen(false); loadStudents();
   };
 
+  // Batch import - auto-assign course based on class name
   const handleImport = () => {
-    if (!importText.trim() || !selectedCourseId) return;
+    if (!importText.trim()) return;
     const result = Papa.parse(importText.trim(), { header: false, skipEmptyLines: true });
     const rows = result.data as string[][];
     for (const row of rows) {
       const name = (row[0] || '').trim();
       if (!name) continue;
+      const className = (row[1] || '').trim();
+      // Auto-detect course from class name
+      let courseId = selectedCourseId;
+      const cnLower = className.toLowerCase();
+      if (cnLower.includes('c++') || cnLower.includes('信奥') || cnLower.includes('csp')) {
+        courseId = 'course_cpp';
+      } else if (cnLower.includes('python') || cnLower.includes('python')) {
+        courseId = 'course_python';
+      } else if (cnLower.includes('图形化') || cnLower.includes('scratch') || cnLower.includes('编程启蒙')) {
+        courseId = 'course_visual';
+      }
       addStudent({
-        id: uuidv4(), name, courseId: selectedCourseId,
-        className: (row[1] || '').trim() || undefined,
+        id: uuidv4(), name, courseId,
+        className: className || undefined,
         notes: (row[2] || '').trim() || undefined,
         createdAt: new Date().toISOString(),
       });
@@ -232,41 +289,42 @@ export default function HomePage() {
     loadStudents();
   };
 
+  // Save student records
   const handleSaveStudent = (studentId: string) => {
     if (activeTab === 'typing') {
       const form = getTypingForm(studentId);
       if (!form.speed) return;
       addTypingRecord({
         id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
-        speed: Number(form.speed), accuracy: Number(form.accuracy) || 0,
+        speed: Number(form.speed), accuracy: 0,
         praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
         improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
       });
     } else if (activeTab === 'retry') {
-      const form = getRetryForm(studentId);
-      if (!form.problemId || !form.timeSpent) return;
-      const problem = activeCourse?.problems.find((p) => p.id === form.problemId);
-      addRetryRecord({
-        id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
-        problemId: form.problemId, problemName: problem?.name || '',
-        attempt: Number(form.attempt) || 1, timeSpent: Number(form.timeSpent),
-        notes: form.notes.trim() || undefined,
-        praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
-        improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
-        growthSuggestions: form.growthSuggestions.length > 0 ? form.growthSuggestions : undefined,
-      });
+      const rows = getRetryForm(studentId);
+      for (const row of rows) {
+        if (!row.problemId) continue;
+        const problem = activeCourse?.problems.find((p) => p.id === row.problemId);
+        row.times.forEach((time, idx) => {
+          const t = Number(time);
+          if (t > 0) {
+            addRetryRecord({
+              id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+              problemId: row.problemId, problemName: problem?.name || '',
+              attempt: idx + 1, timeSpent: t,
+            });
+          }
+        });
+      }
     } else if (activeTab === 'homework') {
       const form = getHomeworkForm(studentId);
-      if (!form.title.trim()) return;
+      if (!form.content.trim()) return;
       addHomeworkRecord({
         id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
-        title: form.title.trim(), content: form.content.trim(),
-        score: form.score ? Number(form.score) : undefined,
+        title: '课后作业',
+        content: form.content.trim(),
+        score: form.completion ? Number(form.completion) : undefined,
         comment: form.comment.trim() || undefined,
-        imageUrl: form.imageUrl.trim() || undefined,
-        praiseTags: form.praiseTags.length > 0 ? form.praiseTags : undefined,
-        improveTags: form.improveTags.length > 0 ? form.improveTags : undefined,
-        growthSuggestions: form.growthSuggestions.length > 0 ? form.growthSuggestions : undefined,
       });
     }
     setSavedStudents((prev) => new Set(prev).add(studentId));
@@ -281,69 +339,66 @@ export default function HomePage() {
     }
   };
 
-  const getRetryImprovement = (problemId: string, attempt: number, currentTime: number): number | null => {
-    const allRetries = getRetryRecords();
-    const prev = allRetries.find((r) => r.problemId === problemId && r.attempt === attempt - 1);
-    if (prev) return Math.round(((prev.timeSpent - currentTime) / prev.timeSpent) * 100);
-    return null;
-  };
-
-  // 三刷批量上传处理
+  // Batch retry upload - auto-add missing problems
   const handleBatchRetryUpload = (studentId: string) => {
     if (!batchRetryText.trim() || !activeCourse) return;
     const lines = batchRetryText.trim().split('\n').filter(l => l.trim());
     let success = 0;
     let failed = 0;
+    const course = { ...activeCourse };
 
     for (const line of lines) {
       const parts = line.trim().split(/\s+/);
       if (parts.length < 2) { failed++; continue; }
 
-      // 最后一部分是题目名称（可能包含空格），前面是数字
-      // 格式: 题目名称 一刷耗时 [二刷耗时] [三刷耗时]
-      // 从后往前找，找到连续的数字部分作为耗时
-      const numbers: number[] = [];
-      const nameParts: string[] = [];
-      
-      // 从末尾开始提取数字
       let i = parts.length - 1;
       const tempNums: string[] = [];
       while (i >= 1 && /^\d+(\.\d+)?$/.test(parts[i])) {
         tempNums.unshift(parts[i]);
         i--;
       }
-      
-      // 剩余部分作为题目名称
+
       const problemName = parts.slice(0, i + 1).join(' ');
       const times = tempNums.map(Number);
-      
       if (!problemName || times.length === 0) { failed++; continue; }
 
-      // 在课程题目中查找匹配的题目
-      const matchedProblem = activeCourse.problems.find(
+      // Find or auto-create problem
+      let matchedProblem = course.problems.find(
         p => p.name === problemName || p.id === problemName || problemName.includes(p.name) || p.name.includes(problemName)
       );
 
-      if (!matchedProblem) { failed++; continue; }
+      if (!matchedProblem) {
+        // Auto-add the problem to the course
+        const newProblem = {
+          id: `prob_auto_${uuidv4().slice(0, 8)}`,
+          name: problemName,
+        };
+        course.problems = [...course.problems, newProblem];
+        matchedProblem = newProblem;
+        // Persist to course storage
+        const allCourses = getCourses();
+        const idx = allCourses.findIndex(c => c.id === selectedCourseId);
+        if (idx >= 0) {
+          allCourses[idx].problems = course.problems;
+          // Save back via localStorage
+          localStorage.setItem('coding_courses', JSON.stringify(allCourses));
+        }
+      }
 
-      // 为每个耗时创建一条记录
       times.forEach((time, idx) => {
         if (time > 0) {
           addRetryRecord({
-            id: uuidv4(),
-            studentId,
-            courseId: selectedCourseId,
-            date: recordDate,
-            problemId: matchedProblem.id,
-            problemName: matchedProblem.name,
-            attempt: idx + 1,
-            timeSpent: time,
+            id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+            problemId: matchedProblem!.id, problemName: matchedProblem!.name,
+            attempt: idx + 1, timeSpent: time,
           });
           success++;
         }
       });
     }
 
+    // Reload data to reflect new problems
+    setCourses([course]);
     setBatchRetryResult({ success, failed });
     setBatchRetryText('');
     setTimeout(() => setBatchRetryResult(null), 3000);
@@ -359,668 +414,563 @@ export default function HomePage() {
     });
   };
 
-  const filteredStudents = courseStudents.filter((s) => {
-    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-      (s.className || '').toLowerCase().includes(search.toLowerCase());
-    if (!matchSearch) return false;
-    if (tagFilter === 'all') return true;
-    const tags = (s as Student & { _autoTags?: AutoTag[] })._autoTags || [];
-    if (tagFilter === 'highlight') return tags.some((t) => t.type === 'highlight');
-    if (tagFilter === 'weakness') return tags.some((t) => t.type === 'weakness');
-    return true;
-  });
-
-  const selectedStudents = courseStudents.filter((s) => selectedStudentIds.includes(s.id));
-
-  const courseColor = COURSE_COLORS[selectedCourseId] || COURSE_COLORS.course_cpp;
-
+  // ============ RENDER ============
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header - 修仙风 */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-xianjin/20" style={{ background: 'rgba(12, 14, 26, 0.9)' }}>
-        <div className="px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-900/30">
-              <Sparkles className="h-5 w-5 text-amber-950" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold xian-text-gold font-serif">
-                {XIAN.app}
-              </h1>
-              <p className="text-[10px] text-amber-600/60 -mt-0.5">修仙编程录</p>
-            </div>
+    <div className="h-screen flex flex-col bg-[#f8fafc]">
+      {/* Header */}
+      <header className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+            <Code2 className="h-4 w-4 text-white" />
           </div>
-
-          <div className="flex items-center gap-2">
-            <Select value={selectedCourseId} onValueChange={handleCourseChange}>
-              <SelectTrigger className="w-36 h-9 bg-anye/60 border-xianjin/20 text-amber-200">
-                <SelectValue placeholder="选择功法" />
-              </SelectTrigger>
-              <SelectContent className="bg-anye border-xianjin/20">
-                {courses.map((c) => (
-                  <SelectItem key={c.id} value={c.id} className="text-amber-200 focus:bg-xianjin/10 focus:text-amber-100">{COURSE_COLORS[c.id]?.icon || ''} {c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Link href="/courses">
-              <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300">
-                <Scroll className="h-4 w-4 mr-1" />{XIAN.courses}
-              </Button>
-            </Link>
-            <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300" onClick={() => setAddStudentOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />{XIAN.addStudent}
+          <h1 className="text-lg font-semibold text-gray-800">{XIAN.app}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => { setImportOpen(true); }}>
+            <Upload className="h-4 w-4" />{XIAN.importCSV}
+          </Button>
+          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => { setAddStudentOpen(true); }}>
+            <Plus className="h-4 w-4" />{XIAN.addStudent}
+          </Button>
+          <Link href="/courses">
+            <Button variant="ghost" size="sm" className="text-gray-500 gap-1">
+              <Settings className="h-4 w-4" />{XIAN.courses}
             </Button>
-            <Button size="sm" variant="outline" className="border-xianjin/20 text-amber-400 hover:bg-xianjin/10 hover:text-amber-300" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-1" />{XIAN.importCSV}
-            </Button>
-          </div>
+          </Link>
         </div>
       </header>
 
-      {/* Toolbar */}
-      <div className="sticky top-[57px] z-40 backdrop-blur-xl border-b border-xianjin/15 px-4 sm:px-6 py-3" style={{ background: 'rgba(21, 24, 41, 0.9)' }}>
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* Student multi-select */}
-          <div className="flex items-center gap-2">
-            <Label className="text-sm shrink-0 text-amber-300 font-medium">{XIAN.student}</Label>
-            <Popover open={studentPopoverOpen} onOpenChange={setStudentPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[200px] justify-between h-9 border-xianjin/20 text-amber-200 hover:bg-xianjin/10">
-                  <span className="truncate">
-                    {selectedStudentIds.length === 0
-                      ? `点击选择${XIAN.student}...`
-                      : `已选 ${selectedStudentIds.length} 名${XIAN.student}`}
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 ml-2 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 p-0 bg-anye border-xianjin/20" align="start">
-                <div className="p-2 border-b border-xianjin/10">
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-amber-600" />
-                    <Input
-                      value={search} onChange={(e) => setSearch(e.target.value)}
-                      placeholder={`搜索${XIAN.student}...`}
-                      className="pl-8 h-8 text-sm xian-input"
-                    />
-                  </div>
-                  <div className="flex items-center gap-1 mt-2">
-                    {([['all', '全部'], ['highlight', '亮点'], ['weakness', '薄弱']] as const).map(([val, label]) => (
-                      <button
-                        key={val} onClick={() => setTagFilter(val)}
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                          tagFilter === val
-                            ? val === 'highlight' ? 'xian-tag-biyu' : val === 'weakness' ? 'xian-tag-zhusa' : 'xian-tag-xianjin'
-                            : 'bg-anye/60 text-amber-700 hover:bg-anye'
-                        }`}
-                      >
-                        {label}
+      {/* Main: Left-Right Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - Student Selection */}
+        <div className="w-72 shrink-0 bg-white border-r border-gray-200 flex flex-col">
+          {/* Course tabs */}
+          <div className="p-3 border-b border-gray-100">
+            <div className="flex gap-1">
+              {courses.map(c => {
+                const colors = COURSE_COLORS[c.id] || COURSE_COLORS.course_cpp;
+                return (
+                  <button key={c.id} onClick={() => handleCourseChange(c.id)}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                      selectedCourseId === c.id
+                        ? `${colors.bg} ${colors.text} ${colors.border} border`
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}>
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Class filter */}
+          <div className="px-3 py-2 border-b border-gray-100">
+            <div className="flex items-center gap-1 flex-wrap">
+              <button onClick={() => setSelectedClass('all')}
+                className={`px-2 py-1 rounded text-xs transition-all ${selectedClass === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
+                全部班级
+              </button>
+              {classList.map(cls => (
+                <button key={cls} onClick={() => setSelectedClass(cls)}
+                  className={`px-2 py-1 rounded text-xs transition-all ${selectedClass === cls ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  {cls}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search + select all */}
+          <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input placeholder="搜索学员..." value={search} onChange={(e) => setSearch(e.target.value)}
+                className="pl-7 h-7 text-xs rounded-lg border-gray-200" />
+            </div>
+            <button onClick={selectAllInClass} className="text-xs text-blue-500 hover:text-blue-600 shrink-0">
+              {filteredStudents.every(s => selectedStudentIds.includes(s.id)) ? '取消全选' : '全选'}
+            </button>
+          </div>
+
+          {/* Student list */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredStudents.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 text-sm">暂无学员</div>
+            ) : (
+              <div className="py-1">
+                {filteredStudents.map((student) => {
+                  const isSelected = selectedStudentIds.includes(student.id);
+                  return (
+                    <div key={student.id}
+                      className={`px-3 py-2 mx-1 my-0.5 rounded-lg cursor-pointer transition-all flex items-center gap-2 ${
+                        isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50 border border-transparent'
+                      }`}
+                      onClick={() => toggleStudent(student.id)}>
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
+                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 truncate">{student.name}</div>
+                        {student.className && (
+                          <div className="text-xs text-gray-400 truncate">{student.className}</div>
+                        )}
+                      </div>
+                      <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
+                        <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
                       </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-1 border-b border-xianjin/10">
-                  <Button variant="ghost" size="sm" className="w-full text-xs text-amber-400 justify-start hover:bg-xianjin/10" onClick={selectAllStudents}>
-                    {selectedStudentIds.length === courseStudents.length ? '取消全选' : '全选'}
-                  </Button>
-                </div>
-                <div className="max-h-60 overflow-y-auto py-1">
-                  {filteredStudents.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-amber-700">尚无{XIAN.student}</div>
-                  ) : (
-                    filteredStudents.map((student) => {
-                      const isSelected = selectedStudentIds.includes(student.id);
-                      return (
-                        <div
-                          key={student.id}
-                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors rounded-md mx-1 ${
-                            isSelected ? 'bg-xianjin/15' : 'hover:bg-anye/80'
-                          }`}
-                          onClick={() => toggleStudent(student.id)}
-                        >
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-amber-500 border-amber-500' : 'border-amber-800'
-                          }`}>
-                            {isSelected && <Check className="h-3 w-3 text-amber-950" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-amber-200 truncate">{student.name}</p>
-                            {student.className && <p className="text-xs text-amber-700 truncate">{student.className}</p>}
-                            {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).length > 0 && (
-                              <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                {((student as Student & { _autoTags?: AutoTag[] })._autoTags || []).slice(0, 3).map((tag: AutoTag, i: number) => (
-                                  <span key={i} className={`px-1 py-0 rounded text-[10px] leading-tight ${
-                                    tag.type === 'highlight' ? 'xian-tag-biyu' : 'xian-tag-zhusa'
-                                  }`}>
-                                    {tag.label}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-xianjin/10" onClick={() => router.push(`/students/${student.id}`)}>
-                              <FileText className="h-3 w-3 text-amber-500" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-red-900/20">
-                                  <Trash2 className="h-3 w-3 text-red-400" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="bg-anye border-xianjin/20">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-amber-200">确认逐出门派</AlertDialogTitle>
-                                  <AlertDialogDescription className="text-amber-600">
-                                    确定要将{XIAN.student}「{student.name}」逐出门派吗？所有修炼记录也将被清除。
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel className="border-xianjin/20 text-amber-400">取消</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(student.id)} className="bg-red-600 hover:bg-red-700">逐出</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-            {selectedStudentIds.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap">
-                {selectedStudents.slice(0, 4).map((s) => (
-                  <Badge key={s.id} className="xian-tag-xianjin gap-1 pr-1 border-0">
-                    {s.name}
-                    <X className="h-3 w-3 cursor-pointer hover:text-red-400" onClick={() => toggleStudent(s.id)} />
-                  </Badge>
-                ))}
-                {selectedStudents.length > 4 && (
-                  <Badge className="xian-tag-zixia border-0">+{selectedStudents.length - 4}</Badge>
-                )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
-
-          <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
-
-          <div className="flex items-center gap-2">
-            <Label className="text-sm shrink-0 text-amber-300">日期</Label>
-            <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
-              className="w-36 h-9 xian-input" />
-          </div>
-
-          <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
-
-          {/* Record type tabs */}
-          <div className="flex items-center gap-1 bg-anye/60 rounded-lg p-0.5 border border-xianjin/10">
-            <Button size="sm" variant={activeTab === 'typing' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'typing' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
-              onClick={() => setActiveTab('typing')}>
-              <Keyboard className="h-3.5 w-3.5" />{XIAN.typing}
-            </Button>
-            <Button size="sm" variant={activeTab === 'retry' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'retry' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
-              onClick={() => setActiveTab('retry')}>
-              <Swords className="h-3.5 w-3.5" />{XIAN.retry}
-            </Button>
-            <Button size="sm" variant={activeTab === 'homework' ? 'default' : 'ghost'}
-              className={`h-8 text-xs gap-1 ${activeTab === 'homework' ? 'xian-btn-gold' : 'text-amber-500 hover:bg-xianjin/10 hover:text-amber-300'}`}
-              onClick={() => setActiveTab('homework')}>
-              <BookOpen className="h-3.5 w-3.5" />{XIAN.homework}
-            </Button>
-          </div>
-
-          {selectedStudentIds.length > 0 && (
-            <>
-              <Separator orientation="vertical" className="h-6 bg-xianjin/15" />
-              <Button size="sm" className="xian-btn-gold h-8" onClick={handleSaveAll}>
-                <Save className="h-3.5 w-3.5 mr-1" />全部{XIAN.save}
-              </Button>
-            </>
-          )}
         </div>
-      </div>
 
-      {/* Main content: Student rows */}
-      <div className="flex-1 overflow-y-auto">
-        {selectedStudentIds.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center xian-animate-in">
-              <div className="w-16 h-16 rounded-full bg-amber-900/20 flex items-center justify-center mx-auto mb-4 border border-xianjin/20">
-                <Users className="h-8 w-8 text-amber-700" />
+        {/* Right Panel - Recording Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab bar + controls */}
+          <div className="bg-white border-b border-gray-200 px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <button onClick={() => setActiveTab('retry')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'retry' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  {XIAN.retry}
+                </button>
+                <button onClick={() => setActiveTab('typing')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'typing' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  {XIAN.typing}
+                </button>
+                <button onClick={() => setActiveTab('homework')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'homework' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  {XIAN.homework}
+                </button>
+                <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
+                <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
+                  className="w-36 h-7 text-xs border-gray-200" />
+                {selectedStudentIds.length > 0 && (
+                  <>
+                    <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
+                    <Button size="sm" className="h-7 text-xs bg-blue-500 hover:bg-blue-600 text-white" onClick={handleSaveAll}>
+                      <Save className="h-3.5 w-3.5 mr-1" />全部{XIAN.save}
+                    </Button>
+                  </>
+                )}
               </div>
-              <h3 className="text-lg font-medium text-amber-500 font-serif">请先选择{XIAN.student}</h3>
-              <p className="text-sm text-amber-700 mt-2">点击上方「{XIAN.student}」下拉框选择一名或多名{XIAN.student}</p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowTags(!showTags)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all ${showTags ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'}`}>
+                  {showTags ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  {showTags ? '隐藏评价' : '显示评价'}
+                </button>
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="p-4 sm:p-6 space-y-3 max-w-5xl">
-            {selectedStudents.map((student) => {
-              const isSaved = savedStudents.has(student.id);
-              const isHistoryOpen = historyStudentId === student.id;
 
-              return (
-                <div key={student.id} className="xian-card rounded-xl xian-animate-in">
-                  <div className="p-4">
-                    <div className="flex items-start gap-4">
-                      {/* Student name */}
-                      <div className="w-20 shrink-0 pt-1">
-                        <button
-                          className="text-sm font-semibold text-amber-300 hover:text-amber-200 hover:underline cursor-pointer text-left font-serif"
-                          onClick={() => router.push(`/students/${student.id}`)}
-                        >
-                          {student.name}
-                        </button>
-                        {student.className && <p className="text-xs text-amber-700 mt-0.5">{student.className}</p>}
-                      </div>
-
-                      <Separator orientation="vertical" className="h-12 shrink-0 bg-xianjin/15" />
-
-                      {/* Form fields */}
-                      <div className="flex-1 min-w-0">
-                        {activeTab === 'typing' && (
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">{XIAN.speed}</Label>
-                              <Input type="number"
-                                placeholder={lastRecordHints[student.id]?.lastSpeed ? `上次${lastRecordHints[student.id].lastSpeed}` : '字/分'}
-                                value={getTypingForm(student.id).speed}
-                                onChange={(e) => updateTypingForm(student.id, 'speed', e.target.value)}
-                                className="w-24 h-8 text-sm xian-input" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">{XIAN.accuracy}</Label>
-                              <Input type="number"
-                                placeholder={lastRecordHints[student.id]?.lastAccuracy ? `上次${lastRecordHints[student.id].lastAccuracy}%` : '%'}
-                                min={0} max={100}
-                                value={getTypingForm(student.id).accuracy}
-                                onChange={(e) => updateTypingForm(student.id, 'accuracy', e.target.value)}
-                                className="w-20 h-8 text-sm xian-input" />
-                            </div>
-                            {lastRecordHints[student.id]?.lastSpeed && (
-                              <span className="text-[10px] xian-tag-xianjin px-1.5 py-0.5 rounded">
-                                上次 {lastRecordHints[student.id].lastSpeed}字/分 / {lastRecordHints[student.id].lastAccuracy}%
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {activeTab === 'retry' && (
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">题目</Label>
-                              {activeCourse && activeCourse.problems.length > 0 ? (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" className="w-48 h-8 text-sm xian-input justify-between">
-                                      {getRetryForm(student.id).problemId ? (
-                                        <span className="truncate text-amber-200">
-                                          {activeCourse.problems.find(p => p.id === getRetryForm(student.id).problemId)?.name || '选择题目'}
-                                        </span>
-                                      ) : (
-                                        <span className="text-amber-600">搜索题号/题目名</span>
-                                      )}
-                                      <ChevronDown className="h-3 w-3 text-amber-500 ml-1 shrink-0" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-64 p-0 bg-anye border-xianjin/20" align="start">
-                                    <div className="p-2 border-b border-xianjin/10">
-                                      <Input
-                                        placeholder="输入题号或题目名搜索..."
-                                        className="xian-input h-7 text-xs"
-                                        value={problemSearch}
-                                        onChange={(e) => setProblemSearch(e.target.value)}
-                                      />
-                                    </div>
-                                    <div className="max-h-48 overflow-y-auto">
-                                      {activeCourse.problems
-                                        .filter(p => {
-                                          if (!problemSearch) return true;
-                                          const search = problemSearch.toLowerCase();
-                                          return p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
-                                        })
-                                        .map((p) => {
-                                          const kpId = p.knowledgePointIds?.[0] || p.knowledgePointId;
-                                          const kp = kpId ? activeCourse!.knowledgePoints.find((k) => k.id === kpId) : undefined;
-                                          return (
-                                            <div
-                                              key={p.id}
-                                              className={`px-3 py-2 text-xs cursor-pointer hover:bg-xianjin/10 transition-colors ${
-                                                getRetryForm(student.id).problemId === p.id ? 'bg-xianjin/20 text-xianjin' : 'text-amber-200'
-                                              }`}
-                                              onClick={() => {
-                                                updateRetryForm(student.id, 'problemId', p.id);
-                                                setProblemSearch('');
-                                              }}
-                                            >
-                                              <div className="font-medium">{p.name}</div>
-                                              {kp && <div className="text-amber-600 text-[10px] mt-0.5">{kp.name}</div>}
-                                            </div>
-                                          );
-                                        })}
-                                      {activeCourse.problems.filter(p => {
-                                        if (!problemSearch) return true;
-                                        const search = problemSearch.toLowerCase();
-                                        return p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
-                                      }).length === 0 && (
-                                        <div className="px-3 py-4 text-xs text-amber-600 text-center">未找到匹配的题目</div>
-                                      )}
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                              ) : (
-                                <span className="text-xs text-amber-700">请先添加题目</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">第几次</Label>
-                              <Select value={getRetryForm(student.id).attempt}
-                                onValueChange={(v) => updateRetryForm(student.id, 'attempt', v)}>
-                                <SelectTrigger className="w-20 h-8 text-sm xian-input"><SelectValue /></SelectTrigger>
-                                <SelectContent className="bg-anye border-xianjin/20">
-                                  {[1,2,3,4,5].map((n) => (
-                                    <SelectItem key={n} value={String(n)} className="text-amber-200 focus:bg-xianjin/10">第{n}次</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">耗时</Label>
-                              <Input type="number" placeholder="分钟"
-                                value={getRetryForm(student.id).timeSpent}
-                                onChange={(e) => updateRetryForm(student.id, 'timeSpent', e.target.value)}
-                                className="w-20 h-8 text-sm xian-input" />
-                            </div>
-                            {(() => {
-                              const form = getRetryForm(student.id);
-                              if (form.problemId && form.timeSpent && Number(form.attempt) > 1) {
-                                const improvement = getRetryImprovement(form.problemId, Number(form.attempt), Number(form.timeSpent));
-                                if (improvement !== null) {
-                                  return (
-                                    <Badge className={`text-xs border-0 ${improvement > 0 ? 'xian-tag-biyu' : 'xian-tag-zhusa'}`}>
-                                      <TrendingUp className="h-3 w-3 mr-1" />
-                                      {improvement > 0 ? '提升' : '延缓'} {Math.abs(improvement)}%
-                                    </Badge>
-                                  );
-                                }
-                              }
-                              return null;
-                            })()}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 text-xs gap-1 text-amber-500 hover:bg-xianjin/10 hover:text-amber-300 ml-auto"
-                              onClick={() => {
-                                setBatchRetryStudentId(student.id);
-                                setShowBatchRetry(true);
-                              }}
-                            >
-                              <Upload className="h-3.5 w-3.5" />
-                              批量上传
-                            </Button>
-                          </div>
-                        )}
-
-                        {activeTab === 'homework' && (
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">标题</Label>
-                              <Input value={getHomeworkForm(student.id).title}
-                                onChange={(e) => updateHomeworkForm(student.id, 'title', e.target.value)}
-                                placeholder="作业标题" className="w-32 h-8 text-sm xian-input" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">内容</Label>
-                              <Input value={getHomeworkForm(student.id).content}
-                                onChange={(e) => updateHomeworkForm(student.id, 'content', e.target.value)}
-                                placeholder="完成情况" className="w-36 h-8 text-sm xian-input" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">评分</Label>
-                              <Input type="number" placeholder="分"
-                                value={getHomeworkForm(student.id).score}
-                                onChange={(e) => updateHomeworkForm(student.id, 'score', e.target.value)}
-                                className="w-16 h-8 text-sm xian-input" />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-amber-500 shrink-0">点评</Label>
-                              <Input value={getHomeworkForm(student.id).comment}
-                                onChange={(e) => updateHomeworkForm(student.id, 'comment', e.target.value)}
-                                placeholder="老师点评" className="w-28 h-8 text-sm xian-input" />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Teacher feedback tags */}
-                        <div className="mt-2 pt-2 border-t border-xianjin/10 space-y-1.5">
-                          {/* Praise tags */}
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-[10px] text-emerald-500 shrink-0 w-8">点赞</span>
-                            {PRESET_STRENGTHS.map((tag) => {
-                              const form = activeTab === 'typing' ? getTypingForm(student.id) : activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
-                              const tags = form.praiseTags;
-                              const isSelected = tags.includes(tag);
-                              return (
-                                <button key={tag} type="button"
-                                  className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
-                                    isSelected ? 'bg-emerald-600 text-white' : 'bg-emerald-900/20 text-emerald-600 hover:bg-emerald-900/40 border border-emerald-800/30'
-                                  }`}
-                                  onClick={() => {
-                                    const newTags = isSelected ? tags.filter((t: string) => t !== tag) : [...tags, tag];
-                                    if (activeTab === 'typing') setTypingForms((prev) => ({ ...prev, [student.id]: { ...getTypingForm(student.id), praiseTags: newTags } }));
-                                    else if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), praiseTags: newTags } }));
-                                    else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), praiseTags: newTags } }));
-                                  }}>
-                                  {tag}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {/* Improve tags */}
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-[10px] text-orange-500 shrink-0 w-8">待提升</span>
-                            {PRESET_IMPROVEMENTS.map((tag) => {
-                              const form = activeTab === 'typing' ? getTypingForm(student.id) : activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
-                              const tags = form.improveTags;
-                              const isSelected = tags.includes(tag);
-                              return (
-                                <button key={tag} type="button"
-                                  className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
-                                    isSelected ? 'bg-orange-600 text-white' : 'bg-orange-900/20 text-orange-600 hover:bg-orange-900/40 border border-orange-800/30'
-                                  }`}
-                                  onClick={() => {
-                                    const newTags = isSelected ? tags.filter((t: string) => t !== tag) : [...tags, tag];
-                                    if (activeTab === 'typing') setTypingForms((prev) => ({ ...prev, [student.id]: { ...getTypingForm(student.id), improveTags: newTags } }));
-                                    else if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), improveTags: newTags } }));
-                                    else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), improveTags: newTags } }));
-                                  }}>
-                                  {tag}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {/* Growth suggestions (only for retry and homework) */}
-                          {activeTab !== 'typing' && (
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <span className="text-[10px] text-blue-500 shrink-0 w-8">建议</span>
-                              {GROWTH_SUGGESTION_PRESETS.map((sug) => {
-                                const form = activeTab === 'retry' ? getRetryForm(student.id) : getHomeworkForm(student.id);
-                                const sugs = form.growthSuggestions;
-                                const isSelected = sugs.includes(sug);
-                                return (
-                                  <button key={sug} type="button"
-                                    className={`px-1.5 py-0 rounded text-[10px] leading-tight transition-colors ${
-                                      isSelected ? 'bg-blue-600 text-white' : 'bg-blue-900/20 text-blue-600 hover:bg-blue-900/40 border border-blue-800/30'
-                                    }`}
-                                    onClick={() => {
-                                      const newSugs = isSelected ? sugs.filter((s: string) => s !== sug) : [...sugs, sug];
-                                      if (activeTab === 'retry') setRetryForms((prev) => ({ ...prev, [student.id]: { ...getRetryForm(student.id), growthSuggestions: newSugs } }));
-                                      else setHomeworkForms((prev) => ({ ...prev, [student.id]: { ...getHomeworkForm(student.id), growthSuggestions: newSugs } }));
-                                    }}>
-                                    {sug}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:bg-xianjin/10"
-                          onClick={() => loadHistory(student.id)}>
-                          <History className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" className={`h-8 ${isSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'xian-btn-gold'}`}
-                          onClick={() => handleSaveStudent(student.id)}>
-                          {isSaved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                          {isSaved ? '已保存' : XIAN.save}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* History panel */}
-                    {isHistoryOpen && (
-                      <div className="mt-3 pt-3 border-t border-xianjin/10">
-                        <h4 className="text-xs font-medium text-amber-400 mb-2">{XIAN.history}</h4>
-                        <div className="space-y-1.5">
-                          {historyRecords.typing.length === 0 && historyRecords.retry.length === 0 && historyRecords.homework.length === 0 ? (
-                            <p className="text-xs text-amber-700">暂无修炼记录</p>
-                          ) : (
-                            <>
-                              {historyRecords.typing.map((r) => (
-                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
-                                  <span className="xian-tag-xianjin px-1 rounded text-[10px]">速度</span>
-                                  <span>{r.date}</span>
-                                  <span>{r.speed}字/分</span>
-                                  <span>{r.accuracy}%</span>
-                                </div>
-                              ))}
-                              {historyRecords.retry.map((r) => (
-                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
-                                  <span className="xian-tag-liuli px-1 rounded text-[10px]">三刷</span>
-                                  <span>{r.date}</span>
-                                  <span>{r.problemName}</span>
-                                  <span>第{r.attempt}次 {r.timeSpent}分</span>
-                                </div>
-                              ))}
-                              {historyRecords.homework.map((r) => (
-                                <div key={r.id} className="text-xs text-amber-500 flex items-center gap-2">
-                                  <span className="xian-tag-zixia px-1 rounded text-[10px]">日志</span>
-                                  <span>{r.date}</span>
-                                  <span>{r.title}{r.score ? ` (${r.score}分)` : ''}</span>
-                                </div>
-                              ))}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {selectedStudentIds.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm">请在左侧选择学员开始记录</p>
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="space-y-4 max-w-4xl">
+                {selectedStudents.map((student) => (
+                  <StudentRecordCard
+                    key={student.id}
+                    student={student}
+                    activeTab={activeTab}
+                    activeCourse={activeCourse}
+                    recordDate={recordDate}
+                    showTags={showTags}
+                    isSaved={savedStudents.has(student.id)}
+                    isHistoryOpen={historyStudentId === student.id}
+                    historyRecords={historyRecords}
+                    typingForm={getTypingForm(student.id)}
+                    retryRows={getRetryForm(student.id)}
+                    homeworkForm={getHomeworkForm(student.id)}
+                    problemSearch={problemSearch}
+                    onProblemSearchChange={setProblemSearch}
+                    onUpdateTyping={(field, value) => updateTypingForm(student.id, field, value)}
+                    onUpdateRetryRow={(rowIndex, field, value) => updateRetryRow(student.id, rowIndex, field, value)}
+                    onAddRetryRow={() => addRetryRow(student.id)}
+                    onRemoveRetryRow={(rowIndex) => removeRetryRow(student.id, rowIndex)}
+                    onUpdateHomework={(field, value) => updateHomeworkForm(student.id, field, value)}
+                    onSave={() => handleSaveStudent(student.id)}
+                    onLoadHistory={() => loadHistory(student.id)}
+                    onBatchRetry={() => { setBatchRetryStudentId(student.id); setShowBatchRetry(true); }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Add Student Dialog */}
       <Dialog open={addStudentOpen} onOpenChange={setAddStudentOpen}>
-        <DialogContent className="bg-anye border-xianjin/20">
+        <DialogContent className="bg-white border-gray-200 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif">{XIAN.addStudent}</DialogTitle>
-            <DialogDescription className="text-amber-600">收入新{XIAN.student}入门下</DialogDescription>
+            <DialogTitle className="text-gray-800">{XIAN.addStudent}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div><Label className="text-amber-300">{XIAN.student}姓名</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="输入姓名" className="xian-input mt-1" /></div>
-            <div><Label className="text-amber-300">课程</Label>
+            <div>
+              <Label className="text-xs text-gray-500">姓名</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="学员姓名" className="mt-1 h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">课程</Label>
               <Select value={newCourseId} onValueChange={setNewCourseId}>
-                <SelectTrigger className="xian-input mt-1 w-full"><SelectValue placeholder="选择课程" /></SelectTrigger>
+                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="course_cpp">C++ 信奥</SelectItem>
-                  <SelectItem value="course_python">Python</SelectItem>
-                  <SelectItem value="course_visual">图形化编程</SelectItem>
+                  {courses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div><Label className="text-amber-300">备注</Label><Textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="备注信息" className="xian-input mt-1" /></div>
-            <Button className="w-full xian-btn-gold" onClick={handleAddStudent} disabled={!newName.trim()}>确认收入门下</Button>
+            <div>
+              <Label className="text-xs text-gray-500">班级</Label>
+              <Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="所在班级" className="mt-1 h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">备注</Label>
+              <Input value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="备注信息（可选）" className="mt-1 h-8 text-sm" />
+            </div>
+            <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={handleAddStudent} disabled={!newName.trim()}>
+              确认添加
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Import Dialog */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="bg-anye border-xianjin/20">
+        <DialogContent className="bg-white border-gray-200 max-w-md">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif">{XIAN.importCSV}</DialogTitle>
-            <DialogDescription className="text-amber-600">每行一名{XIAN.student}，格式：姓名,班级,备注</DialogDescription>
+            <DialogTitle className="text-gray-800">{XIAN.importCSV}</DialogTitle>
+            <DialogDescription className="text-gray-500">
+              每行一名学员，格式：姓名, 班级, 备注<br/>
+              系统会根据班级名称自动分配课程（含C++/信奥→C++课程，含Python→Python课程，含图形化/Scratch→图形化课程）
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder={'张三,入门班\n李四,进阶班\n王五'} className="xian-input min-h-[120px]" />
-            <Button className="w-full xian-btn-gold" onClick={handleImport} disabled={!importText.trim()}>确认收入</Button>
+            <Textarea value={importText} onChange={(e) => setImportText(e.target.value)}
+              placeholder={'张三, C++入门班, 备注\n李四, Python基础班\n王五, 图形化启蒙班'} className="min-h-[140px] text-sm" />
+            <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={handleImport} disabled={!importText.trim()}>
+              确认导入
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* 三刷批量上传 Dialog */}
+      {/* Batch Retry Upload Dialog */}
       <Dialog open={showBatchRetry} onOpenChange={(open) => {
         setShowBatchRetry(open);
-        if (!open) {
-          setBatchRetryText('');
-          setBatchRetryResult(null);
-        }
+        if (!open) { setBatchRetryText(''); setBatchRetryResult(null); }
       }}>
-        <DialogContent className="bg-anye border-xianjin/20 max-w-lg">
+        <DialogContent className="bg-white border-gray-200 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="xian-text-gold font-serif flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+            <DialogTitle className="text-gray-800 flex items-center gap-2">
+              <Upload className="h-5 w-5 text-blue-500" />
               批量{XIAN.retry}上传
             </DialogTitle>
-            <DialogDescription className="text-amber-600">
-              为「{courseStudents.find(s => s.id === batchRetryStudentId)?.name}」批量录入{XIAN.retry}记录
+            <DialogDescription className="text-gray-500">
+              为「{courseStudents.find(s => s.id === batchRetryStudentId)?.name}」批量录入三刷记录
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg border border-xianjin/15 bg-xianjin/5 p-3">
-              <p className="text-xs text-amber-400 font-medium mb-1">格式说明：</p>
-              <p className="text-xs text-amber-600">每行一条记录，空格分隔：</p>
-              <p className="text-xs text-amber-500 font-mono mt-1">题目名称 一刷耗时 二刷耗时 三刷耗时</p>
-              <p className="text-xs text-amber-700 mt-2">耗时单位为分钟，只填一刷耗时则为首次练习</p>
-              <div className="mt-2 pt-2 border-t border-xianjin/10">
-                <p className="text-xs text-amber-600">示例：</p>
-                <p className="text-xs text-amber-500 font-mono mt-1">津津的储蓄计划 30 20 15</p>
-                <p className="text-xs text-amber-500 font-mono">买铅笔 10 8</p>
-                <p className="text-xs text-amber-500 font-mono">猜数游戏 5</p>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs text-gray-600 font-medium mb-1">格式说明：</p>
+              <p className="text-xs text-gray-500">每行一条，空格分隔：题目名称 一刷耗时 二刷耗时 三刷耗时</p>
+              <p className="text-xs text-gray-400 mt-1">耗时单位为分钟。不存在的题目会自动添加到题库</p>
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-400">示例：</p>
+                <p className="text-xs text-gray-500 font-mono mt-1">津津的储蓄计划 30 20 15</p>
+                <p className="text-xs text-gray-500 font-mono">买铅笔 10 8</p>
               </div>
             </div>
-            <Textarea
-              value={batchRetryText}
-              onChange={(e) => setBatchRetryText(e.target.value)}
-              placeholder={'津津的储蓄计划 30 20 15\n买铅笔 10 8\n猜数游戏 5'}
-              className="xian-input min-h-[160px] font-mono text-sm"
-            />
+            <Textarea value={batchRetryText} onChange={(e) => setBatchRetryText(e.target.value)}
+              placeholder={'津津的储蓄计划 30 20 15\n买铅笔 10 8'} className="min-h-[140px] font-mono text-sm" />
             {batchRetryResult && (
-              <div className={`text-sm rounded-lg px-3 py-2 ${batchRetryResult.success > 0 ? 'bg-green-900/20 text-green-400 border border-green-800/30' : 'bg-red-900/20 text-red-400 border border-red-800/30'}`}>
-                成功录入 {batchRetryResult.success} 条{batchRetryResult.failed > 0 ? `，${batchRetryResult.failed} 条格式错误或未匹配到题目` : ''}
+              <div className={`text-sm rounded-lg px-3 py-2 ${batchRetryResult.success > 0 ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-red-50 text-red-500 border border-red-200'}`}>
+                成功录入 {batchRetryResult.success} 条{batchRetryResult.failed > 0 ? `，${batchRetryResult.failed} 条失败` : ''}
               </div>
             )}
-            <Button
-              className="w-full xian-btn-gold"
-              onClick={() => handleBatchRetryUpload(batchRetryStudentId)}
-              disabled={!batchRetryText.trim()}
-            >
-              <Upload className="h-4 w-4 mr-2" />
+            <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={() => handleBatchRetryUpload(batchRetryStudentId)} disabled={!batchRetryText.trim()}>
               确认上传
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ============ Student Record Card Component ============
+interface StudentRecordCardProps {
+  student: Student;
+  activeTab: RecordTab;
+  activeCourse: Course | undefined;
+  recordDate: string;
+  showTags: boolean;
+  isSaved: boolean;
+  isHistoryOpen: boolean;
+  historyRecords: { typing: TypingRecord[]; retry: ProblemRetryRecord[]; homework: HomeworkRecord[] };
+  typingForm: TypingForm;
+  retryRows: RetryRowForm[];
+  homeworkForm: HomeworkForm;
+  problemSearch: string;
+  onProblemSearchChange: (v: string) => void;
+  onUpdateTyping: (field: keyof TypingForm, value: string | string[]) => void;
+  onUpdateRetryRow: (rowIndex: number, field: 'problemId' | 'times', value: string | [string, string, string]) => void;
+  onAddRetryRow: () => void;
+  onRemoveRetryRow: (rowIndex: number) => void;
+  onUpdateHomework: (field: keyof HomeworkForm, value: string) => void;
+  onSave: () => void;
+  onLoadHistory: () => void;
+  onBatchRetry: () => void;
+}
+
+function StudentRecordCard({
+  student, activeTab, activeCourse, showTags, isSaved, isHistoryOpen,
+  historyRecords, typingForm, retryRows, homeworkForm,
+  problemSearch, onProblemSearchChange,
+  onUpdateTyping, onUpdateRetryRow, onAddRetryRow, onRemoveRetryRow,
+  onUpdateHomework, onSave, onLoadHistory, onBatchRetry,
+}: StudentRecordCardProps) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm xian-animate-in">
+      {/* Card header */}
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-800">{student.name}</span>
+          {student.className && <span className="text-xs text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">{student.className}</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onLoadHistory} className="text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1">
+            <History className="h-3 w-3" />{isHistoryOpen ? '收起' : '历史'}
+          </button>
+          {activeTab === 'retry' && (
+            <button onClick={onBatchRetry} className="text-xs text-gray-400 hover:text-blue-500 flex items-center gap-1">
+              <Upload className="h-3 w-3" />批量
+            </button>
+          )}
+          <Button size="sm" className={`h-7 text-xs ${isSaved ? 'bg-green-500 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`} onClick={onSave}>
+            {isSaved ? <Check className="h-3 w-3 mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+            {isSaved ? '已保存' : XIAN.save}
+          </Button>
+        </div>
+      </div>
+
+      {/* Card body */}
+      <div className="p-4">
+        {/* Retry Tab */}
+        {activeTab === 'retry' && (
+          <div className="space-y-3">
+            {retryRows.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex items-start gap-2 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                {/* Problem selector */}
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs text-gray-500 mb-1 block">题目</Label>
+                  {activeCourse && activeCourse.problems.length > 0 ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full h-8 text-sm justify-between">
+                          {row.problemId ? (
+                            <span className="truncate text-gray-700">
+                              {activeCourse.problems.find(p => p.id === row.problemId)?.name || '选择题目'}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">搜索题号/题目名</span>
+                          )}
+                          <ChevronDown className="h-3 w-3 text-gray-400 ml-1 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0 bg-white border-gray-200" align="start">
+                        <div className="p-2 border-b border-gray-100">
+                          <Input placeholder="输入题号或题目名搜索..." className="h-7 text-xs"
+                            value={problemSearch} onChange={(e) => onProblemSearchChange(e.target.value)} />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {activeCourse.problems
+                            .filter(p => {
+                              if (!problemSearch) return true;
+                              const s = problemSearch.toLowerCase();
+                              return p.name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s);
+                            })
+                            .map((p) => (
+                              <div key={p.id}
+                                className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors ${
+                                  row.problemId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                }`}
+                                onClick={() => { onUpdateRetryRow(rowIndex, 'problemId', p.id); onProblemSearchChange(''); }}>
+                                {p.name}
+                              </div>
+                            ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <span className="text-xs text-gray-400">请先在课程管理中添加题目</span>
+                  )}
+                </div>
+                {/* Time inputs - horizontal */}
+                {(['一刷', '二刷', '三刷'] as const).map((label, timeIdx) => (
+                  <div key={label} className="w-20">
+                    <Label className="text-xs text-gray-500 mb-1 block">{label}</Label>
+                    <Input type="number" placeholder="分钟"
+                      value={row.times[timeIdx]}
+                      onChange={(e) => {
+                        const newTimes = [...row.times] as [string, string, string];
+                        newTimes[timeIdx] = e.target.value;
+                        onUpdateRetryRow(rowIndex, 'times', newTimes);
+                      }}
+                      className="h-8 text-sm" />
+                  </div>
+                ))}
+                {/* Remove row */}
+                {retryRows.length > 1 && (
+                  <button onClick={() => onRemoveRetryRow(rowIndex)} className="mt-5 p-1 text-gray-400 hover:text-red-500">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button onClick={onAddRetryRow} className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1">
+              <Plus className="h-3 w-3" />添加题目
+            </button>
+          </div>
+        )}
+
+        {/* Typing Tab */}
+        {activeTab === 'typing' && (
+          <div className="flex items-center gap-4">
+            <div>
+              <Label className="text-xs text-gray-500">打字速度（字/分钟）</Label>
+              <Input type="number" placeholder="速度" value={typingForm.speed}
+                onChange={(e) => onUpdateTyping('speed', e.target.value)}
+                className="w-32 h-8 text-sm mt-1" />
+            </div>
+          </div>
+        )}
+
+        {/* Homework Tab */}
+        {activeTab === 'homework' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Label className="text-xs text-gray-500">作业内容</Label>
+                <Textarea value={homeworkForm.content} onChange={(e) => onUpdateHomework('content', e.target.value)}
+                  placeholder="记录作业内容..." className="mt-1 min-h-[60px] text-sm" />
+              </div>
+              <div className="w-24">
+                <Label className="text-xs text-gray-500">完成度</Label>
+                <Select value={homeworkForm.completion} onValueChange={(v) => onUpdateHomework('completion', v)}>
+                  <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="选择" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">全部完成</SelectItem>
+                    <SelectItem value="75">大部分完成</SelectItem>
+                    <SelectItem value="50">完成一半</SelectItem>
+                    <SelectItem value="25">少量完成</SelectItem>
+                    <SelectItem value="0">未完成</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">教师评语</Label>
+              <Input value={homeworkForm.comment} onChange={(e) => onUpdateHomework('comment', e.target.value)}
+                placeholder="写一句评语..." className="mt-1 h-8 text-sm" />
+            </div>
+          </div>
+        )}
+
+        {/* Tags section (toggleable) */}
+        {showTags && (
+          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+            <div>
+              <Label className="text-xs text-gray-500 mb-1 block">{XIAN.strengths}</Label>
+              <div className="flex flex-wrap gap-1">
+                {PRESET_STRENGTHS.map(tag => {
+                  const tags = activeTab === 'typing' ? typingForm.praiseTags : activeTab === 'retry' ? [] : [];
+                  const isActive = tags.includes(tag);
+                  return (
+                    <button key={tag} onClick={() => {
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.praiseTags;
+                        onUpdateTyping('praiseTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      }
+                    }}
+                      className={`px-2 py-0.5 rounded text-xs transition-all ${isActive ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500 mb-1 block">{XIAN.improvements}</Label>
+              <div className="flex flex-wrap gap-1">
+                {PRESET_IMPROVEMENTS.map(tag => {
+                  const tags = activeTab === 'typing' ? typingForm.improveTags : [];
+                  const isActive = tags.includes(tag);
+                  return (
+                    <button key={tag} onClick={() => {
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.improveTags;
+                        onUpdateTyping('improveTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      }
+                    }}
+                      className={`px-2 py-0.5 rounded text-xs transition-all ${isActive ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* History panel */}
+      {isHistoryOpen && (
+        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+          <h4 className="text-xs font-medium text-gray-500 mb-2">{XIAN.history}</h4>
+          <div className="space-y-1">
+            {historyRecords.retry.length === 0 && historyRecords.typing.length === 0 && historyRecords.homework.length === 0 ? (
+              <p className="text-xs text-gray-400">暂无记录</p>
+            ) : (
+              <>
+                {historyRecords.retry.map((r) => (
+                  <div key={r.id} className="text-xs text-gray-500 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-500 text-[10px]">三刷</span>
+                    <span>{r.date}</span>
+                    <span>{r.problemName}</span>
+                    <span>第{r.attempt}次 {r.timeSpent}分</span>
+                  </div>
+                ))}
+                {historyRecords.typing.map((r) => (
+                  <div key={r.id} className="text-xs text-gray-500 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-green-50 text-green-500 text-[10px]">速度</span>
+                    <span>{r.date}</span>
+                    <span>{r.speed}字/分</span>
+                  </div>
+                ))}
+                {historyRecords.homework.map((r) => (
+                  <div key={r.id} className="text-xs text-gray-500 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-500 text-[10px]">作业</span>
+                    <span>{r.date}</span>
+                    <span>{r.content.slice(0, 20)}{r.content.length > 20 ? '...' : ''}</span>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

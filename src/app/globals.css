@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.cn/css2?family=Ma+Shan+Zheng&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -53,173 +52,169 @@
   --font-serif:
     'Noto Serif SC', 'Songti SC', 'SimSun', ui-serif, Georgia, Cambria,
     'Times New Roman', Times, serif;
-  /* 修仙主题色 */
-  --color-xianjin: #d4a853;
-  --color-xianjin-light: #f0d78c;
-  --color-biyu: #4ade80;
+  /* 课程主题色 */
+  --color-xianjin: #3b82f6;
+  --color-xianjin-light: #60a5fa;
+  --color-biyu: #22c55e;
   --color-zhusa: #ef4444;
-  --color-zixia: #a78bfa;
-  --color-tianqing: #60a5fa;
-  --color-liuli: #fb923c;
-  --color-moye: #0c0e1a;
-  --color-anye: #151829;
+  --color-zixia: #8b5cf6;
+  --color-tianqing: #3b82f6;
+  --color-liuli: #f59e0b;
+  --color-moye: #1e293b;
+  --color-anye: #f8fafc;
 }
 
 :root {
-  --radius: 0.75rem;
-  /* 修仙主题 - 深色底 + 金色点缀 (hex for html2canvas compat) */
-  --background: #05070d;
-  --foreground: #e9dcc8;
-  --card: #0c0f18;
-  --card-foreground: #e9dcc8;
-  --popover: #0c0f18;
-  --popover-foreground: #e9dcc8;
-  --primary: #d9a440;
-  --primary-foreground: #05070f;
-  --secondary: #161a26;
-  --secondary-foreground: #d8ccb8;
-  --muted: #171a24;
-  --muted-foreground: #8a7f6c;
-  --accent: #1a2135;
-  --accent-foreground: #e9dcc8;
+  --radius: 0.5rem;
+  /* 简洁明亮主题 */
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eff6ff;
+  --accent-foreground: #1e293b;
   --destructive: #ef4444;
-  --border: #262d42;
-  --input: #1c2130;
-  --ring: #d9a440;
-  --chart-1: #d9a440;
-  --chart-2: #00c470;
-  --chart-3: #cf57c8;
-  --chart-4: #00aee9;
-  --chart-5: #f37513;
-  --sidebar: #060911;
-  --sidebar-foreground: #e9dcc8;
-  --sidebar-primary: #d9a440;
-  --sidebar-primary-foreground: #05070f;
-  --sidebar-accent: #1a2135;
-  --sidebar-accent-foreground: #e9dcc8;
-  --sidebar-border: #262d42;
-  --sidebar-ring: #d9a440;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #f1f5f9;
+  --sidebar-foreground: #334155;
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e2e8f0;
+  --sidebar-accent-foreground: #1e293b;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #3b82f6;
 }
 
 body {
   font-family: var(--font-sans);
-  background: linear-gradient(135deg, #0c0e1a 0%, #151829 50%, #0f1225 100%);
-  background-attachment: fixed;
-  color: #f0e6d3;
+  background: #f8fafc;
+  color: #1e293b;
 }
 
-/* 修仙主题卡片 */
+/* 卡片 */
 .xian-card {
-  background: rgba(25, 30, 55, 0.85);
-  border: 1px solid rgba(212, 168, 83, 0.2);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 168, 83, 0.08);
-  transition: all 0.3s ease;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s ease;
 }
 .xian-card:hover {
-  border-color: rgba(212, 168, 83, 0.4);
-  box-shadow: 0 8px 40px rgba(212, 168, 83, 0.12), inset 0 1px 0 rgba(212, 168, 83, 0.15);
-  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
-/* 金色按钮 */
+/* 主按钮 */
 .xian-btn-gold {
-  background: linear-gradient(135deg, #d4a853, #c4943f);
-  color: #0c0e1a;
-  font-weight: 600;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 500;
   border: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 .xian-btn-gold:hover {
-  background: linear-gradient(135deg, #f0d78c, #d4a853);
-  box-shadow: 0 0 20px rgba(212, 168, 83, 0.3);
+  background: #2563eb;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
-/* 金色文字渐变 */
+/* 标题文字 */
 .xian-text-gold {
-  background: linear-gradient(135deg, #f0d78c, #d4a853, #c4943f);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1e293b;
+  font-weight: 600;
 }
 
-/* 标签样式 - 修仙 */
+/* 标签样式 */
 .xian-tag-biyu {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
 }
 .xian-tag-zhusa {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 .xian-tag-zixia {
-  background: rgba(167, 139, 250, 0.15);
-  color: #a78bfa;
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
 }
 .xian-tag-tianqing {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
 }
 .xian-tag-liuli {
-  background: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
 }
 .xian-tag-xianjin {
-  background: rgba(212, 168, 83, 0.15);
-  color: #f0d78c;
-  border: 1px solid rgba(212, 168, 83, 0.3);
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
 }
 
 /* 分隔线 */
 .xian-divider {
-  border-color: rgba(212, 168, 83, 0.15);
+  border-color: #e2e8f0;
 }
 
-/* Custom scrollbar - 修仙风 */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 18, 37, 0.5);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 168, 83, 0.3);
+  background: #cbd5e1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 168, 83, 0.5);
+  background: #94a3b8;
 }
 
 /* 动画 */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .xian-animate-in {
-  animation: fadeInUp 0.4s ease-out;
+  animation: fadeInUp 0.3s ease-out;
 }
 
 /* 选中标签激活态 */
 .xian-tag-active {
-  box-shadow: 0 0 12px rgba(212, 168, 83, 0.4);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
 /* 输入框 */
 .xian-input {
-  background: rgba(15, 18, 37, 0.6);
-  border: 1px solid rgba(212, 168, 83, 0.2);
-  color: #f0e6d3;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
 }
 .xian-input:focus {
-  border-color: rgba(212, 168, 83, 0.5);
-  box-shadow: 0 0 12px rgba(212, 168, 83, 0.15);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   outline: none;
 }
 .xian-input::placeholder {
-  color: rgba(160, 140, 120, 0.5);
+  color: #94a3b8;
 }

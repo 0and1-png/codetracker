@@ -50,36 +50,36 @@ export const DEFAULT_VISUAL_KNOWLEDGE = [
   '克隆',
 ] as const;
 
-/* ===== 修仙术语映射 ===== */
+/* ===== 术语映射 ===== */
 export const XIAN = {
-  app: '仙码录',
-  student: '弟子',
-  students: '弟子',
-  course: '功法',
-  courses: '功法阁',
+  app: '少儿编程成长馆',
+  student: '学员',
+  students: '学员',
+  course: '课程',
+  courses: '课程管理',
   knowledge: '知识点',
   typing: '速度练习',
-  retry: '三刷',
-  homework: '作业',
-  curriculum: '功法谱',
-  report: '月度报告',
-  teacher: '老师',
+  retry: '三刷练习',
+  homework: '课后作业',
+  curriculum: '授课体系',
+  report: '成长报告',
+  teacher: '教师',
   focus: '专注度',
   attendance: '出勤',
-  strengths: '亮点标签',
-  improvements: '待改进',
+  strengths: '点赞',
+  improvements: '待提升',
   save: '保存',
-  history: '学习记录',
-  detail: '弟子档案',
-  addStudent: '收入门下',
-  importCSV: '批量收徒',
+  history: '历史记录',
+  detail: '学员详情',
+  addStudent: '添加学员',
+  importCSV: '批量导入',
   speed: '打字速度',
   accuracy: '正确率',
   mastered: '已掌握',
   learning: '学习中',
   notStarted: '未开始',
   bestWork: '本月最佳作品',
-  teacherComment: '老师寄语',
+  teacherComment: '教师评语',
   nextGoal: '下月目标',
   knowledgePoints: '知识点',
 } as const;
@@ -91,9 +91,9 @@ export const KNOWLEDGE_STATUS_LABELS: Record<string, string> = {
 };
 
 export const KNOWLEDGE_STATUS_COLORS: Record<string, string> = {
-  not_started: 'bg-gray-800/50 text-gray-400 border border-gray-700/50',
-  learning: 'bg-amber-900/30 text-amber-400 border border-amber-700/50',
-  mastered: 'bg-emerald-900/30 text-emerald-400 border border-emerald-700/50',
+  not_started: 'bg-gray-50 text-gray-500 border border-gray-200',
+  learning: 'bg-blue-50 text-blue-600 border border-blue-200',
+  mastered: 'bg-green-50 text-green-600 border border-green-200',
 };
 
 export const BEHAVIOR_LABELS = {
@@ -183,34 +183,34 @@ export const COMMENT_TEMPLATES = [
   },
 ] as const;
 
-/* 课程对应颜色（修仙风） */
+/* 课程对应颜色 */
 export const COURSE_COLORS: Record<string, { bg: string; border: string; text: string; gradient: string; icon: string; from: string; to: string }> = {
   course_cpp: {
-    bg: 'bg-blue-950/40',
-    border: 'border-blue-800/40',
-    text: 'text-blue-400',
-    gradient: 'from-blue-600 to-indigo-700',
-    icon: '⚔️',
-    from: '#2563eb',
-    to: '#4338ca',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-600',
+    gradient: 'from-blue-500 to-blue-600',
+    icon: 'C++',
+    from: '#3b82f6',
+    to: '#2563eb',
   },
   course_python: {
-    bg: 'bg-emerald-950/40',
-    border: 'border-emerald-800/40',
-    text: 'text-emerald-400',
-    gradient: 'from-emerald-600 to-teal-700',
-    icon: '🐍',
-    from: '#059669',
-    to: '#0f766e',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-600',
+    gradient: 'from-green-500 to-emerald-600',
+    icon: 'Py',
+    from: '#22c55e',
+    to: '#059669',
   },
   course_visual: {
-    bg: 'bg-orange-950/40',
-    border: 'border-orange-800/40',
-    text: 'text-orange-400',
-    gradient: 'from-orange-500 to-amber-700',
-    icon: '🎨',
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-600',
+    gradient: 'from-orange-400 to-amber-500',
+    icon: 'Scr',
     from: '#f97316',
-    to: '#b45309',
+    to: '#f59e0b',
   },
 };
 

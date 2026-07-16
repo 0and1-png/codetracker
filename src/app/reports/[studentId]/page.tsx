@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
 import {
   getStudents,
@@ -95,6 +95,8 @@ export default function ReportPage() {
   
   // 荣誉证书
   const [honorRecords, setHonorRecords] = useState<HonorRecord[]>([]);
+  const [expandedGespLevel, setExpandedGespLevel] = useState<number | null>(null);
+  const [expandedCompetitionId, setExpandedCompetitionId] = useState<string | null>(null);
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -2374,7 +2376,13 @@ export default function ReportPage() {
                               return (
                                 <div key={gesp.level}>
                                   <button
-                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                    onClick={() => {
+                                      if (certUrl) {
+                                        setExpandedGespLevel(expandedGespLevel === gesp.level ? null : gesp.level);
+                                      } else {
+                                        toggleGespLevel(gesp.level as GESPLlevel);
+                                      }
+                                    }}
                                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
                                       isPassed
                                         ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
@@ -2391,12 +2399,15 @@ export default function ReportPage() {
                                       <div className={`text-[10px] ${isPassed ? 'text-green-600' : 'text-gray-400'}`}>{gesp.desc}</div>
                                     </div>
                                     {hasCertificate && (
-                                      <span className="text-[10px] text-green-500 shrink-0">已上传证书</span>
+                                      <span className="text-[10px] text-green-500 shrink-0 flex items-center gap-1">
+                                        {expandedGespLevel === gesp.level ? '收起' : '查看证书'}
+                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedGespLevel === gesp.level ? 'rotate-180' : ''}`} />
+                                      </span>
                                     )}
                                   </button>
-                                  {certUrl && (
-                                    <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-                                      <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-56 object-contain" />
+                                  {certUrl && expandedGespLevel === gesp.level && (
+                                    <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                      <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
                                   )}
                                 </div>
@@ -2413,7 +2424,13 @@ export default function ReportPage() {
                               return (
                                 <div key={gesp.level}>
                                   <button
-                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                    onClick={() => {
+                                      if (certUrl) {
+                                        setExpandedGespLevel(expandedGespLevel === gesp.level ? null : gesp.level);
+                                      } else {
+                                        toggleGespLevel(gesp.level as GESPLlevel);
+                                      }
+                                    }}
                                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
                                       isSelected
                                         ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
@@ -2431,10 +2448,16 @@ export default function ReportPage() {
                                       <div className={`text-xs font-medium ${isSelected ? '' : isPassed ? 'text-green-800' : ''}`}>{gesp.name}</div>
                                       <div className={`text-[10px] ${isSelected ? 'text-blue-100' : isPassed ? 'text-green-600' : 'text-gray-400'}`}>{gesp.desc}</div>
                                     </div>
+                                    {certUrl && (
+                                      <span className={`text-[10px] shrink-0 flex items-center gap-1 ${isSelected ? 'text-blue-100' : 'text-green-500'}`}>
+                                        {expandedGespLevel === gesp.level ? '收起' : '查看证书'}
+                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedGespLevel === gesp.level ? 'rotate-180' : ''}`} />
+                                      </span>
+                                    )}
                                   </button>
-                                  {certUrl && (
-                                    <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-                                      <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-56 object-contain" />
+                                  {certUrl && expandedGespLevel === gesp.level && (
+                                    <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                      <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
                                   )}
                                 </div>
@@ -2457,7 +2480,13 @@ export default function ReportPage() {
                                         <div className="text-[10px] text-blue-100">{gesp.desc}</div>
                                       </div>
                                       {certUrl && (
-                                        <span className="text-[10px] text-blue-100 shrink-0">已上传证书</span>
+                                        <button
+                                          onClick={() => setExpandedGespLevel(expandedGespLevel === gesp.level ? null : gesp.level)}
+                                          className="text-[10px] text-blue-100 shrink-0 flex items-center gap-1 hover:text-white transition-colors"
+                                        >
+                                          {expandedGespLevel === gesp.level ? '收起' : '查看证书'}
+                                          <ChevronDown className={`h-3 w-3 transition-transform ${expandedGespLevel === gesp.level ? 'rotate-180' : ''}`} />
+                                        </button>
                                       )}
                                       <button
                                         onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
@@ -2466,9 +2495,9 @@ export default function ReportPage() {
                                         <X className="h-3 w-3" />
                                       </button>
                                     </div>
-                                    {certUrl && (
-                                      <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50">
-                                        <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-56 object-contain" />
+                                    {certUrl && expandedGespLevel === gesp.level && (
+                                      <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-blue-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-64 object-contain" />
                                       </div>
                                     )}
                                   </div>
@@ -2555,7 +2584,13 @@ export default function ReportPage() {
                                 <div key={comp.id}>
                                   <div
                                     className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200 cursor-pointer"
-                                    onClick={() => toggleCompetition(comp.id)}
+                                    onClick={() => {
+                                      if (certUrl) {
+                                        setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id);
+                                      } else {
+                                        toggleCompetition(comp.id);
+                                      }
+                                    }}
                                   >
                                     <div className="h-4 w-4 rounded border border-gray-300 flex items-center justify-center" />
                                     <div className="flex-1 min-w-0">
@@ -2563,7 +2598,10 @@ export default function ReportPage() {
                                       <div className="text-[10px] text-gray-400 truncate">{comp.category}</div>
                                     </div>
                                     {certUrl && (
-                                      <span className="text-[10px] text-green-500 shrink-0">已上传证书</span>
+                                      <span className="text-[10px] text-green-500 shrink-0 flex items-center gap-1">
+                                        {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
+                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
+                                      </span>
                                     )}
                                     {isCustom && (
                                       <button
@@ -2574,9 +2612,9 @@ export default function ReportPage() {
                                       </button>
                                     )}
                                   </div>
-                                  {certUrl && (
-                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-56 object-contain" />
+                                  {certUrl && expandedCompetitionId === comp.id && (
+                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
                                   )}
                                 </div>
@@ -2598,7 +2636,13 @@ export default function ReportPage() {
                                         ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-purple-400 shadow-md shadow-purple-200/50'
                                         : 'bg-white text-gray-400 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 opacity-60'
                                     }`}
-                                    onClick={() => toggleCompetition(comp.id)}
+                                    onClick={() => {
+                                      if (certUrl) {
+                                        setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id);
+                                      } else {
+                                        toggleCompetition(comp.id);
+                                      }
+                                    }}
                                   >
                                     <div className={`h-4 w-4 rounded flex items-center justify-center border ${
                                       isSelected ? 'bg-white/20 border-white/40' : 'border-gray-300'
@@ -2609,6 +2653,12 @@ export default function ReportPage() {
                                       <div className="text-xs font-medium truncate">{comp.name}</div>
                                       <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>{comp.category}</div>
                                     </div>
+                                    {certUrl && (
+                                      <span className={`text-[10px] shrink-0 flex items-center gap-1 ${isSelected ? 'text-purple-100' : 'text-green-500'}`}>
+                                        {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
+                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
+                                      </span>
+                                    )}
                                     {isCustom && (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
@@ -2620,9 +2670,9 @@ export default function ReportPage() {
                                       </button>
                                     )}
                                   </div>
-                                  {certUrl && (
-                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-56 object-contain" />
+                                  {certUrl && expandedCompetitionId === comp.id && (
+                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
                                   )}
                                 </div>
@@ -2646,7 +2696,13 @@ export default function ReportPage() {
                                         <div className="text-[10px] text-purple-100 truncate">{comp.category}{comp.date ? ` · ${comp.date}` : ''}</div>
                                       </div>
                                       {certUrl && (
-                                        <span className="text-[10px] text-purple-100 shrink-0">已上传证书</span>
+                                        <button
+                                          onClick={() => setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id)}
+                                          className="text-[10px] text-purple-100 shrink-0 flex items-center gap-1 hover:text-white transition-colors"
+                                        >
+                                          {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
+                                          <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
+                                        </button>
                                       )}
                                       <button
                                         onClick={() => toggleCompetition(comp.id)}
@@ -2655,9 +2711,9 @@ export default function ReportPage() {
                                         <X className="h-3 w-3" />
                                       </button>
                                     </div>
-                                    {certUrl && (
-                                      <div className="mt-2 ml-11 mr-2 rounded-lg overflow-hidden border border-purple-200 shadow-sm bg-purple-50">
-                                        <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-56 object-contain" />
+                                    {certUrl && expandedCompetitionId === comp.id && (
+                                      <div className="mt-2 ml-11 mr-2 rounded-lg overflow-hidden border border-purple-200 shadow-sm bg-purple-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
                                       </div>
                                     )}
                                   </div>

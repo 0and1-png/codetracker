@@ -404,6 +404,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   const [uploadStudentId, setUploadStudentId] = useState<string>('');
   const [certificateImg, setCertificateImg] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
 
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -528,9 +529,15 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                   <div key={levelDef.level}>
                     <div
                       onClick={() => {
-                        setUploadStudentId(student.id);
-                        setUploadLevel(levelDef.level);
-                        setShowUploadDialog(true);
+                        if (certImg) {
+                          // 已有证书，切换显示/隐藏
+                          setExpandedLevel(expandedLevel === levelDef.level ? null : levelDef.level);
+                        } else {
+                          // 无证书，打开上传对话框
+                          setUploadStudentId(student.id);
+                          setUploadLevel(levelDef.level);
+                          setShowUploadDialog(true);
+                        }
                       }}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 ${
                         passed
@@ -556,14 +563,21 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                         </div>
                       </div>
                       {/* 上传提示 */}
-                      <div className={`text-[10px] shrink-0 ${passed ? 'text-green-500' : 'text-gray-300'}`}>
-                        {certImg ? '查看证书' : passed ? '已上传' : '点击上传'}
+                      <div className={`text-[10px] shrink-0 flex items-center gap-1 ${passed ? 'text-green-500' : 'text-gray-300'}`}>
+                        {certImg ? (
+                          <>
+                            <span>{expandedLevel === levelDef.level ? '收起' : '查看证书'}</span>
+                            <ChevronDown className={`h-3 w-3 transition-transform ${expandedLevel === levelDef.level ? 'rotate-180' : ''}`} />
+                          </>
+                        ) : (
+                          <span>{passed ? '已上传' : '点击上传'}</span>
+                        )}
                       </div>
                     </div>
-                    {/* 证书大图展示 */}
-                    {certImg && (
-                      <div className="mt-2 ml-10 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
-                        <img src={certImg} alt={`${levelDef.name}证书`} className="w-full max-h-64 object-contain" />
+                    {/* 证书大图展示 - 点击后展开 */}
+                    {certImg && expandedLevel === levelDef.level && (
+                      <div className="mt-2 ml-10 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <img src={certImg} alt={`${levelDef.name}证书`} className="w-full max-h-80 object-contain" />
                       </div>
                     )}
                   </div>

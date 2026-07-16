@@ -2514,213 +2514,57 @@ export default function ReportPage() {
                         <div className="flex items-center gap-2">
                           <Trophy className="h-4 w-4 text-purple-600" strokeWidth={1.5} />
                           <span className="text-sm font-semibold text-purple-800">赛事活动</span>
-                          {sprintCompetitionIds.length > 0 && (
-                            <button
-                              onClick={() => setShowAllCompetitions(!showAllCompetitions)}
-                              className="ml-auto text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
-                            >
-                              {showAllCompetitions ? '仅显示已选' : '显示全部'}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setShowAddCompetition(!showAddCompetition)}
-                            className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors"
-                          >
-                            <Plus className="h-3 w-3" />
-                            添加
-                          </button>
                         </div>
                       </div>
                       <div className="p-4">
-                        {/* 添加赛事表单 */}
-                        {showAddCompetition && (
-                          <div className="mb-4 p-3 bg-purple-50/50 rounded-lg border border-purple-200/40 space-y-2">
-                            <div className="flex gap-2">
-                              <Input
-                                value={newCompName}
-                                onChange={(e) => setNewCompName(e.target.value)}
-                                placeholder="赛事名称"
-                                className="flex-1 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
-                              />
-                              <Input
-                                value={newCompDate}
-                                onChange={(e) => setNewCompDate(e.target.value)}
-                                placeholder="预计日期"
-                                type="date"
-                                className="w-32 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Input
-                                value={newCompCategory}
-                                onChange={(e) => setNewCompCategory(e.target.value)}
-                                placeholder="分类（如：编程竞赛）"
-                                className="flex-1 h-8 text-xs rounded-lg border-purple-200/50 bg-white"
-                              />
-                              <Button
-                                onClick={handleAddCompetition}
-                                className="h-8 px-3 text-xs rounded-lg bg-purple-500 hover:bg-purple-600 text-white"
-                              >
-                                添加
-                              </Button>
-                              <Button
-                                onClick={() => setShowAddCompetition(false)}
-                                variant="outline"
-                                className="h-8 px-3 text-xs rounded-lg border-purple-200 text-purple-600"
-                              >
-                                取消
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 无选择时：显示全部可选 */}
-                        {sprintCompetitionIds.length === 0 ? (
-                          <div className="space-y-3">
-                            {allCompetitions.map((comp) => {
-                              const isCustom = comp.id.startsWith('comp_custom_');
-                              const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
-                              return (
-                                <div key={comp.id}>
-                                  <div
-                                    className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200 cursor-pointer"
-                                    onClick={() => {
-                                      if (certUrl) {
-                                        setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id);
-                                      } else {
-                                        toggleCompetition(comp.id);
-                                      }
-                                    }}
-                                  >
-                                    <div className="h-4 w-4 rounded border border-gray-300 flex items-center justify-center" />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-xs font-medium truncate">{comp.name}</div>
-                                      <div className="text-[10px] text-gray-400 truncate">{comp.category}</div>
-                                    </div>
-                                    {certUrl && (
-                                      <span className="text-[10px] text-green-500 shrink-0 flex items-center gap-1">
-                                        {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
-                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
-                                      </span>
-                                    )}
-                                    {isCustom && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
-                                        className="h-4 w-4 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
-                                      >
-                                        <X className="h-2.5 w-2.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                  {certUrl && expandedCompetitionId === comp.id && (
-                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : showAllCompetitions ? (
-                          /* 有选择 + 显示全部模式 */
-                          <div className="space-y-3">
-                            {allCompetitions.map((comp) => {
-                              const isSelected = sprintCompetitionIds.includes(comp.id);
-                              const isCustom = comp.id.startsWith('comp_custom_');
-                              const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
-                              return (
-                                <div key={comp.id}>
-                                  <div
-                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all duration-200 cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-purple-400 shadow-md shadow-purple-200/50'
-                                        : 'bg-white text-gray-400 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30 opacity-60'
-                                    }`}
-                                    onClick={() => {
-                                      if (certUrl) {
-                                        setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id);
-                                      } else {
-                                        toggleCompetition(comp.id);
-                                      }
-                                    }}
-                                  >
-                                    <div className={`h-4 w-4 rounded flex items-center justify-center border ${
-                                      isSelected ? 'bg-white/20 border-white/40' : 'border-gray-300'
-                                    }`}>
-                                      {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={2} />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-xs font-medium truncate">{comp.name}</div>
-                                      <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>{comp.category}</div>
-                                    </div>
-                                    {certUrl && (
-                                      <span className={`text-[10px] shrink-0 flex items-center gap-1 ${isSelected ? 'text-purple-100' : 'text-green-500'}`}>
-                                        {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
-                                        <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
-                                      </span>
-                                    )}
-                                    {isCustom && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
-                                        className={`h-4 w-4 rounded-full flex items-center justify-center ${
-                                          isSelected ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
-                                        }`}
-                                      >
-                                        <X className="h-2.5 w-2.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                  {certUrl && expandedCompetitionId === comp.id && (
-                                    <div className="mt-2 ml-7 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                      <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          /* 有选择 + 仅显示已选模式 */
-                          <div className="space-y-3">
-                            {allCompetitions
-                              .filter(c => sprintCompetitionIds.includes(c.id))
-                              .map(comp => {
-                                const isCustom = comp.id.startsWith('comp_custom_');
-                                const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
+                        {(() => {
+                          const customCompetitions = honorRecords.filter(h => h.type === 'competition');
+                          if (customCompetitions.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-gray-400">
+                                <Trophy className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                <p className="text-xs">暂无赛事记录</p>
+                                <p className="text-[10px] text-gray-300 mt-1">在工作台荣誉模块添加赛事后同步显示</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="space-y-3">
+                              {customCompetitions.map((comp) => {
+                                const hasCert = !!comp.certificateUrl;
+                                const isExpanded = expandedCompetitionId === comp.id;
                                 return (
                                   <div key={comp.id}>
-                                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-sm">
-                                      <Trophy className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-medium truncate">{comp.name}</div>
-                                        <div className="text-[10px] text-purple-100 truncate">{comp.category}{comp.date ? ` · ${comp.date}` : ''}</div>
+                                    <div
+                                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border bg-white border-purple-100 hover:border-purple-300 hover:bg-purple-50/30 transition-all duration-200 cursor-pointer"
+                                      onClick={() => { if (hasCert) setExpandedCompetitionId(isExpanded ? null : comp.id); }}
+                                    >
+                                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-400 to-fuchsia-400 flex items-center justify-center shrink-0">
+                                        <Trophy className="h-4 w-4 text-white" strokeWidth={1.5} />
                                       </div>
-                                      {certUrl && (
-                                        <button
-                                          onClick={() => setExpandedCompetitionId(expandedCompetitionId === comp.id ? null : comp.id)}
-                                          className="text-[10px] text-purple-100 shrink-0 flex items-center gap-1 hover:text-white transition-colors"
-                                        >
-                                          {expandedCompetitionId === comp.id ? '收起' : '查看证书'}
-                                          <ChevronDown className={`h-3 w-3 transition-transform ${expandedCompetitionId === comp.id ? 'rotate-180' : ''}`} />
-                                        </button>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-gray-800 truncate">{comp.title || '未命名赛事'}</div>
+                                        <div className="text-xs text-gray-500 truncate">{comp.achievedDate || ''}</div>
+                                      </div>
+                                      {hasCert && (
+                                        <span className="text-xs text-purple-600 shrink-0 flex items-center gap-1">
+                                          {isExpanded ? '收起' : '查看证书'}
+                                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </span>
                                       )}
-                                      <button
-                                        onClick={() => toggleCompetition(comp.id)}
-                                        className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0"
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </button>
+                                      {hasCert && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">已上传</span>}
                                     </div>
-                                    {certUrl && expandedCompetitionId === comp.id && (
+                                    {hasCert && isExpanded && (
                                       <div className="mt-2 ml-11 mr-2 rounded-lg overflow-hidden border border-purple-200 shadow-sm bg-purple-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <img src={certUrl} alt={`${comp.name}证书`} className="w-full max-h-64 object-contain" />
+                                        <img src={comp.certificateUrl} alt={`${comp.title}证书`} className="w-full max-h-72 object-contain" />
                                       </div>
                                     )}
                                   </div>
                                 );
                               })}
-                          </div>
-                        )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 

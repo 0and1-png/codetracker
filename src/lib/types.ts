@@ -45,6 +45,7 @@ export interface Course {
   teachingContent?: string;     // Legacy field, kept for migration
   knowledgePoints: KnowledgePointDef[];
   problems: ProblemDef[];
+  classes: string[];            // 班级名称列表
 }
 
 // ============ Student ============

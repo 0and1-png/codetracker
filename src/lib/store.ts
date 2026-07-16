@@ -82,17 +82,23 @@ export function getCourses(): Course[] {
           name,
         })),
         problems: [],
+        classes: [],
       };
     });
     setItem(COURSES_KEY, defaults);
     return defaults;
   }
-  // Migrate old courses: ensure curriculum field exists
+  // Migrate old courses: ensure curriculum field exists and classes array
   let needsSave = false;
   const migrated = courses.map((c) => {
     const withContent = { ...c, teachingContent: c.teachingContent ?? '' };
     const withCurriculum = migrateToCurriculum(withContent);
     if (withCurriculum.curriculum !== c.curriculum) needsSave = true;
+    // Migrate: add classes array if missing
+    if (!withCurriculum.classes) {
+      withCurriculum.classes = [];
+      needsSave = true;
+    }
     return withCurriculum;
   });
   if (needsSave) setItem(COURSES_KEY, migrated);
@@ -110,6 +116,51 @@ export function saveCourses(courses: Course[]): void {
 export function updateCourse(updated: Course): void {
   const list = getCourses().map((c) => (c.id === updated.id ? updated : c));
   saveCourses(list);
+}
+
+// ============ Course Classes ============
+export function getCourseClasses(courseId: string): string[] {
+  const course = getCourses().find((c) => c.id === courseId);
+  return course?.classes ?? [];
+}
+
+export function addClassToCourse(courseId: string, className: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return;
+  if (!course.classes) course.classes = [];
+  if (!course.classes.includes(className)) {
+    course.classes.push(className);
+    saveCourses(courses);
+  }
+}
+
+export function removeClassFromCourse(courseId: string, className: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (!course || !course.classes) return;
+  course.classes = course.classes.filter((c) => c !== className);
+  saveCourses(courses);
+  // Also remove students from this class
+  const students = getStudents().filter(
+    (s) => !(s.courseId === courseId && s.className === className)
+  );
+  saveStudents(students);
+}
+
+export function renameClassInCourse(courseId: string, oldName: string, newName: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (!course || !course.classes) return;
+  course.classes = course.classes.map((c) => (c === oldName ? newName : c));
+  saveCourses(courses);
+  // Also update students' className
+  const students = getStudents().map((s) =>
+    s.courseId === courseId && s.className === oldName
+      ? { ...s, className: newName }
+      : s
+  );
+  saveStudents(students);
 }
 
 // ============ Students ============

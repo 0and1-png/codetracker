@@ -7,7 +7,7 @@ import {
   Plus, Upload, Search, Trash2, FileText, Code2, Settings,
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
-  ChevronRight, ChevronLeft, Eye, EyeOff,
+  ChevronRight, ChevronLeft, Eye, EyeOff, Edit,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -39,6 +39,7 @@ import {
   addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
   getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
   getCourses as getCoursesForUpdate,
+  addClassToCourse, removeClassFromCourse, renameClassInCourse, getCourseClasses,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -109,6 +110,12 @@ export default function HomePage() {
   const [batchRetryText, setBatchRetryText] = useState('');
   const [batchRetryResult, setBatchRetryResult] = useState<{ success: number; failed: number } | null>(null);
 
+  // Class management
+  const [showCreateClass, setShowCreateClass] = useState(false);
+  const [createClass, setCreateClass] = useState('');
+  const [editingClass, setEditingClass] = useState<string | null>(null);
+  const [editingClassName, setEditingClassName] = useState('');
+
   const loadData = useCallback(() => {
     const courseList = getCourses();
     setCourses(courseList);
@@ -159,8 +166,10 @@ export default function HomePage() {
   const activeCourse = courses.find((c) => c.id === selectedCourseId);
 
   // Get unique classes from students
-  const classList = Array.from(new Set(courseStudents.map(s => s.className || '未分类').filter(Boolean))).sort();
-  const filteredByClass = selectedClass === 'all' ? courseStudents : courseStudents.filter(s => (s.className || '未分类') === selectedClass);
+  const courseClasses = getCourseClasses(selectedCourseId);
+  const studentClasses = Array.from(new Set(courseStudents.map(s => s.className || '').filter(Boolean)));
+  const classList = Array.from(new Set([...courseClasses, ...studentClasses])).sort();
+  const filteredByClass = selectedClass === 'all' ? courseStudents : courseStudents.filter(s => (s.className || '') === selectedClass);
 
   const filteredStudents = filteredByClass.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -468,14 +477,30 @@ export default function HomePage() {
             <div className="flex items-center gap-1 flex-wrap">
               <button onClick={() => setSelectedClass('all')}
                 className={`px-2 py-1 rounded text-xs transition-all ${selectedClass === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
-                全部班级
+                全部
               </button>
               {classList.map(cls => (
-                <button key={cls} onClick={() => setSelectedClass(cls)}
-                  className={`px-2 py-1 rounded text-xs transition-all ${selectedClass === cls ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  {cls}
-                </button>
+                <div key={cls} className="relative group">
+                  <button onClick={() => setSelectedClass(cls)}
+                    className={`px-2 py-1 rounded text-xs transition-all pr-4 ${selectedClass === cls ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    {cls}
+                  </button>
+                  <div className="absolute right-0 top-0 hidden group-hover:flex items-center gap-0.5">
+                    <button onClick={(e) => { e.stopPropagation(); setEditingClass(cls); setEditingClassName(cls); }}
+                      className="p-0.5 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-500" title="重命名">
+                      <Edit className="h-2.5 w-2.5" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); if (confirm(`确定删除班级「${cls}」？班级内学员也将被删除`)) { removeClassFromCourse(selectedCourseId, cls); loadData(); if (selectedClass === cls) setSelectedClass('all'); } }}
+                      className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500" title="删除">
+                      <Trash2 className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                </div>
               ))}
+              <button onClick={() => setShowCreateClass(true)}
+                className="px-1.5 py-1 rounded text-xs text-blue-500 hover:bg-blue-50 transition-all flex items-center gap-0.5">
+                <Plus className="h-3 w-3" /> 班级
+              </button>
             </div>
           </div>
 
@@ -639,7 +664,12 @@ export default function HomePage() {
             </div>
             <div>
               <Label className="text-xs text-gray-500">班级</Label>
-              <Input value={newClassName} onChange={(e) => setNewClassName(e.target.value)} placeholder="所在班级" className="mt-1 h-8 text-sm" />
+              <Select value={newClassName} onValueChange={setNewClassName}>
+                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="选择或输入班级" /></SelectTrigger>
+                <SelectContent>
+                  {classList.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs text-gray-500">备注</Label>
@@ -669,6 +699,63 @@ export default function HomePage() {
               确认导入
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Class Dialog */}
+      <Dialog open={showCreateClass} onOpenChange={(open) => {
+        setShowCreateClass(open);
+        if (!open) setCreateClass('');
+      }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>创建新班级</DialogTitle>
+            <DialogDescription>在「{courses.find(c => c.id === selectedCourseId)?.name}」课程下创建班级</DialogDescription>
+          </DialogHeader>
+          <div className="py-3">
+            <Label className="text-sm font-medium text-gray-700">班级名称</Label>
+            <Input value={createClass} onChange={(e) => setCreateClass(e.target.value)}
+              placeholder="例如：周六班、提高班" className="mt-1.5" autoFocus />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowCreateClass(false); setCreateClass(''); }}>取消</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => {
+              if (createClass.trim()) {
+                addClassToCourse(selectedCourseId, createClass.trim());
+                setShowCreateClass(false);
+                setCreateClass('');
+                loadData();
+              }
+            }} disabled={!createClass.trim()}>创建</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Class Dialog */}
+      <Dialog open={!!editingClass} onOpenChange={(open) => {
+        if (!open) { setEditingClass(null); setEditingClassName(''); }
+      }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>重命名班级</DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <Label className="text-sm font-medium text-gray-700">新名称</Label>
+            <Input value={editingClassName} onChange={(e) => setEditingClassName(e.target.value)}
+              placeholder="输入新的班级名称" className="mt-1.5" autoFocus />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditingClass(null); setEditingClassName(''); }}>取消</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => {
+              if (editingClass && editingClassName.trim()) {
+                renameClassInCourse(selectedCourseId, editingClass, editingClassName.trim());
+                setEditingClass(null);
+                setEditingClassName('');
+                if (selectedClass === editingClass) setSelectedClass(editingClassName.trim());
+                loadData();
+              }
+            }} disabled={!editingClassName.trim()}>确定</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

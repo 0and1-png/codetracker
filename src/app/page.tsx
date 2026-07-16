@@ -47,7 +47,7 @@ import {
   calcHomeworkSummary, calcKnowledgeMastery, getMonthRange, getPreviousMonthRange,
   getRecordsInPeriod,
 } from '@/lib/analytics';
-import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS } from '@/lib/constants';
+import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS, getGespLevelsByCourse } from '@/lib/constants';
 
 type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'honor';
 
@@ -400,9 +400,11 @@ function CompetitionTab({ selectedStudentIds, students, selectedCourseId }: { se
 // ==================== 荣誉 Tab 组件 ====================
 function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
   const [honorType, setHonorType] = useState<'exam' | 'competition'>('exam');
-  const [examLevel, setExamLevel] = useState(1);
-  const [honorTitle, setHonorTitle] = useState('');
+  const [uploadLevel, setUploadLevel] = useState<number | null>(null);
+  const [uploadStudentId, setUploadStudentId] = useState<string>('');
   const [certificateImg, setCertificateImg] = useState('');
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+
   const todayStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -410,7 +412,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   const [honorDate, setHonorDate] = useState(todayStr);
 
   const isVisual = selectedCourseId === 'course_visual';
-  const maxLevel = isVisual ? 6 : 8;
+  const levels = getGespLevelsByCourse(selectedCourseId);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -422,21 +424,27 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
     reader.readAsDataURL(file);
   };
 
-  const handleSaveHonor = useCallback((studentId: string) => {
+  const handleConfirmUpload = useCallback(() => {
+    if (!uploadStudentId || uploadLevel === null) return;
+    const levelDef = levels.find(l => l.level === uploadLevel);
+    if (!levelDef) return;
     const record: HonorRecord = {
-      id: `honor_${studentId}_${Date.now()}`,
-      studentId,
+      id: `honor_${uploadStudentId}_${uploadLevel}_${Date.now()}`,
+      studentId: uploadStudentId,
       courseId: selectedCourseId,
       type: honorType,
-      title: honorType === 'exam' ? `GESP ${selectedCourseId === 'course_cpp' ? 'C++' : selectedCourseId === 'course_python' ? 'Python' : '图形化'} ${examLevel}级` : honorTitle,
-      level: honorType === 'exam' ? examLevel : undefined,
+      title: honorType === 'exam' ? levelDef.name : levelDef.name,
+      level: uploadLevel,
       achievedDate: honorDate,
       certificateUrl: certificateImg || undefined,
       createdAt: new Date().toISOString(),
     };
     saveHonorRecord(record);
     setCertificateImg('');
-  }, [honorType, selectedCourseId, examLevel, honorTitle, honorDate, certificateImg]);
+    setShowUploadDialog(false);
+    setUploadLevel(null);
+    setUploadStudentId('');
+  }, [uploadStudentId, uploadLevel, levels, honorType, selectedCourseId, honorDate, certificateImg]);
 
   // 获取学员已有荣誉
   const getStudentHonors = (studentId: string) => {
@@ -448,6 +456,19 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
     return honors.some(h => h.type === 'exam' && (h.level || 0) >= level);
   };
 
+  // 获取某级别的证书图片
+  const getLevelCertificate = (honors: HonorRecord[], level: number) => {
+    const honor = honors.find(h => h.type === 'exam' && h.level === level);
+    return honor?.certificateUrl || null;
+  };
+
+  // 获取已通过的最高级别
+  const getHighestPassedLevel = (honors: HonorRecord[]) => {
+    const examHonors = honors.filter(h => h.type === 'exam');
+    if (examHonors.length === 0) return 0;
+    return Math.max(...examHonors.map(h => h.level || 0));
+  };
+
   const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
 
   if (selectedStudents.length === 0) {
@@ -455,104 +476,150 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   }
 
   return (
-    <div className="space-y-4">
-      {/* 添加荣誉 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-center gap-4">
-          <div>
-            <Label className="text-xs text-gray-500">类型</Label>
-            <Select value={honorType} onValueChange={v => setHonorType(v as 'exam' | 'competition')}>
-              <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="exam">考级</SelectItem>
-                <SelectItem value="competition">赛事</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {honorType === 'exam' ? (
-            <div>
-              <Label className="text-xs text-gray-500">级别</Label>
-              <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
-                <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: maxLevel }, (_, i) => i + 1).map(l => (
-                    <SelectItem key={l} value={String(l)}>{l}级</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <div className="flex-1">
-              <Label className="text-xs text-gray-500">赛事名称</Label>
-              <Input value={honorTitle} onChange={e => setHonorTitle(e.target.value)} placeholder="赛事名称" className="mt-1 h-8 text-sm" />
-            </div>
-          )}
-          <div>
-            <Label className="text-xs text-gray-500">获得日期</Label>
-            <Input type="date" value={honorDate} onChange={e => setHonorDate(e.target.value)} className="mt-1 h-8 text-sm w-36" />
-          </div>
-          <div>
-            <Label className="text-xs text-gray-500">证书图片</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs text-gray-600 hover:bg-gray-50">
-                <Upload className="w-3.5 h-3.5" />
-                上传证书
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-              </label>
-              {certificateImg && <span className="text-xs text-green-600">已选择</span>}
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* 类型切换 */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setHonorType('exam')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            honorType === 'exam'
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+        >
+          考级
+        </button>
+        <button
+          onClick={() => setHonorType('competition')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            honorType === 'competition'
+              ? 'bg-purple-500 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+        >
+          赛事
+        </button>
       </div>
 
-      {/* 学员荣誉列表 */}
+      {/* 学员列表 */}
       {selectedStudents.map(student => {
         const honors = getStudentHonors(student.id);
+        const highestPassed = getHighestPassedLevel(honors);
+
         return (
-          <div key={student.id} className="border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-medium text-sm text-gray-800">{student.name}</span>
-              <Button size="sm" onClick={() => handleSaveHonor(student.id)} disabled={!honorDate}>添加荣誉</Button>
+          <div key={student.id} className="border border-gray-200 rounded-xl overflow-hidden">
+            {/* 学员标题 */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-100">
+              <span className="text-sm font-semibold text-blue-800">{student.name}</span>
+              {highestPassed > 0 && (
+                <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                  已通过 {highestPassed} 级
+                </span>
+              )}
             </div>
-            {honors.length === 0 ? (
-              <div className="text-xs text-gray-400">暂无荣誉记录</div>
-            ) : (
-              <div className="space-y-2">
-                {/* 考级荣誉 */}
-                {honorType === 'exam' && (
-                  <div>
-                    <div className="text-xs text-gray-500 mb-1">考级进度</div>
-                    <div className="flex gap-2 flex-wrap">
-                      {Array.from({ length: maxLevel }, (_, i) => i + 1).map(level => {
-                        const passed = isLevelPassed(honors, level);
-                        return (
-                          <div key={level} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                            passed ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-200'
-                          }`}>
-                            {level}级 {passed && '✓'}
-                          </div>
-                        );
-                      })}
+
+            {/* 级别列表 */}
+            <div className="p-3 space-y-2">
+              {levels.map((levelDef) => {
+                const passed = isLevelPassed(honors, levelDef.level);
+                const certImg = getLevelCertificate(honors, levelDef.level);
+
+                return (
+                  <div
+                    key={levelDef.level}
+                    onClick={() => {
+                      setUploadStudentId(student.id);
+                      setUploadLevel(levelDef.level);
+                      setShowUploadDialog(true);
+                    }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 ${
+                      passed
+                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
+                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                    }`}
+                  >
+                    {/* 级别编号圆圈 */}
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      passed
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {passed ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : levelDef.level}
                     </div>
+                    {/* 级别信息 */}
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-xs font-medium ${passed ? 'text-green-800' : 'text-gray-700'}`}>
+                        {levelDef.name}
+                      </div>
+                      <div className={`text-[10px] ${passed ? 'text-green-600' : 'text-gray-400'}`}>
+                        {levelDef.desc}
+                      </div>
+                    </div>
+                    {/* 证书缩略图 */}
+                    {certImg && (
+                      <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
+                        <img src={certImg} alt="证书" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    {/* 上传提示 */}
+                    {!certImg && (
+                      <div className={`text-[10px] shrink-0 ${passed ? 'text-green-500' : 'text-gray-300'}`}>
+                        {passed ? '已上传' : '点击上传'}
+                      </div>
+                    )}
                   </div>
-                )}
-                {/* 所有荣誉列表 */}
-                <div className="space-y-1">
-                  {honors.map(h => (
-                    <div key={h.id} className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-0.5 rounded ${h.type === 'exam' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                        {h.type === 'exam' ? '考级' : '赛事'}
-                      </span>
-                      <span className="text-gray-700">{h.title}</span>
-                      <span className="text-gray-400">{h.achievedDate}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
         );
       })}
+
+      {/* 上传证书对话框 */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              上传证书 - {levels.find(l => l.level === uploadLevel)?.name || ''}
+            </DialogTitle>
+            <DialogDescription>
+              为学员 {students.find(s => s.id === uploadStudentId)?.name || ''} 上传证书照片
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs text-gray-500">获得日期</Label>
+              <Input type="date" value={honorDate} onChange={e => setHonorDate(e.target.value)} className="mt-1 h-9 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-500">证书图片</Label>
+              <div className="mt-2">
+                {certificateImg ? (
+                  <div className="relative">
+                    <img src={certificateImg} alt="证书预览" className="w-full h-48 object-contain rounded-lg border border-gray-200 bg-gray-50" />
+                    <button
+                      onClick={() => setCertificateImg('')}
+                      className="absolute top-2 right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-xs text-gray-500">点击上传证书图片</span>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowUploadDialog(false); setCertificateImg(''); }}>取消</Button>
+            <Button onClick={handleConfirmUpload} disabled={!certificateImg}>确认上传</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

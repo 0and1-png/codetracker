@@ -22,8 +22,9 @@ import {
   saveSprintGoal,
   addCompetition,
   removeCompetition,
+  getHonorRecordsByStudent,
 } from '@/lib/store';
-import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel } from '@/lib/types';
+import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
 import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS, getGespLevelsByCourse } from '@/lib/constants';
 import type { GESPLlevelDef } from '@/lib/constants';
@@ -91,6 +92,9 @@ export default function ReportPage() {
   const [courseGespLevels, setCourseGespLevels] = useState<GESPLlevelDef[]>([]);
   const [showAllGesp, setShowAllGesp] = useState(false);
   const [showAllCompetitions, setShowAllCompetitions] = useState(false);
+  
+  // 荣誉证书
+  const [honorRecords, setHonorRecords] = useState<HonorRecord[]>([]);
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -400,6 +404,8 @@ export default function ReportPage() {
     if (!student) return;
     // Load competitions
     setAllCompetitions(getAllCompetitions());
+    // Load honor records
+    setHonorRecords(getHonorRecordsByStudent(student.id));
     // Set course-specific GESP levels
     if (course) {
       setCourseGespLevels(getGespLevelsByCourse(course.id));
@@ -2361,27 +2367,48 @@ export default function ReportPage() {
                         {/* 无选择时：显示全部可选 */}
                         {sprintGespLevels.length === 0 ? (
                           <div className="space-y-2">
-                            {courseGespLevels.map((gesp) => (
-                              <button
-                                key={gesp.level}
-                                onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
-                              >
-                                <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
-                                  {gesp.level}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-xs font-medium">{gesp.name}</div>
-                                  <div className="text-[10px] text-gray-400">{gesp.desc}</div>
-                                </div>
-                              </button>
-                            ))}
+                            {courseGespLevels.map((gesp) => {
+                              const hasCertificate = honorRecords.some(h => h.type === 'exam' && h.level === gesp.level && h.certificateUrl);
+                              const certUrl = honorRecords.find(h => h.type === 'exam' && h.level === gesp.level && h.certificateUrl)?.certificateUrl;
+                              const isPassed = honorRecords.some(h => h.type === 'exam' && (h.level || 0) >= gesp.level);
+                              return (
+                                <button
+                                  key={gesp.level}
+                                  onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
+                                    isPassed
+                                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                                  }`}
+                                >
+                                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                    isPassed ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                    {isPassed ? <Check className="h-3 w-3" strokeWidth={2.5} /> : gesp.level}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-xs font-medium ${isPassed ? 'text-green-800' : ''}`}>{gesp.name}</div>
+                                    <div className={`text-[10px] ${isPassed ? 'text-green-600' : 'text-gray-400'}`}>{gesp.desc}</div>
+                                  </div>
+                                  {certUrl && (
+                                    <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
+                                      <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                  {hasCertificate && !certUrl && (
+                                    <span className="text-[10px] text-green-500 shrink-0">已上传</span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         ) : showAllGesp ? (
                           /* 有选择 + 显示全部模式 */
                           <div className="space-y-2">
                             {courseGespLevels.map((gesp) => {
                               const isSelected = sprintGespLevels.includes(gesp.level as GESPLlevel);
+                              const certUrl = honorRecords.find(h => h.type === 'exam' && h.level === gesp.level && h.certificateUrl)?.certificateUrl;
+                              const isPassed = honorRecords.some(h => h.type === 'exam' && (h.level || 0) >= gesp.level);
                               return (
                                 <button
                                   key={gesp.level}
@@ -2389,18 +2416,25 @@ export default function ReportPage() {
                                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all duration-200 border ${
                                     isSelected
                                       ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-400 shadow-md shadow-blue-200/50'
-                                      : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 opacity-60'
+                                      : isPassed
+                                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
+                                        : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 opacity-60'
                                   }`}
                                 >
-                                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                    isSelected ? 'bg-white/20' : 'bg-gray-100'
+                                  <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                    isSelected ? 'bg-white/20' : isPassed ? 'bg-green-500 text-white' : 'bg-gray-100'
                                   }`}>
-                                    {isSelected ? <Check className="h-3 w-3" strokeWidth={2} /> : gesp.level}
+                                    {isSelected ? <Check className="h-3 w-3" strokeWidth={2} /> : isPassed ? <Check className="h-3 w-3" strokeWidth={2.5} /> : gesp.level}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="text-xs font-medium">{gesp.name}</div>
-                                    <div className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>{gesp.desc}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-xs font-medium ${isSelected ? '' : isPassed ? 'text-green-800' : ''}`}>{gesp.name}</div>
+                                    <div className={`text-[10px] ${isSelected ? 'text-blue-100' : isPassed ? 'text-green-600' : 'text-gray-400'}`}>{gesp.desc}</div>
                                   </div>
+                                  {certUrl && (
+                                    <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
+                                      <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
                                 </button>
                               );
                             })}
@@ -2410,21 +2444,29 @@ export default function ReportPage() {
                           <div className="space-y-2">
                             {courseGespLevels
                               .filter(g => sprintGespLevels.includes(g.level as GESPLlevel))
-                              .map(gesp => (
-                                <div key={gesp.level} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
-                                  <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">{gesp.level}</div>
-                                  <div className="flex-1">
-                                    <div className="text-xs font-medium">{gesp.name}</div>
-                                    <div className="text-[10px] text-blue-100">{gesp.desc}</div>
+                              .map(gesp => {
+                                const certUrl = honorRecords.find(h => h.type === 'exam' && h.level === gesp.level && h.certificateUrl)?.certificateUrl;
+                                return (
+                                  <div key={gesp.level} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
+                                    <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold shrink-0">{gesp.level}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-medium">{gesp.name}</div>
+                                      <div className="text-[10px] text-blue-100">{gesp.desc}</div>
+                                    </div>
+                                    {certUrl && (
+                                      <div className="h-8 w-12 rounded overflow-hidden border border-white/30 shrink-0">
+                                        <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                      </div>
+                                    )}
+                                    <button
+                                      onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
+                                      className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
                                   </div>
-                                  <button
-                                    onClick={() => toggleGespLevel(gesp.level as GESPLlevel)}
-                                    className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              ))}
+                                );
+                              })}
                           </div>
                         )}
                       </div>
@@ -2501,6 +2543,7 @@ export default function ReportPage() {
                           <div className="space-y-2">
                             {allCompetitions.map((comp) => {
                               const isCustom = comp.id.startsWith('comp_custom_');
+                              const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
                               return (
                                 <div
                                   key={comp.id}
@@ -2512,6 +2555,11 @@ export default function ReportPage() {
                                     <div className="text-xs font-medium truncate">{comp.name}</div>
                                     <div className="text-[10px] text-gray-400 truncate">{comp.category}</div>
                                   </div>
+                                  {certUrl && (
+                                    <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
+                                      <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
                                   {isCustom && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
@@ -2530,6 +2578,7 @@ export default function ReportPage() {
                             {allCompetitions.map((comp) => {
                               const isSelected = sprintCompetitionIds.includes(comp.id);
                               const isCustom = comp.id.startsWith('comp_custom_');
+                              const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
                               return (
                                 <div
                                   key={comp.id}
@@ -2549,6 +2598,11 @@ export default function ReportPage() {
                                     <div className="text-xs font-medium truncate">{comp.name}</div>
                                     <div className={`text-[10px] truncate ${isSelected ? 'text-purple-100' : 'text-gray-400'}`}>{comp.category}</div>
                                   </div>
+                                  {certUrl && (
+                                    <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
+                                      <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
                                   {isCustom && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleRemoveCompetition(comp.id); }}
@@ -2570,6 +2624,7 @@ export default function ReportPage() {
                               .filter(c => sprintCompetitionIds.includes(c.id))
                               .map(comp => {
                                 const isCustom = comp.id.startsWith('comp_custom_');
+                                const certUrl = honorRecords.find(h => h.type === 'competition' && h.title === comp.name && h.certificateUrl)?.certificateUrl;
                                 return (
                                   <div key={comp.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-sm">
                                     <Trophy className="h-4 w-4 shrink-0" strokeWidth={1.5} />
@@ -2577,6 +2632,11 @@ export default function ReportPage() {
                                       <div className="text-xs font-medium truncate">{comp.name}</div>
                                       <div className="text-[10px] text-purple-100 truncate">{comp.category}{comp.date ? ` · ${comp.date}` : ''}</div>
                                     </div>
+                                    {certUrl && (
+                                      <div className="h-8 w-12 rounded overflow-hidden border border-white/30 shrink-0">
+                                        <img src={certUrl} alt="证书" className="w-full h-full object-cover" />
+                                      </div>
+                                    )}
                                     <button
                                       onClick={() => toggleCompetition(comp.id)}
                                       className="h-5 w-5 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0"

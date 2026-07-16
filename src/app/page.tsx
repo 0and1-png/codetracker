@@ -41,6 +41,7 @@ import {
   getCourses as getCoursesForUpdate,
   addClassToCourse, removeClassFromCourse, renameClassInCourse, getCourseClasses,
   saveExamRecord, saveCompetitionRecord, saveHonorRecord, getHonorRecordsByStudent,
+  getExamRecordsByStudent,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -87,12 +88,14 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
   // 4套试卷: 3月/6月/9月/12月
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
   const [wrongNoteMap, setWrongNoteMap] = useState<Record<string, Record<number, string>>>({});
+  // 记录每个学员每套试卷的完成状态
+  const [completedSets, setCompletedSets] = useState<Record<string, Set<number>>>({});
 
   const isVisual = selectedCourseId === 'course_visual';
   const totalQuestions = isVisual ? 17 : 27;
   const months = [3, 6, 9, 12];
 
-  // 初始化4套试卷
+  // 加载已有考级记录
   useEffect(() => {
     const sets: ExamSet[] = months.map((m, idx) => {
       const results: ExamQuestionResult[] = [];
@@ -106,9 +109,37 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
         results,
       };
     });
+
+    // 加载每个学员的已有记录
+    const newCompleted: Record<string, Set<number>> = {};
+    selectedStudentIds.forEach(studentId => {
+      const records = getExamRecordsByStudent(studentId);
+      const studentRecords = records.filter(r => r.courseId === selectedCourseId && r.level === examLevel && r.examDate.startsWith(`${activeYear}年`));
+      const completed = new Set<number>();
+      studentRecords.forEach(record => {
+        const month = parseInt(record.examDate.replace(`${activeYear}年`, '').replace('月', ''));
+        const setIdx = months.indexOf(month);
+        if (setIdx >= 0) {
+          completed.add(setIdx);
+          // 恢复试卷结果
+          sets[setIdx].results = record.results;
+          // 恢复错题笔记
+          const key = `${activeYear}_${setIdx}`;
+          const notes: Record<number, string> = {};
+          record.results.forEach(r => {
+            if (r.note) {
+              notes[r.questionIndex - 1] = r.note;
+            }
+          });
+          setWrongNoteMap(prev => ({ ...prev, [key]: { ...(prev[key] || {}), ...notes } }));
+        }
+      });
+      newCompleted[studentId] = completed;
+    });
+
     setExamSets(sets);
-    setWrongNoteMap({});
-  }, [activeYear, examLevel, totalQuestions]); // eslint-disable-line react-hooks/exhaustive-deps
+    setCompletedSets(newCompleted);
+  }, [activeYear, examLevel, totalQuestions, selectedStudentIds, selectedCourseId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 年份下拉选项（2020-2030）
   const allYears = Array.from({ length: 11 }, (_, i) => 2020 + i);
@@ -156,6 +187,13 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
       createdAt: new Date().toISOString(),
     };
     saveExamRecord(record);
+    // 更新完成状态
+    setCompletedSets(prev => {
+      const studentCompleted = prev[studentId] || new Set();
+      const newCompleted = new Set(studentCompleted);
+      newCompleted.add(setIdx);
+      return { ...prev, [studentId]: newCompleted };
+    });
   }, [examSets, examLevel, selectedCourseId, totalQuestions, wrongNoteMap, activeYear]);
 
   const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
@@ -256,13 +294,21 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
 
                 {/* 学员保存按钮 */}
                 <div className="border-t border-gray-100 pt-2 space-y-1.5">
-                  {selectedStudents.map(student => (
-                    <div key={student.id} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700">{student.name}</span>
-                      <Button size="sm" onClick={() => handleSaveExam(student.id, setIdx)}
-                        className="bg-blue-500 hover:bg-blue-600 h-7 text-xs px-3">保存</Button>
-                    </div>
-                  ))}
+                  {selectedStudents.map(student => {
+                    const isCompleted = completedSets[student.id]?.has(setIdx) || false;
+                    return (
+                      <div key={student.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700">{student.name}</span>
+                          {isCompleted && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">已完成</span>}
+                        </div>
+                        <Button size="sm" onClick={() => handleSaveExam(student.id, setIdx)}
+                          className={`h-7 text-xs px-3 ${isCompleted ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                          {isCompleted ? '重新保存' : '保存'}
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

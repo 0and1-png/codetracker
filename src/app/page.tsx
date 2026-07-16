@@ -519,52 +519,51 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
             </div>
 
             {/* 级别列表 */}
-            <div className="p-3 space-y-2">
+            <div className="p-3 space-y-3">
               {levels.map((levelDef) => {
                 const passed = isLevelPassed(honors, levelDef.level);
                 const certImg = getLevelCertificate(honors, levelDef.level);
 
                 return (
-                  <div
-                    key={levelDef.level}
-                    onClick={() => {
-                      setUploadStudentId(student.id);
-                      setUploadLevel(levelDef.level);
-                      setShowUploadDialog(true);
-                    }}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 ${
-                      passed
-                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
-                        : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                    }`}
-                  >
-                    {/* 级别编号圆圈 */}
-                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      passed
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {passed ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : levelDef.level}
-                    </div>
-                    {/* 级别信息 */}
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-xs font-medium ${passed ? 'text-green-800' : 'text-gray-700'}`}>
-                        {levelDef.name}
+                  <div key={levelDef.level}>
+                    <div
+                      onClick={() => {
+                        setUploadStudentId(student.id);
+                        setUploadLevel(levelDef.level);
+                        setShowUploadDialog(true);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-all duration-200 ${
+                        passed
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:border-green-300'
+                          : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                      }`}
+                    >
+                      {/* 级别编号圆圈 */}
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        passed
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {passed ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : levelDef.level}
                       </div>
-                      <div className={`text-[10px] ${passed ? 'text-green-600' : 'text-gray-400'}`}>
-                        {levelDef.desc}
+                      {/* 级别信息 */}
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-xs font-medium ${passed ? 'text-green-800' : 'text-gray-700'}`}>
+                          {levelDef.name}
+                        </div>
+                        <div className={`text-[10px] ${passed ? 'text-green-600' : 'text-gray-400'}`}>
+                          {levelDef.desc}
+                        </div>
                       </div>
-                    </div>
-                    {/* 证书缩略图 */}
-                    {certImg && (
-                      <div className="h-8 w-12 rounded overflow-hidden border border-gray-200 shrink-0">
-                        <img src={certImg} alt="证书" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    {/* 上传提示 */}
-                    {!certImg && (
+                      {/* 上传提示 */}
                       <div className={`text-[10px] shrink-0 ${passed ? 'text-green-500' : 'text-gray-300'}`}>
-                        {passed ? '已上传' : '点击上传'}
+                        {certImg ? '查看证书' : passed ? '已上传' : '点击上传'}
+                      </div>
+                    </div>
+                    {/* 证书大图展示 */}
+                    {certImg && (
+                      <div className="mt-2 ml-10 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50">
+                        <img src={certImg} alt={`${levelDef.name}证书`} className="w-full max-h-64 object-contain" />
                       </div>
                     )}
                   </div>

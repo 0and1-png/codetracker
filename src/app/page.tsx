@@ -1164,6 +1164,10 @@ export default function HomePage() {
   const handleAddStudent = () => {
     if (!newName.trim() || !newCourseId) return;
     const classToUse = newClassName.trim() || (selectedClass !== 'all' ? selectedClass : undefined);
+    // Add class to course if it doesn't exist
+    if (classToUse) {
+      addClassToCourse(newCourseId, classToUse);
+    }
     addStudent({
       id: uuidv4(), name: newName.trim(), courseId: newCourseId,
       className: classToUse || undefined,
@@ -1692,12 +1696,25 @@ export default function HomePage() {
             </div>
             <div>
               <Label className="text-xs text-gray-500">班级</Label>
-              <Select value={newClassName} onValueChange={setNewClassName}>
-                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="选择或输入班级" /></SelectTrigger>
-                <SelectContent>
-                  {classList.map(cls => <SelectItem key={cls} value={cls}>{cls}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 mt-1">
+                <Select value={newClassName} onValueChange={setNewClassName}>
+                  <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="选择班级" /></SelectTrigger>
+                  <SelectContent>
+                    {[...getCourseClasses(newCourseId)].sort().map(cls => (
+                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => {
+                  const name = prompt('请输入新班级名称');
+                  if (name && name.trim()) {
+                    addClassToCourse(newCourseId, name.trim());
+                    setNewClassName(name.trim());
+                  }
+                }}>
+                  <Plus className="h-3 w-3 mr-1" />新增
+                </Button>
+              </div>
             </div>
             <div>
               <Label className="text-xs text-gray-500">备注</Label>

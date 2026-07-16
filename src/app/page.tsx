@@ -80,7 +80,8 @@ interface ExamSet {
 }
 
 function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
-  const [examYears, setExamYears] = useState<number[]>([new Date().getFullYear()]);
+  // 年份选项：2020-2030
+  const yearOptions = Array.from({ length: 11 }, (_, i) => 2020 + i);
   const [activeYear, setActiveYear] = useState<number>(new Date().getFullYear());
   const [examLevel, setExamLevel] = useState(1);
   // 4套试卷: 3月/6月/9月/12月
@@ -109,13 +110,8 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
     setWrongNoteMap({});
   }, [activeYear, examLevel, totalQuestions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 添加年份
-  const addYear = useCallback(() => {
-    const maxYear = Math.max(...examYears);
-    const newYear = maxYear + 1;
-    setExamYears(prev => [...prev, newYear]);
-    setActiveYear(newYear);
-  }, [examYears]);
+  // 年份下拉选项（2020-2030）
+  const allYears = Array.from({ length: 11 }, (_, i) => 2020 + i);
 
   // 切换对错
   const toggleQuestion = useCallback((setIdx: number, qIdx: number) => {
@@ -173,18 +169,12 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
       <div className="flex items-center gap-4 mb-4 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">年份</span>
-          {examYears.map(y => (
-            <button key={y} onClick={() => setActiveYear(y)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                y === activeYear ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}>
-              {y}年
-            </button>
-          ))}
-          <button onClick={addYear}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> 添加年份
-          </button>
+          <select value={activeYear} onChange={e => setActiveYear(Number(e.target.value))}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {allYears.map(y => (
+              <option key={y} value={y}>{y}年</option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">级别</span>

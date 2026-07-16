@@ -2415,13 +2415,20 @@ export default function ReportPage() {
                                       <div className="text-gray-600 mt-0.5">{codeCorrect}/{codeQ}</div>
                                     </div>
                                   </div>
-                                  {record.results.some(r => r.note) && (
+                                  {record.results.some(r => !r.isCorrect) && (
                                     <div className="mt-2 pt-2 border-t border-gray-100">
-                                      <div className="text-xs text-gray-500 mb-1">错题笔记：</div>
+                                      <div className="text-xs text-red-600 font-medium mb-1">错题详情：</div>
                                       <div className="space-y-1">
-                                        {record.results.filter(r => r.note).map((r) => (
-                                          <div key={r.questionIndex} className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
-                                            第{r.questionIndex}题：{r.note}
+                                        {record.results.filter(r => !r.isCorrect).map((r) => (
+                                          <div key={r.questionIndex} className="text-xs bg-red-50 px-2 py-1.5 rounded border border-red-100">
+                                            <div className="flex items-start gap-1.5">
+                                              <span className="text-red-600 font-medium shrink-0">第{r.questionIndex}题</span>
+                                              {r.note ? (
+                                                <span className="text-gray-700">错误原因：{r.note}</span>
+                                              ) : (
+                                                <span className="text-gray-400 italic">未填写错误原因</span>
+                                              )}
+                                            </div>
                                           </div>
                                         ))}
                                       </div>

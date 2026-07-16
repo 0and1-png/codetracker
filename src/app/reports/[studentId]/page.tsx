@@ -23,8 +23,9 @@ import {
   addCompetition,
   removeCompetition,
   getHonorRecordsByStudent,
+  getExamRecordsByStudent,
 } from '@/lib/store';
-import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord } from '@/lib/types';
+import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
 import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS, getGespLevelsByCourse } from '@/lib/constants';
 import type { GESPLlevelDef } from '@/lib/constants';
@@ -97,6 +98,9 @@ export default function ReportPage() {
   const [honorRecords, setHonorRecords] = useState<HonorRecord[]>([]);
   const [expandedGespLevel, setExpandedGespLevel] = useState<number | null>(null);
   const [expandedCompetitionId, setExpandedCompetitionId] = useState<string | null>(null);
+  
+  // 考级练习记录
+  const [examRecords, setExamRecords] = useState<ExamRecord[]>([]);
   
   // 新增：战码少年有话说
   const [studentWords, setStudentWords] = useState('');
@@ -408,6 +412,7 @@ export default function ReportPage() {
     setAllCompetitions(getAllCompetitions());
     // Load honor records
     setHonorRecords(getHonorRecordsByStudent(student.id));
+    setExamRecords(getExamRecordsByStudent(student.id));
     // Set course-specific GESP levels
     if (course) {
       setCourseGespLevels(getGespLevelsByCourse(course.id));
@@ -2347,6 +2352,88 @@ export default function ReportPage() {
                         />
                       </div>
                     </div>
+
+                    {/* 模块1.5：考级练习记录 */}
+                    {examRecords.length > 0 && (
+                      <div className="border border-purple-200/60 rounded-xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-purple-50 to-fuchsia-50 px-4 py-3 border-b border-purple-200/40">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="h-4 w-4 text-purple-600" strokeWidth={1.5} />
+                            <span className="text-sm font-semibold text-purple-800">考级练习记录</span>
+                            <span className="text-xs text-purple-600/70 ml-auto">共 {examRecords.length} 套练习</span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="space-y-3">
+                            {examRecords.map((record) => {
+                              const accuracy = record.totalQuestions > 0 ? Math.round((record.correctCount / record.totalQuestions) * 100) : 0;
+                              const isVisual = record.courseId === 'course_visual';
+                              const totalQ = isVisual ? 17 : 27;
+                              const choiceQ = isVisual ? 10 : 15;
+                              const judgeQ = isVisual ? 5 : 10;
+                              const codeQ = 2;
+                              
+                              // 计算各题型正确数
+                              const choiceResults = record.results.filter(r => r.questionIndex <= choiceQ);
+                              const judgeResults = record.results.filter(r => r.questionIndex > choiceQ && r.questionIndex <= choiceQ + judgeQ);
+                              const codeResults = record.results.filter(r => r.questionIndex > choiceQ + judgeQ);
+                              
+                              const choiceCorrect = choiceResults.filter(r => r.isCorrect).length;
+                              const judgeCorrect = judgeResults.filter(r => r.isCorrect).length;
+                              const codeCorrect = codeResults.filter(r => r.isCorrect).length;
+                              
+                              return (
+                                <div key={record.id} className="rounded-lg border border-purple-100 bg-white p-3 hover:border-purple-300 transition-colors">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
+                                        GESP {record.courseId === 'course_cpp' ? 'C++' : record.courseId === 'course_python' ? 'Python' : '图形化'} {record.level}级
+                                      </span>
+                                      <span className="text-xs text-gray-500">{record.examDate}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                                        accuracy >= 80 ? 'bg-green-100 text-green-700' :
+                                        accuracy >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-red-100 text-red-700'
+                                      }`}>
+                                        正确率 {accuracy}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <div className="text-center p-2 rounded bg-blue-50">
+                                      <div className="text-blue-600 font-medium">选择题</div>
+                                      <div className="text-gray-600 mt-0.5">{choiceCorrect}/{choiceQ}</div>
+                                    </div>
+                                    <div className="text-center p-2 rounded bg-green-50">
+                                      <div className="text-green-600 font-medium">判断题</div>
+                                      <div className="text-gray-600 mt-0.5">{judgeCorrect}/{judgeQ}</div>
+                                    </div>
+                                    <div className="text-center p-2 rounded bg-purple-50">
+                                      <div className="text-purple-600 font-medium">编程题</div>
+                                      <div className="text-gray-600 mt-0.5">{codeCorrect}/{codeQ}</div>
+                                    </div>
+                                  </div>
+                                  {record.results.some(r => r.note) && (
+                                    <div className="mt-2 pt-2 border-t border-gray-100">
+                                      <div className="text-xs text-gray-500 mb-1">错题笔记：</div>
+                                      <div className="space-y-1">
+                                        {record.results.filter(r => r.note).map((r) => (
+                                          <div key={r.questionIndex} className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                                            第{r.questionIndex}题：{r.note}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* 模块2：GESP考级 */}
                     <div className="border border-blue-200/60 rounded-xl overflow-hidden">

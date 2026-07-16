@@ -178,14 +178,12 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700">级别</span>
-          {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
-            <button key={l} onClick={() => setExamLevel(l)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                l === examLevel ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}>
-              {l}级
-            </button>
-          ))}
+          <select value={examLevel} onChange={e => setExamLevel(Number(e.target.value))}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
+              <option key={l} value={l}>{l}级</option>
+            ))}
+          </select>
         </div>
         <div className="text-xs text-gray-400 ml-auto">
           选择题{isVisual ? 10 : 15}道 | 判断题{isVisual ? 5 : 10}道 | 编程题2道 | 共{totalQuestions}道
@@ -214,39 +212,47 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
                   </div>
                 </div>
 
-                {/* 题目网格 */}
-                <div className="space-y-2 mb-3">
-                  {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
-                    <div key={rowIdx} className="flex items-start gap-1">
-                      {set.results.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
-                        const idx = rowIdx * 10 + colIdx;
-                        const hasNote = notes[idx] || result.note;
-                        return (
-                          <div key={idx} className="flex flex-col items-center min-w-[36px]">
-                            <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
-                            <button
-                              onClick={() => toggleQuestion(setIdx, idx)}
-                              className={`w-7 h-7 rounded text-xs font-bold flex items-center justify-center transition-all border ${
-                                result.isCorrect
-                                  ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-                                  : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
-                              }`}>
-                              {result.isCorrect ? '✓' : '✗'}
-                            </button>
-                            {!result.isCorrect && (
-                              <input
-                                value={notes[idx] || ''}
-                                onChange={e => updateWrongNote(setIdx, idx, e.target.value)}
-                                placeholder="错因"
-                                className="mt-0.5 w-full h-5 text-[9px] px-0.5 rounded border border-gray-200 focus:border-blue-300 focus:outline-none text-center"
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
+                {/* 题目分组 */}
+                {(() => {
+                  const groups = isVisual
+                    ? [{ label: '选择题', start: 1, end: 10 }, { label: '判断题', start: 11, end: 15 }, { label: '编程题', start: 16, end: 17 }]
+                    : [{ label: '选择题', start: 1, end: 15 }, { label: '判断题', start: 16, end: 25 }, { label: '编程题', start: 26, end: 27 }];
+                  return groups.map(group => (
+                    <div key={group.label} className="mb-3">
+                      <div className="text-xs font-medium text-gray-500 mb-1.5">{group.label}（{group.start}-{group.end}）</div>
+                      <div className="flex flex-wrap gap-1">
+                        {Array.from({ length: group.end - group.start + 1 }, (_, i) => {
+                          const idx = group.start - 1 + i;
+                          const result = set.results[idx];
+                          if (!result) return null;
+                          const hasNote = notes[idx] || result.note;
+                          return (
+                            <div key={idx} className="flex flex-col items-center min-w-[32px]">
+                              <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
+                              <button
+                                onClick={() => toggleQuestion(setIdx, idx)}
+                                className={`w-7 h-7 rounded text-xs font-bold flex items-center justify-center transition-all border ${
+                                  result.isCorrect
+                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                    : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                                }`}>
+                                {result.isCorrect ? '✓' : '✗'}
+                              </button>
+                              {!result.isCorrect && (
+                                <input
+                                  value={notes[idx] || ''}
+                                  onChange={e => updateWrongNote(setIdx, idx, e.target.value)}
+                                  placeholder="错因"
+                                  className="mt-0.5 w-full h-5 text-[9px] px-0.5 rounded border border-gray-200 focus:border-blue-300 focus:outline-none text-center"
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  ));
+                })()}
 
                 {/* 学员保存按钮 */}
                 <div className="border-t border-gray-100 pt-2 space-y-1.5">
@@ -271,37 +277,57 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
 function CompetitionTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
   const [compName, setCompName] = useState('');
   const [compDate, setCompDate] = useState('');
-  const [totalQ, setTotalQ] = useState(10);
+  const [compItems, setCompItems] = useState<{ name: string; totalQ: number }[]>([{ name: '赛项1', totalQ: 10 }]);
+  const [activeItemIdx, setActiveItemIdx] = useState(0);
   const [compResults, setCompResults] = useState<CompetitionQuestionResult[]>([]);
 
+  const activeItem = compItems[activeItemIdx];
+
   useEffect(() => {
+    if (!activeItem) return;
     const results: CompetitionQuestionResult[] = [];
-    for (let i = 1; i <= totalQ; i++) {
+    for (let i = 1; i <= activeItem.totalQ; i++) {
       results.push({ questionIndex: i, isCorrect: true });
     }
     setCompResults(results);
-  }, [totalQ]);
+  }, [activeItem?.totalQ]);
 
   const toggleQuestion = (idx: number) => {
     setCompResults(prev => prev.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r));
   };
 
+  const addCompItem = () => {
+    setCompItems(prev => [...prev, { name: `赛项${prev.length + 1}`, totalQ: 10 }]);
+    setActiveItemIdx(compItems.length);
+  };
+
+  const removeCompItem = (idx: number) => {
+    if (compItems.length <= 1) return;
+    setCompItems(prev => prev.filter((_, i) => i !== idx));
+    setActiveItemIdx(Math.max(0, activeItemIdx - (idx < activeItemIdx ? 1 : 0)));
+  };
+
+  const updateCompItem = (idx: number, field: 'name' | 'totalQ', value: string | number) => {
+    setCompItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
+  };
+
   const handleSaveComp = useCallback((studentId: string) => {
+    if (!activeItem) return;
     const correctCount = compResults.filter(r => r.isCorrect).length;
     const record: CompetitionRecord = {
-      id: `comp_${studentId}_${compDate}_${Date.now()}`,
+      id: `comp_${studentId}_${compDate}_${activeItem.name}_${Date.now()}`,
       studentId,
       courseId: selectedCourseId,
-      competitionName: compName,
+      competitionName: `${compName} - ${activeItem.name}`,
       competitionDate: compDate,
-      totalQuestions: totalQ,
+      totalQuestions: activeItem.totalQ,
       correctCount,
-      wrongCount: totalQ - correctCount,
+      wrongCount: activeItem.totalQ - correctCount,
       results: compResults,
       createdAt: new Date().toISOString(),
     };
     saveCompetitionRecord(record);
-  }, [compResults, compDate, selectedCourseId, compName, totalQ]);
+  }, [compResults, compDate, selectedCourseId, compName, activeItem]);
 
   const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
 
@@ -320,20 +346,28 @@ function CompetitionTab({ selectedStudentIds, students, selectedCourseId }: { se
           <Label className="text-xs text-gray-500">赛事日期</Label>
           <Input type="date" value={compDate} onChange={e => setCompDate(e.target.value)} className="mt-1 h-8 text-sm w-36" />
         </div>
-        <div>
-          <Label className="text-xs text-gray-500">题目数</Label>
-          <Input type="number" value={totalQ} onChange={e => setTotalQ(Number(e.target.value))} className="mt-1 h-8 text-sm w-20" min={1} max={50} />
-        </div>
+      </div>
+
+      {/* 赛项管理 */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {compItems.map((item, idx) => (
+          <div key={idx} className={`flex items-center gap-1 px-2 py-1 rounded border ${idx === activeItemIdx ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'}`}>
+            <button onClick={() => setActiveItemIdx(idx)} className="text-xs font-medium text-gray-700 hover:text-blue-600">{item.name}</button>
+            <Input value={item.totalQ} onChange={e => updateCompItem(idx, 'totalQ', Number(e.target.value))} className="h-5 w-12 text-xs" min={1} max={50} type="number" />
+            {compItems.length > 1 && <button onClick={() => removeCompItem(idx)} className="text-red-400 hover:text-red-600 text-xs">×</button>}
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addCompItem} className="h-7 text-xs">+ 添加赛项</Button>
       </div>
 
       {selectedStudents.map(student => (
         <div key={student.id} className="border border-gray-200 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-medium text-sm text-gray-800">{student.name}</span>
+            <span className="font-medium text-sm text-gray-800">{student.name} {activeItem && <span className="text-xs text-gray-500">- {activeItem.name} ({activeItem.totalQ}题)</span>}</span>
             <Button size="sm" onClick={() => handleSaveComp(student.id)} disabled={!compName || !compDate}>保存记录</Button>
           </div>
           <div className="space-y-1">
-            {Array.from({ length: Math.ceil(totalQ / 10) }, (_, rowIdx) => (
+            {Array.from({ length: Math.ceil((activeItem?.totalQ || 0) / 10) }, (_, rowIdx) => (
               <div key={rowIdx} className="flex items-center gap-1">
                 <div className="flex gap-1 flex-wrap">
                   {compResults.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
@@ -368,6 +402,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   const [honorType, setHonorType] = useState<'exam' | 'competition'>('exam');
   const [examLevel, setExamLevel] = useState(1);
   const [honorTitle, setHonorTitle] = useState('');
+  const [certificateImg, setCertificateImg] = useState('');
   const todayStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -376,6 +411,16 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
 
   const isVisual = selectedCourseId === 'course_visual';
   const maxLevel = isVisual ? 6 : 8;
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setCertificateImg(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveHonor = useCallback((studentId: string) => {
     const record: HonorRecord = {
@@ -386,10 +431,12 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
       title: honorType === 'exam' ? `GESP ${selectedCourseId === 'course_cpp' ? 'C++' : selectedCourseId === 'course_python' ? 'Python' : '图形化'} ${examLevel}级` : honorTitle,
       level: honorType === 'exam' ? examLevel : undefined,
       achievedDate: honorDate,
+      certificateUrl: certificateImg || undefined,
       createdAt: new Date().toISOString(),
     };
     saveHonorRecord(record);
-  }, [honorType, selectedCourseId, examLevel, honorTitle, honorDate]);
+    setCertificateImg('');
+  }, [honorType, selectedCourseId, examLevel, honorTitle, honorDate, certificateImg]);
 
   // 获取学员已有荣誉
   const getStudentHonors = (studentId: string) => {
@@ -443,6 +490,17 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
           <div>
             <Label className="text-xs text-gray-500">获得日期</Label>
             <Input type="date" value={honorDate} onChange={e => setHonorDate(e.target.value)} className="mt-1 h-8 text-sm w-36" />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-500">证书图片</Label>
+            <div className="mt-1 flex items-center gap-2">
+              <label className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md text-xs text-gray-600 hover:bg-gray-50">
+                <Upload className="w-3.5 h-3.5" />
+                上传证书
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              </label>
+              {certificateImg && <span className="text-xs text-green-600">已选择</span>}
+            </div>
           </div>
         </div>
       </div>

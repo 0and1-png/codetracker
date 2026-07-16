@@ -7,7 +7,7 @@ import {
   Plus, Upload, Search, Trash2, FileText, Code2, Settings,
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
-  ChevronRight, ChevronLeft, Eye, EyeOff, Edit,
+  ChevronRight, ChevronLeft, Eye, EyeOff, Edit, Award,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -176,26 +176,26 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
       <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
         {examSets.map((set, idx) => (
           <button key={set.id} onClick={() => setActiveSetIdx(idx)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              idx === activeSetIdx ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              idx === activeSetIdx ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}>
             第{idx + 1}套 · GESP {set.level}级 · {set.examDate}
           </button>
         ))}
         <button onClick={addExamSet}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
-          <Plus className="w-3.5 h-3.5" /> 添加试卷
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-green-50 text-green-600 hover:bg-green-100 transition-all flex items-center gap-1">
+          <Plus className="w-4 h-4" /> 添加试卷
         </button>
       </div>
 
       {activeSet && (
         <>
           {/* 考级信息 */}
-          <div className="flex items-center gap-6 mb-4">
+          <div className="flex items-center gap-6 mb-5">
             <div>
               <Label className="text-xs text-gray-500 mb-1 block">考级级别</Label>
               <Select value={String(activeSet.level)} onValueChange={v => updateSet('level', Number(v))}>
-                <SelectTrigger className="h-9 w-28 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 w-32 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
                     <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
@@ -206,7 +206,7 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
             <div>
               <Label className="text-xs text-gray-500 mb-1 block">考级时间</Label>
               <Select value={activeSet.examDate} onValueChange={v => updateSet('examDate', v)}>
-                <SelectTrigger className="h-9 w-36 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 w-40 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {examDateOptions.map(opt => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
@@ -214,7 +214,7 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
                 </SelectContent>
               </Select>
             </div>
-            <div className="text-xs text-gray-400 ml-auto">
+            <div className="text-sm text-gray-400 ml-auto">
               选择题{isVisual ? 10 : 15}道 | 判断题{isVisual ? 5 : 10}道 | 编程题2道 | 共{totalQuestions}道
             </div>
           </div>
@@ -225,39 +225,39 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
               const correctCount = activeSet.results.filter(r => r.isCorrect).length;
               const wrongCount = totalQuestions - correctCount;
               return (
-                <div key={student.id} className="border border-gray-200 rounded-xl p-4 mb-4 bg-white">
-                  <div className="flex items-center justify-between mb-3">
+                <div key={student.id} className="border border-gray-200 rounded-xl p-5 mb-5 bg-white shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <span className="font-semibold text-base text-gray-800">{student.name}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                      <span className="font-bold text-lg text-gray-800">{student.name}</span>
+                      <span className="text-sm px-3 py-1 rounded-full bg-green-50 text-green-600 font-medium">
                         正确 {correctCount}/{totalQuestions}
                       </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+                      <span className="text-sm px-3 py-1 rounded-full bg-red-50 text-red-500 font-medium">
                         错误 {wrongCount}
                       </span>
                     </div>
                     <Button size="sm" onClick={() => handleSaveExam(student.id)} disabled={!activeSet.examDate}
-                      className="bg-blue-500 hover:bg-blue-600">保存记录</Button>
+                      className="bg-blue-500 hover:bg-blue-600 h-9 px-4">保存记录</Button>
                   </div>
 
-                  {/* 题目网格 - 每行10题 */}
-                  <div className="space-y-2">
+                  {/* 题目网格 - 每行10题，更大 */}
+                  <div className="space-y-3">
                     {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
-                      <div key={rowIdx} className="flex items-start gap-1">
+                      <div key={rowIdx} className="flex items-start gap-2">
                         {activeSet.results.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
                           const idx = rowIdx * 10 + colIdx;
                           const hasNote = wrongNoteMap[idx] || result.note;
                           return (
-                            <div key={idx} className="flex flex-col items-center min-w-[44px]">
-                              <span className="text-[11px] text-gray-400 mb-1">{result.questionIndex}</span>
+                            <div key={idx} className="flex flex-col items-center min-w-[56px]">
+                              <span className="text-xs text-gray-500 mb-1.5 font-medium">{result.questionIndex}</span>
                               <button
                                 onClick={() => toggleQuestion(idx)}
-                                className={`w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-all border-2 ${
+                                className={`w-11 h-11 rounded-xl text-base font-bold flex items-center justify-center transition-all border-2 ${
                                   result.isCorrect
-                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-                                    : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'
+                                    ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 shadow-sm'
+                                    : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100 shadow-sm'
                                 }`}>
-                                {result.isCorrect ? '✓' : ''}
+                                {result.isCorrect ? '✓' : '✗'}
                               </button>
                               {/* 错题备注输入 */}
                               {!result.isCorrect && (
@@ -265,11 +265,11 @@ function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedS
                                   value={wrongNoteMap[idx] || ''}
                                   onChange={e => updateWrongNote(idx, e.target.value)}
                                   placeholder="错因..."
-                                  className="mt-1 w-full h-6 text-[10px] px-1 rounded border border-gray-200 focus:border-blue-300 focus:outline-none text-center"
+                                  className="mt-1.5 w-full h-7 text-xs px-1.5 rounded-md border border-gray-200 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-100 text-center"
                                 />
                               )}
                               {hasNote && result.isCorrect && (
-                                <span className="text-[9px] text-amber-500 mt-0.5" title={hasNote}>注</span>
+                                <span className="text-[10px] text-amber-500 mt-1 font-medium" title={hasNote}>注</span>
                               )}
                             </div>
                           );
@@ -428,35 +428,38 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
   }
 
   return (
-    <div className="space-y-4">
-      {/* 添加荣誉 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-center gap-4">
+    <div className="space-y-6">
+      {/* 添加荣誉 - 高级感设计 */}
+      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-amber-800 mb-4 flex items-center gap-2">
+          <Award className="w-4 h-4" /> 添加荣誉记录
+        </h3>
+        <div className="flex items-end gap-4 flex-wrap">
           <div>
-            <Label className="text-xs text-gray-500">类型</Label>
+            <Label className="text-xs text-gray-500 mb-1.5 block">荣誉类型</Label>
             <Select value={honorType} onValueChange={v => setHonorType(v as 'exam' | 'competition')}>
-              <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 w-28 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="exam">考级</SelectItem>
-                <SelectItem value="competition">赛事</SelectItem>
+                <SelectItem value="exam">🏆 考级</SelectItem>
+                <SelectItem value="competition">🎯 赛事</SelectItem>
               </SelectContent>
             </Select>
           </div>
           {honorType === 'exam' ? (
             <div>
-              <Label className="text-xs text-gray-500">级别</Label>
+              <Label className="text-xs text-gray-500 mb-1.5 block">考级级别</Label>
               <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
-                <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-10 w-28 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Array.from({ length: maxLevel }, (_, i) => i + 1).map(l => (
-                    <SelectItem key={l} value={String(l)}>{l}级</SelectItem>
+                    <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           ) : (
-            <div className="flex-1">
-              <Label className="text-xs text-gray-500">赛事名称</Label>
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs text-gray-500 mb-1.5 block">赛事名称</Label>
               <Input value={honorTitle} onChange={e => setHonorTitle(e.target.value)} placeholder="赛事名称" className="mt-1 h-8 text-sm" />
             </div>
           )}
@@ -488,10 +491,12 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                       {Array.from({ length: maxLevel }, (_, i) => i + 1).map(level => {
                         const passed = isLevelPassed(honors, level);
                         return (
-                          <div key={level} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                            passed ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-200'
+                          <div key={level} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            passed
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-white shadow-md border border-amber-300'
+                              : 'bg-gray-50 text-gray-400 border border-gray-200'
                           }`}>
-                            {level}级 {passed && '✓'}
+                            {passed && <span className="mr-1">🏆</span>}{level}级
                           </div>
                         );
                       })}
@@ -499,14 +504,14 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
                   </div>
                 )}
                 {/* 所有荣誉列表 */}
-                <div className="space-y-1">
+                <div className="space-y-2 mt-3">
                   {honors.map(h => (
-                    <div key={h.id} className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-0.5 rounded ${h.type === 'exam' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                        {h.type === 'exam' ? '考级' : '赛事'}
+                    <div key={h.id} className="flex items-center gap-3 text-sm bg-white rounded-lg px-3 py-2 border border-gray-100 shadow-sm">
+                      <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${h.type === 'exam' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                        {h.type === 'exam' ? ' 考级' : '🎯 赛事'}
                       </span>
-                      <span className="text-gray-700">{h.title}</span>
-                      <span className="text-gray-400">{h.achievedDate}</span>
+                      <span className="text-gray-800 font-medium">{h.title}</span>
+                      <span className="text-gray-400 text-xs ml-auto">{h.achievedDate}</span>
                     </div>
                   ))}
                 </div>

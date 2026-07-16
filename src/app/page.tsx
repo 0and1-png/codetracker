@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/popover';
 import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord } from '@/lib/types';
 import {
-  getCourses, getStudentsByCourse, addStudent, deleteStudent,
+  getCourses, getStudentsByCourse, addStudent, deleteStudent, updateStudent,
   addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
   getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
   getCourses as getCoursesForUpdate,
@@ -115,6 +115,11 @@ export default function HomePage() {
   const [createClass, setCreateClass] = useState('');
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState('');
+
+  // Move student to another class
+  const [moveStudentOpen, setMoveStudentOpen] = useState(false);
+  const [moveStudentId, setMoveStudentId] = useState('');
+  const [moveStudentClass, setMoveStudentClass] = useState('');
 
   const loadData = useCallback(() => {
     const courseList = getCourses();
@@ -253,14 +258,24 @@ export default function HomePage() {
   // Add student
   const handleAddStudent = () => {
     if (!newName.trim() || !newCourseId) return;
+    const classToUse = newClassName.trim() || (selectedClass !== 'all' ? selectedClass : undefined);
     addStudent({
       id: uuidv4(), name: newName.trim(), courseId: newCourseId,
-      className: newClassName.trim() || undefined,
+      className: classToUse || undefined,
       notes: newNotes.trim() || undefined,
       createdAt: new Date().toISOString(),
     });
-    setNewName(''); setNewCourseId('course_cpp'); setNewClassName(''); setNewNotes('');
+    setNewName(''); setNewCourseId(selectedCourseId); setNewClassName(''); setNewNotes('');
     setAddStudentOpen(false); loadStudents();
+  };
+
+  const handleChangeStudentClass = (studentId: string, newClass: string) => {
+    const allStudents = getStudentsByCourse(selectedCourseId);
+    const student = allStudents.find((s: Student) => s.id === studentId);
+    if (!student) return;
+    const updated = { ...student, className: newClass || undefined };
+    updateStudent(updated);
+    loadData();
   };
 
   // Batch import - auto-assign course based on class name
@@ -438,7 +453,10 @@ export default function HomePage() {
           <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => { setImportOpen(true); }}>
             <Upload className="h-4 w-4" />{XIAN.importCSV}
           </Button>
-          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => { setAddStudentOpen(true); }}>
+          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => {
+            if (selectedClass !== 'all') setNewClassName(selectedClass);
+            setAddStudentOpen(true);
+          }}>
             <Plus className="h-4 w-4" />{XIAN.addStudent}
           </Button>
           <Link href="/courses">
@@ -542,6 +560,16 @@ export default function HomePage() {
                         )}
                       </div>
                       <div className="flex items-center gap-0.5">
+                        <button className="p-1 hover:bg-blue-50 rounded opacity-60 hover:opacity-100 transition-all"
+                          title="更换班级"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMoveStudentId(student.id);
+                            setMoveStudentClass(student.className || '');
+                            setMoveStudentOpen(true);
+                          }}>
+                          <Users className="h-3 w-3 text-blue-400 hover:text-blue-600" />
+                        </button>
                         <Link href={`/reports/${student.id}`} className="p-1 hover:bg-blue-50 rounded opacity-60 hover:opacity-100 transition-all"
                           title="查看成长报告" onClick={(e) => e.stopPropagation()}>
                           <FileText className="h-3 w-3 text-blue-500" />
@@ -755,6 +783,40 @@ export default function HomePage() {
                 loadData();
               }
             }} disabled={!editingClassName.trim()}>确定</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Move Student to Class Dialog */}
+      <Dialog open={moveStudentOpen} onOpenChange={(open) => {
+        setMoveStudentOpen(open);
+        if (!open) { setMoveStudentId(''); setMoveStudentClass(''); }
+      }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>更换班级</DialogTitle>
+            <DialogDescription>将学员移动到另一个班级</DialogDescription>
+          </DialogHeader>
+          <div className="py-3">
+            <Label className="text-sm font-medium text-gray-700">选择班级</Label>
+            <select value={moveStudentClass} onChange={(e) => setMoveStudentClass(e.target.value)}
+              className="mt-1.5 w-full h-9 rounded-md border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">未分班</option>
+              {classList.filter(c => c !== 'all').map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setMoveStudentOpen(false); setMoveStudentId(''); setMoveStudentClass(''); }}>取消</Button>
+            <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => {
+              if (moveStudentId) {
+                handleChangeStudentClass(moveStudentId, moveStudentClass);
+                setMoveStudentOpen(false);
+                setMoveStudentId('');
+                setMoveStudentClass('');
+              }
+            }}>确定</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

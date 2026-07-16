@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -33,13 +33,14 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
-import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord } from '@/lib/types';
+import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord, ExamRecord, CompetitionRecord, HonorRecord, ExamQuestionResult, CompetitionQuestionResult } from '@/lib/types';
 import {
   getCourses, getStudentsByCourse, addStudent, deleteStudent, updateStudent,
   addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
   getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
   getCourses as getCoursesForUpdate,
   addClassToCourse, removeClassFromCourse, renameClassInCourse, getCourseClasses,
+  saveExamRecord, saveCompetitionRecord, saveHonorRecord, getHonorRecordsByStudent,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -48,7 +49,7 @@ import {
 } from '@/lib/analytics';
 import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS } from '@/lib/constants';
 
-type RecordTab = 'retry' | 'typing' | 'homework';
+type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'honor';
 
 interface RetryRowForm {
   problemId: string;
@@ -69,6 +70,387 @@ const GROWTH_SUGGESTION_PRESETS = [
   '加强逻辑思维训练',
   '提升问题拆解能力',
 ] as const;
+
+// ==================== 考级 Tab 组件 ====================
+function ExamTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
+  const [examLevel, setExamLevel] = useState(1);
+  const [examDate, setExamDate] = useState('');
+  const [examResults, setExamResults] = useState<ExamQuestionResult[]>([]);
+  const [wrongNoteIdx, setWrongNoteIdx] = useState<number | null>(null);
+  const [wrongNoteText, setWrongNoteText] = useState('');
+
+  const isVisual = selectedCourseId === 'course_visual';
+  const totalQuestions = isVisual ? 17 : 27;
+  const mcCount = isVisual ? 10 : 15; // 选择题
+  const tfCount = isVisual ? 5 : 10;  // 判断题
+  const progCount = 2; // 编程题
+
+  // 生成GESP考级月份选项 (每年3/6/9/12月)
+  const examDateOptions = useMemo(() => {
+    const options: string[] = [];
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 1; y <= currentYear + 2; y++) {
+      for (const m of [3, 6, 9, 12]) {
+        options.push(`${y}年${m}月`);
+      }
+    }
+    return options;
+  }, []);
+
+  // 初始化题目结果
+  useEffect(() => {
+    const results: ExamQuestionResult[] = [];
+    for (let i = 1; i <= totalQuestions; i++) {
+      results.push({ questionIndex: i, isCorrect: true });
+    }
+    setExamResults(results);
+  }, [totalQuestions]);
+
+  // 切换对错
+  const toggleQuestion = (idx: number) => {
+    setExamResults(prev => prev.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r));
+  };
+
+  // 保存错题详情
+  const saveWrongNote = (idx: number) => {
+    setExamResults(prev => prev.map((r, i) => i === idx ? { ...r, note: wrongNoteText } : r));
+    setWrongNoteIdx(null);
+    setWrongNoteText('');
+  };
+
+  // 保存考级记录
+  const handleSaveExam = useCallback((studentId: string) => {
+    const correctCount = examResults.filter(r => r.isCorrect).length;
+    const record: ExamRecord = {
+      id: `exam_${studentId}_${examDate}_${Date.now()}`,
+      studentId,
+      courseId: selectedCourseId,
+      level: examLevel,
+      examDate,
+      totalQuestions,
+      correctCount,
+      wrongCount: totalQuestions - correctCount,
+      results: examResults,
+      createdAt: new Date().toISOString(),
+    };
+    saveExamRecord(record);
+  }, [examResults, examDate, selectedCourseId, examLevel, totalQuestions]);
+
+  const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
+
+  if (selectedStudents.length === 0) {
+    return <div className="flex items-center justify-center h-32 text-gray-400 text-sm">请在左侧选择学员</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* 考级信息 */}
+      <div className="flex items-center gap-4">
+        <div>
+          <Label className="text-xs text-gray-500">考级级别</Label>
+          <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
+            <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: isVisual ? 6 : 8 }, (_, i) => i + 1).map(l => (
+                <SelectItem key={l} value={String(l)}>GESP {l}级</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">考级时间</Label>
+          <Select value={examDate} onValueChange={setExamDate}>
+            <SelectTrigger className="mt-1 h-8 w-32 text-sm"><SelectValue placeholder="选择月份" /></SelectTrigger>
+            <SelectContent>
+              {examDateOptions.map(opt => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-xs text-gray-400 ml-auto">
+          选择题{mcCount}道 | 判断题{tfCount}道 | 编程题{progCount}道 | 共{totalQuestions}道
+        </div>
+      </div>
+
+      {/* 每个学员的答题网格 */}
+      {selectedStudents.map(student => (
+        <div key={student.id} className="border border-gray-200 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-medium text-sm text-gray-800">{student.name}</span>
+            <Button size="sm" onClick={() => handleSaveExam(student.id)} disabled={!examDate}>保存记录</Button>
+          </div>
+          {/* 题目网格 - 每行10题 */}
+          <div className="space-y-1">
+            {Array.from({ length: Math.ceil(totalQuestions / 10) }, (_, rowIdx) => (
+              <div key={rowIdx} className="flex items-center gap-1">
+                <div className="flex gap-1 flex-wrap">
+                  {examResults.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
+                    const idx = rowIdx * 10 + colIdx;
+                    return (
+                      <div key={idx} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
+                        <button
+                          onClick={() => toggleQuestion(idx)}
+                          className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-all ${
+                            result.isCorrect
+                              ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                          }`}>
+                          {result.isCorrect ? '✓' : '✗'}
+                        </button>
+                        {result.note && (
+                          <span className="text-[9px] text-amber-500" title={result.note}>注</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* 错题详情输入 */}
+          {wrongNoteIdx !== null && (
+            <div className="mt-2 flex gap-2">
+              <Input value={wrongNoteText} onChange={e => setWrongNoteText(e.target.value)}
+                placeholder={`第${examResults[wrongNoteIdx]?.questionIndex}题错因...`} className="h-7 text-xs flex-1" />
+              <Button size="sm" variant="outline" onClick={() => saveWrongNote(wrongNoteIdx)}>确定</Button>
+            </div>
+          )}
+          <div className="mt-2 text-xs text-gray-400">点击题目切换对错，错题可添加错因说明</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== 赛事 Tab 组件 ====================
+function CompetitionTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
+  const [compName, setCompName] = useState('');
+  const [compDate, setCompDate] = useState('');
+  const [totalQ, setTotalQ] = useState(10);
+  const [compResults, setCompResults] = useState<CompetitionQuestionResult[]>([]);
+
+  useEffect(() => {
+    const results: CompetitionQuestionResult[] = [];
+    for (let i = 1; i <= totalQ; i++) {
+      results.push({ questionIndex: i, isCorrect: true });
+    }
+    setCompResults(results);
+  }, [totalQ]);
+
+  const toggleQuestion = (idx: number) => {
+    setCompResults(prev => prev.map((r, i) => i === idx ? { ...r, isCorrect: !r.isCorrect } : r));
+  };
+
+  const handleSaveComp = useCallback((studentId: string) => {
+    const correctCount = compResults.filter(r => r.isCorrect).length;
+    const record: CompetitionRecord = {
+      id: `comp_${studentId}_${compDate}_${Date.now()}`,
+      studentId,
+      courseId: selectedCourseId,
+      competitionName: compName,
+      competitionDate: compDate,
+      totalQuestions: totalQ,
+      correctCount,
+      wrongCount: totalQ - correctCount,
+      results: compResults,
+      createdAt: new Date().toISOString(),
+    };
+    saveCompetitionRecord(record);
+  }, [compResults, compDate, selectedCourseId, compName, totalQ]);
+
+  const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
+
+  if (selectedStudents.length === 0) {
+    return <div className="flex items-center justify-center h-32 text-gray-400 text-sm">请在左侧选择学员</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <Label className="text-xs text-gray-500">赛事名称</Label>
+          <Input value={compName} onChange={e => setCompName(e.target.value)} placeholder="如：NOIP2026" className="mt-1 h-8 text-sm" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">赛事日期</Label>
+          <Input type="date" value={compDate} onChange={e => setCompDate(e.target.value)} className="mt-1 h-8 text-sm w-36" />
+        </div>
+        <div>
+          <Label className="text-xs text-gray-500">题目数</Label>
+          <Input type="number" value={totalQ} onChange={e => setTotalQ(Number(e.target.value))} className="mt-1 h-8 text-sm w-20" min={1} max={50} />
+        </div>
+      </div>
+
+      {selectedStudents.map(student => (
+        <div key={student.id} className="border border-gray-200 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-medium text-sm text-gray-800">{student.name}</span>
+            <Button size="sm" onClick={() => handleSaveComp(student.id)} disabled={!compName || !compDate}>保存记录</Button>
+          </div>
+          <div className="space-y-1">
+            {Array.from({ length: Math.ceil(totalQ / 10) }, (_, rowIdx) => (
+              <div key={rowIdx} className="flex items-center gap-1">
+                <div className="flex gap-1 flex-wrap">
+                  {compResults.slice(rowIdx * 10, (rowIdx + 1) * 10).map((result, colIdx) => {
+                    const idx = rowIdx * 10 + colIdx;
+                    return (
+                      <div key={idx} className="flex flex-col items-center">
+                        <span className="text-[10px] text-gray-400 mb-0.5">{result.questionIndex}</span>
+                        <button
+                          onClick={() => toggleQuestion(idx)}
+                          className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-all ${
+                            result.isCorrect
+                              ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                              : 'bg-red-100 text-red-600 hover:bg-red-200'
+                          }`}>
+                          {result.isCorrect ? '✓' : '✗'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ==================== 荣誉 Tab 组件 ====================
+function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selectedStudentIds: Set<string>; students: Student[]; selectedCourseId: string }) {
+  const [honorType, setHonorType] = useState<'exam' | 'competition'>('exam');
+  const [examLevel, setExamLevel] = useState(1);
+  const [honorTitle, setHonorTitle] = useState('');
+  const [honorDate, setHonorDate] = useState('');
+
+  const isVisual = selectedCourseId === 'course_visual';
+  const maxLevel = isVisual ? 6 : 8;
+
+  const handleSaveHonor = useCallback((studentId: string) => {
+    const record: HonorRecord = {
+      id: `honor_${studentId}_${Date.now()}`,
+      studentId,
+      courseId: selectedCourseId,
+      type: honorType,
+      title: honorType === 'exam' ? `GESP ${selectedCourseId === 'course_cpp' ? 'C++' : selectedCourseId === 'course_python' ? 'Python' : '图形化'} ${examLevel}级` : honorTitle,
+      level: honorType === 'exam' ? examLevel : undefined,
+      achievedDate: honorDate,
+      createdAt: new Date().toISOString(),
+    };
+    saveHonorRecord(record);
+  }, [honorType, selectedCourseId, examLevel, honorTitle, honorDate]);
+
+  // 获取学员已有荣誉
+  const getStudentHonors = (studentId: string) => {
+    return getHonorRecordsByStudent(studentId).filter(h => h.courseId === selectedCourseId);
+  };
+
+  // 判断考级是否已通过（本级或更高级已通过）
+  const isLevelPassed = (honors: HonorRecord[], level: number) => {
+    return honors.some(h => h.type === 'exam' && (h.level || 0) >= level);
+  };
+
+  const selectedStudents = students.filter(s => selectedStudentIds.has(s.id));
+
+  if (selectedStudents.length === 0) {
+    return <div className="flex items-center justify-center h-32 text-gray-400 text-sm">请在左侧选择学员</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* 添加荣誉 */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-4">
+          <div>
+            <Label className="text-xs text-gray-500">类型</Label>
+            <Select value={honorType} onValueChange={v => setHonorType(v as 'exam' | 'competition')}>
+              <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="exam">考级</SelectItem>
+                <SelectItem value="competition">赛事</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {honorType === 'exam' ? (
+            <div>
+              <Label className="text-xs text-gray-500">级别</Label>
+              <Select value={String(examLevel)} onValueChange={v => setExamLevel(Number(v))}>
+                <SelectTrigger className="mt-1 h-8 w-24 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: maxLevel }, (_, i) => i + 1).map(l => (
+                    <SelectItem key={l} value={String(l)}>{l}级</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="flex-1">
+              <Label className="text-xs text-gray-500">赛事名称</Label>
+              <Input value={honorTitle} onChange={e => setHonorTitle(e.target.value)} placeholder="赛事名称" className="mt-1 h-8 text-sm" />
+            </div>
+          )}
+          <div>
+            <Label className="text-xs text-gray-500">获得日期</Label>
+            <Input type="date" value={honorDate} onChange={e => setHonorDate(e.target.value)} className="mt-1 h-8 text-sm w-36" />
+          </div>
+        </div>
+      </div>
+
+      {/* 学员荣誉列表 */}
+      {selectedStudents.map(student => {
+        const honors = getStudentHonors(student.id);
+        return (
+          <div key={student.id} className="border border-gray-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-medium text-sm text-gray-800">{student.name}</span>
+              <Button size="sm" onClick={() => handleSaveHonor(student.id)} disabled={!honorDate}>添加荣誉</Button>
+            </div>
+            {honors.length === 0 ? (
+              <div className="text-xs text-gray-400">暂无荣誉记录</div>
+            ) : (
+              <div className="space-y-2">
+                {/* 考级荣誉 */}
+                {honorType === 'exam' && (
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">考级进度</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {Array.from({ length: maxLevel }, (_, i) => i + 1).map(level => {
+                        const passed = isLevelPassed(honors, level);
+                        return (
+                          <div key={level} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                            passed ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-400 border border-gray-200'
+                          }`}>
+                            {level}级 {passed && '✓'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* 所有荣誉列表 */}
+                <div className="space-y-1">
+                  {honors.map(h => (
+                    <div key={h.id} className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-0.5 rounded ${h.type === 'exam' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                        {h.type === 'exam' ? '考级' : '赛事'}
+                      </span>
+                      <span className="text-gray-700">{h.title}</span>
+                      <span className="text-gray-400">{h.achievedDate}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -626,6 +1008,18 @@ export default function HomePage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'homework' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
                   {XIAN.homework}
                 </button>
+                <button onClick={() => setActiveTab('exam')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'exam' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  考级
+                </button>
+                <button onClick={() => setActiveTab('competition')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'competition' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  赛事
+                </button>
+                <button onClick={() => setActiveTab('honor')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'honor' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  荣誉
+                </button>
                 <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
                 <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
                   className="w-36 h-7 text-xs border-gray-200" />
@@ -743,6 +1137,15 @@ export default function HomePage() {
                     onBatchRetry={() => { setBatchRetryStudentId(student.id); setShowBatchRetry(true); }}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* 考级/赛事/荣誉 Tabs - 在学员卡片后面显示 */}
+            {selectedStudentIds.length > 0 && (
+              <div className="mt-4">
+                {activeTab === 'exam' && <ExamTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
+                {activeTab === 'competition' && <CompetitionTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
+                {activeTab === 'honor' && <HonorTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
               </div>
             )}
           </div>

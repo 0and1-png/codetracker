@@ -10,6 +10,9 @@ import type {
   CompetitionEvent,
   SprintGoalData,
   GESPLlevel,
+  ExamRecord,
+  CompetitionRecord,
+  HonorRecord,
 } from './types';
 import {
   COURSE_PRESETS,
@@ -429,6 +432,72 @@ export function saveSprintGoal(data: SprintGoalData): void {
     list.push(data);
   }
   saveSprintGoals(list);
+}
+
+// ==================== 考级记录 ====================
+const EXAM_KEY = 'coding_exam_records';
+export function getExamRecords(): ExamRecord[] {
+  return getItem<ExamRecord[]>(EXAM_KEY, []);
+}
+export function saveExamRecords(records: ExamRecord[]): void {
+  localStorage.setItem(EXAM_KEY, JSON.stringify(records));
+}
+export function getExamRecordsByStudent(studentId: string): ExamRecord[] {
+  return getExamRecords().filter((r) => r.studentId === studentId);
+}
+export function saveExamRecord(record: ExamRecord): void {
+  const records = getExamRecords();
+  const idx = records.findIndex((r) => r.id === record.id);
+  if (idx >= 0) records[idx] = record;
+  else records.push(record);
+  saveExamRecords(records);
+}
+export function deleteExamRecord(id: string): void {
+  saveExamRecords(getExamRecords().filter((r) => r.id !== id));
+}
+
+// ==================== 赛事记录 ====================
+const COMPETITION_KEY = 'coding_competition_records';
+export function getCompetitionRecords(): CompetitionRecord[] {
+  return getItem<CompetitionRecord[]>(COMPETITION_KEY, []);
+}
+export function saveCompetitionRecords(records: CompetitionRecord[]): void {
+  localStorage.setItem(COMPETITION_KEY, JSON.stringify(records));
+}
+export function getCompetitionRecordsByStudent(studentId: string): CompetitionRecord[] {
+  return getCompetitionRecords().filter((r) => r.studentId === studentId);
+}
+export function saveCompetitionRecord(record: CompetitionRecord): void {
+  const records = getCompetitionRecords();
+  const idx = records.findIndex((r) => r.id === record.id);
+  if (idx >= 0) records[idx] = record;
+  else records.push(record);
+  saveCompetitionRecords(records);
+}
+export function deleteCompetitionRecord(id: string): void {
+  saveCompetitionRecords(getCompetitionRecords().filter((r) => r.id !== id));
+}
+
+// ==================== 荣誉记录 ====================
+const HONOR_KEY = 'coding_honor_records';
+export function getHonorRecords(): HonorRecord[] {
+  return getItem<HonorRecord[]>(HONOR_KEY, []);
+}
+export function saveHonorRecords(records: HonorRecord[]): void {
+  localStorage.setItem(HONOR_KEY, JSON.stringify(records));
+}
+export function getHonorRecordsByStudent(studentId: string): HonorRecord[] {
+  return getHonorRecords().filter((r) => r.studentId === studentId);
+}
+export function saveHonorRecord(record: HonorRecord): void {
+  const records = getHonorRecords();
+  const idx = records.findIndex((r) => r.id === record.id);
+  if (idx >= 0) records[idx] = record;
+  else records.push(record);
+  saveHonorRecords(records);
+}
+export function deleteHonorRecord(id: string): void {
+  saveHonorRecords(getHonorRecords().filter((r) => r.id !== id));
 }
 
 /** 更新冲刺目标的课程目标 */

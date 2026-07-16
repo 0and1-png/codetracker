@@ -115,6 +115,61 @@ export interface KnowledgeProgress {
   updatedAt: string;
 }
 
+// ==================== 考级记录 ====================
+export interface ExamQuestionResult {
+  questionIndex: number; // 题目序号 (1-based)
+  isCorrect: boolean;
+  note?: string; // 错题详情
+}
+
+export interface ExamRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  level: number; // GESP级别 1-8
+  examDate: string; // 考级日期 (如 "2026-03")
+  totalQuestions: number; // 总题数
+  correctCount: number; // 正确数
+  wrongCount: number; // 错误数
+  results: ExamQuestionResult[]; // 每题结果
+  certificateUrl?: string; // 证书图片URL
+  createdAt: string;
+}
+
+// ==================== 赛事记录 ====================
+export interface CompetitionQuestionResult {
+  questionIndex: number;
+  isCorrect: boolean;
+  note?: string;
+}
+
+export interface CompetitionRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  competitionName: string; // 赛事名称
+  competitionDate: string; // 赛事日期
+  totalQuestions: number;
+  correctCount: number;
+  wrongCount: number;
+  results: CompetitionQuestionResult[];
+  certificateUrl?: string;
+  createdAt: string;
+}
+
+// ==================== 荣誉记录 ====================
+export interface HonorRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  type: 'exam' | 'competition'; // 考级 or 赛事
+  title: string; // 荣誉标题 (如 "GESP Python 四级")
+  level?: number; // 考级级别
+  achievedDate: string; // 获得日期
+  certificateUrl?: string; // 证书图片
+  createdAt: string;
+}
+
 // ============ Sprint Goal (冲刺目标) ============
 
 /** GESP 考级等级 */

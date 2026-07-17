@@ -826,20 +826,6 @@ export default function ReportPage() {
             className="rounded-[20px] overflow-hidden relative"
             style={{ background: '#f5f0e6' }}
           >
-            {/* 亚麻布料纹理背景 */}
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8b898' fill-opacity='0.10'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E")`,
-              }}
-            />
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px)`,
-              }}
-            />
-
             <div className="relative">
               {/* 顶部图片区域 */}
               <div className="relative w-full" style={{ height: '320px' }}>
@@ -993,18 +979,8 @@ export default function ReportPage() {
           {/* ========== 第二页：学生基本信息 ========== */}
           <div 
             className="rounded-[20px] overflow-hidden relative"
-            style={{ 
-              background: '#f5f0e6',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23c8b898' fill-opacity='0.12'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3C/g%3E%3C/svg%3E")`,
-            }}
+            style={{ background: '#f5f0e6' }}
           >
-            {/* 亚麻布料纹理叠加 */}
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(180,160,130,0.03) 2px, rgba(180,160,130,0.03) 4px)`,
-              }}
-            />
             <div className="relative p-10 pt-8">
               {/* 顶部标题 - 浅蓝书法字体 */}
               <div className="text-center mb-8">

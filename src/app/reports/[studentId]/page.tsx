@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3 } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   getStudents,
   getTypingByStudent,
@@ -1741,23 +1741,58 @@ export default function ReportPage() {
                       </h3>
                       <div className="space-y-3">
                         {monthData.learnedKnowledge.length > 0 ? (
-                          monthData.learnedKnowledge.map((kp) => (
-                            <div key={kp.knowledgePointId} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-purple-50">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <span className="font-semibold text-[#333344] text-base">{kp.knowledgePointName}</span>
-                                  <span className="text-xs px-2.5 py-1 bg-purple-50 text-purple-500 rounded-full">{kp.completedProblems}/{kp.totalProblems}题</span>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="w-24 h-2 rounded-full bg-purple-100 overflow-hidden">
-                                    <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500" style={{ width: `${kp.completionPercent}%` }}></div>
+                          monthData.learnedKnowledge.map((kp) => {
+                            // 获取该知识点关联的作业记录
+                            const kpName = kp.knowledgePointName;
+                            const kpHomework = monthData.homework.filter(h => 
+                              h.title?.includes(kpName) || h.content?.includes(kpName)
+                            );
+                            // 获取该知识点关联的题目
+                            const kpProblems = course?.problems?.filter(p => 
+                              p.knowledgePointIds?.includes(kp.knowledgePointId) || p.knowledgePointId === kp.knowledgePointId
+                            ) || [];
+                            const kpProblemIds = new Set(kpProblems.map(p => p.id));
+                            const kpRetryRecords = monthData.retry.filter(r => kpProblemIds.has(r.problemId));
+
+                            return (
+                              <div key={kp.knowledgePointId} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border border-purple-50">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-semibold text-[#333344] text-base">{kp.knowledgePointName}</span>
+                                    <span className="text-xs px-2.5 py-1 bg-purple-50 text-purple-500 rounded-full">{kp.completedProblems}/{kp.totalProblems}题</span>
                                   </div>
-                                  <span className="text-xs text-[#888] w-10 text-right">{kp.completionPercent}%</span>
-                                  <div className="flex">{renderStars(kp.stars)}</div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-24 h-2 rounded-full bg-purple-100 overflow-hidden">
+                                      <div className="h-full rounded-full bg-gradient-to-r from-purple-400 to-purple-600 transition-all duration-500" style={{ width: `${kp.completionPercent}%` }}></div>
+                                    </div>
+                                    <span className="text-xs text-[#888] w-10 text-right">{kp.completionPercent}%</span>
+                                    <div className="flex">{renderStars(kp.stars)}</div>
+                                  </div>
                                 </div>
+                                {/* 显示完成的题目 */}
+                                {(kpHomework.length > 0 || kpRetryRecords.length > 0) && (
+                                  <div className="mt-3 pt-3 border-t border-purple-50">
+                                    <div className="text-xs text-[#888] mb-2">完成内容：</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {kpHomework.map((h, idx) => (
+                                        <span key={`hw-${idx}`} className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-600 rounded-full border border-purple-100">
+                                          {h.title || h.content?.slice(0, 20) || '作业'}
+                                        </span>
+                                      ))}
+                                      {kpRetryRecords.map((r, idx) => {
+                                        const problemDef = course?.problems?.find(p => p.id === r.problemId);
+                                        return (
+                                          <span key={`retry-${idx}`} className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-600 rounded-full border border-purple-100">
+                                            {problemDef?.name || r.problemName || r.problemId}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         ) : (
                           <div className="bg-white rounded-2xl p-10 text-center">
                             <p className="text-[#888]">暂无知识点学习记录</p>
@@ -1765,6 +1800,67 @@ export default function ReportPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* 能力雷达图 - 图形化课程专属 */}
+                    {isVisualCourse && (() => {
+                      // 从点赞和待提升标签中提取能力维度
+                      const allPraiseTags = monthData.homework.flatMap(h => h.praiseTags || []);
+                      const allImproveTags = monthData.homework.flatMap(h => h.improveTags || []);
+                      
+                      // 定义能力维度
+                      const skillDimensions = [
+                        { name: '逻辑思维', key: '逻辑' },
+                        { name: '创造力', key: '创意' },
+                        { name: '问题解决', key: '独立' },
+                        { name: '代码规范', key: '规范' },
+                        { name: '学习态度', key: '耐心' },
+                        { name: '团队协作', key: '协作' },
+                      ];
+
+                      // 计算每个维度的得分
+                      const radarData = skillDimensions.map(dim => {
+                        const praiseCount = allPraiseTags.filter(t => t.includes(dim.key)).length;
+                        const improveCount = allImproveTags.filter(t => t.includes(dim.key)).length;
+                        const score = Math.min(100, Math.max(20, 50 + praiseCount * 15 - improveCount * 10));
+                        return {
+                          subject: dim.name,
+                          score: score,
+                          fullMark: 100,
+                        };
+                      });
+
+                      return (
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
+                            综合能力评估
+                          </h3>
+                          <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-50">
+                            <ResponsiveContainer width="100%" height={300}>
+                              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                                <PolarGrid stroke="#e0e7ff" />
+                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#666', fontSize: 12 }} />
+                                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#999', fontSize: 10 }} />
+                                <Radar name="能力得分" dataKey="score" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} />
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    backgroundColor: 'white', 
+                                    border: '1px solid #e0e7ff',
+                                    borderRadius: '8px',
+                                    fontSize: '12px'
+                                  }}
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                            <div className="mt-4 text-center">
+                              <p className="text-sm text-[#888]">
+                                基于本月作业表现和教师评价自动生成
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* 本月完成题目 */}
                     <div>

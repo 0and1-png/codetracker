@@ -1272,14 +1272,27 @@ export default function HomePage() {
     } else if (activeTab === 'homework') {
       const form = getHomeworkForm(studentId);
       if (!form.content.trim()) return;
+      // Auto-generate tags based on score if no tags are provided
+      let praiseTags = form.praiseTags && form.praiseTags.length > 0 ? form.praiseTags : undefined;
+      let improveTags = form.improveTags && form.improveTags.length > 0 ? form.improveTags : undefined;
+      if (!praiseTags && !improveTags && form.completion) {
+        const score = Number(form.completion);
+        if (score >= 90) {
+          praiseTags = ['作业完成优秀'];
+        } else if (score >= 80) {
+          praiseTags = ['作业完成良好'];
+        } else if (score < 60) {
+          improveTags = ['作业需要加强'];
+        }
+      }
       addHomeworkRecord({
         id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
         title: '课后作业',
         content: form.content.trim(),
         score: form.completion ? Number(form.completion) : undefined,
         comment: form.comment.trim() || undefined,
-        praiseTags: form.praiseTags && form.praiseTags.length > 0 ? form.praiseTags : undefined,
-        improveTags: form.improveTags && form.improveTags.length > 0 ? form.improveTags : undefined,
+        praiseTags,
+        improveTags,
       });
     }
     setSavedStudents((prev) => new Set(prev).add(studentId));

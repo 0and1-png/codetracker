@@ -8,6 +8,7 @@ import {
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
   ChevronRight, ChevronLeft, Eye, EyeOff, Edit, Award, Trophy,
+  UserPlus,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -1018,6 +1019,7 @@ export default function HomePage() {
 
   // Class management
   const [showCreateClass, setShowCreateClass] = useState(false);
+  const [showAddStudent, setShowAddStudent] = useState(false);
   const [createClass, setCreateClass] = useState('');
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState('');
@@ -1434,34 +1436,42 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Class filter */}
+          {/* Class filter as dropdown */}
           <div className="px-3 py-2 border-b border-gray-100">
-            <div className="flex items-center gap-1 flex-wrap">
-              <button onClick={() => setSelectedClass('all')}
-                className={`px-2 py-1 rounded text-xs transition-all ${selectedClass === 'all' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
-                全部
-              </button>
-              {classList.map(cls => (
-                <div key={cls} className="relative group">
-                  <button onClick={() => setSelectedClass(cls)}
-                    className={`px-2 py-1 rounded text-xs transition-all pr-4 ${selectedClass === cls ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    {cls}
-                  </button>
-                  <div className="absolute right-0 top-0 hidden group-hover:flex items-center gap-0.5">
-                    <button onClick={(e) => { e.stopPropagation(); setEditingClass(cls); setEditingClassName(cls); }}
-                      className="p-0.5 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-500" title="重命名">
-                      <Edit className="h-2.5 w-2.5" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); if (confirm(`确定删除班级「${cls}」？班级内学员也将被删除`)) { removeClassFromCourse(selectedCourseId, cls); loadData(); if (selectedClass === cls) setSelectedClass('all'); } }}
-                      className="p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-500" title="删除">
-                      <Trash2 className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-gray-500 shrink-0">班级</Label>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="h-7 text-xs flex-1 min-w-[120px]">
+                  <SelectValue placeholder="选择班级" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部</SelectItem>
+                  {classList.map(cls => (
+                    <SelectItem key={cls} value={cls}>
+                      <div className="flex items-center justify-between gap-2 w-full">
+                        <span>{cls}</span>
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => { setEditingClass(cls); setEditingClassName(cls); }}
+                            className="p-1 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-500" title="重命名">
+                            <Edit className="h-3 w-3" />
+                          </button>
+                          <button onClick={() => { if (confirm(`确定删除班级「${cls}」？班级内学员也将被删除`)) { removeClassFromCourse(selectedCourseId, cls); loadData(); if (selectedClass === cls) setSelectedClass('all'); } }}
+                            className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500" title="删除">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <button onClick={() => setShowCreateClass(true)}
-                className="px-1.5 py-1 rounded text-xs text-blue-500 hover:bg-blue-50 transition-all flex items-center gap-0.5">
+                className="px-2 py-1 rounded text-xs text-blue-500 hover:bg-blue-50 transition-all flex items-center gap-1 shrink-0">
                 <Plus className="h-3 w-3" /> 班级
+              </button>
+              <button onClick={() => setShowAddStudent(true)}
+                className="px-2 py-1 rounded text-xs text-green-500 hover:bg-green-50 transition-all flex items-center gap-1 shrink-0">
+                <UserPlus className="h-3 w-3" /> 学员
               </button>
             </div>
           </div>

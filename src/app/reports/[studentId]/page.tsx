@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3 } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Activity, Keyboard } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   getStudents,
@@ -1695,6 +1695,169 @@ export default function ReportPage() {
                     </div>
                   );
                 })()}
+
+                {/* 图形化课程：学习进度可视化 */}
+                {isVisualCourse && (() => {
+                  // 作业完成趋势数据
+                  const homeworkTrendData = Array.from({ length: 4 }, (_, i) => {
+                    const weekStart = new Date();
+                    weekStart.setDate(weekStart.getDate() - (3 - i) * 7);
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekEnd.getDate() + 6);
+                    
+                    const weekKey = weekStart.toISOString().slice(0, 7);
+                    const weekHomework = allHomework.filter(h => h.date.startsWith(weekKey));
+                    const completed = weekHomework.filter(h => (h.score || 0) >= 80).length;
+                    
+                    return {
+                      week: `第${i + 1}周`,
+                      完成: completed,
+                      总数: weekHomework.length
+                    };
+                  });
+
+                  // 知识点学习进度
+                  const knowledgeProgress = course?.knowledgePoints?.slice(0, 5).map(kp => {
+                    const progress = knowledge.find(k => k.knowledgePointId === kp.id);
+                    const status = progress?.status || 'not_started';
+                    return {
+                      name: kp.name.length > 6 ? kp.name.slice(0, 6) + '...' : kp.name,
+                      进度: status === 'mastered' ? 100 : status === 'learning' ? 50 : 0
+                    };
+                  }) || [];
+
+                  // 学习活跃度（基于作业和打字记录）
+                  const activityData = Array.from({ length: 7 }, (_, i) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() - (6 - i));
+                    const dateStr = date.toISOString().slice(0, 10);
+                    
+                    const dayHomework = allHomework.filter(h => h.date === dateStr).length;
+                    const dayTyping = allTyping.filter(t => t.date === dateStr).length;
+                    
+                    return {
+                      day: ['日', '一', '二', '三', '四', '五', '六'][date.getDay()],
+                      作业: dayHomework,
+                      练习: dayTyping
+                    };
+                  });
+
+                  // 打字速度趋势
+                  const monthTypingRecords = allTyping.filter(t => t.date.startsWith(selectedMonth));
+                  const typingTrendData = monthTypingRecords
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .slice(-10)
+                    .map((t, idx) => ({
+                      序号: idx + 1,
+                      速度: t.speed,
+                      正确率: t.accuracy
+                    }));
+
+                  return (
+                    <div className="space-y-6 mt-6">
+                      <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+                        学习进度可视化
+                      </h3>
+
+                      {/* 作业完成趋势图 */}
+                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-green-500" />
+                          作业完成趋势
+                        </h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <AreaChart data={homeworkTrendData}>
+                            <defs>
+                              <linearGradient id="colorHomework" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey="week" tick={{ fontSize: 12, fill: '#888' }} />
+                            <YAxis tick={{ fontSize: 12, fill: '#888' }} />
+                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                            <Area type="monotone" dataKey="完成" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorHomework)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* 知识点学习进度 */}
+                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
+                          <Target className="w-4 h-4 text-purple-500" />
+                          知识点学习进度
+                        </h4>
+                        <div className="space-y-3">
+                          {knowledgeProgress.map((kp, idx) => (
+                            <div key={idx}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-[#333] font-medium">{kp.name}</span>
+                                <span className="text-[#888]">{kp.进度}%</span>
+                              </div>
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-500"
+                                  style={{ width: `${kp.进度}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 学习活跃度 */}
+                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-orange-500" />
+                          学习活跃度（近7天）
+                        </h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={activityData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#888' }} />
+                            <YAxis tick={{ fontSize: 12, fill: '#888' }} />
+                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                            <Bar dataKey="作业" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="练习" fill="#f97316" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* 打字速度可视化 */}
+                      {typingTrendData.length > 0 && (
+                        <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                          <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
+                            <Keyboard className="w-4 h-4 text-blue-500" />
+                            打字速度趋势
+                          </h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={typingTrendData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                              <XAxis dataKey="序号" tick={{ fontSize: 12, fill: '#888' }} />
+                              <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#888' }} />
+                              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#888' }} domain={[0, 100]} />
+                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                              <Line yAxisId="left" type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                              <Line yAxisId="right" type="monotone" dataKey="正确率" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                          <div className="flex justify-center gap-6 mt-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                              <span className="text-xs text-[#666]">速度（字/分钟）</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                              <span className="text-xs text-[#666]">正确率（%）</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 
                 {/* 统计信息 */}
                 <div className="grid grid-cols-3 gap-4">
@@ -1877,97 +2040,6 @@ export default function ReportPage() {
                               </p>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* 图形化课程：学习进度可视化 */}
-                    {isVisualCourse && (() => {
-                      // 计算作业完成趋势数据
-                      const homeworkTrend = monthData.homework.map(h => ({
-                        date: h.date.slice(5), // 只显示月-日
-                        score: h.score || 0,
-                        title: h.title || '作业'
-                      }));
-
-                      // 计算知识点掌握进度
-                      const masteredCount = knowledge.filter(k => k.status === 'mastered').length;
-                      const learningCount = knowledge.filter(k => k.status === 'learning').length;
-                      const notStartedCount = knowledge.filter(k => k.status === 'not_started').length;
-                      const totalKnowledge = masteredCount + learningCount + notStartedCount;
-                      const masteryRate = totalKnowledge > 0 ? Math.round((masteredCount / totalKnowledge) * 100) : 0;
-
-                      return (
-                        <div className="mt-8">
-                          <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
-                            学习进度可视化
-                          </h3>
-                          
-                          {/* 知识点掌握进度 */}
-                          <div className="bg-white rounded-2xl p-6 shadow-sm border border-purple-50 mb-6">
-                            <h4 className="text-sm font-semibold text-[#555] mb-4">知识点掌握进度</h4>
-                            <div className="space-y-4">
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm text-[#666]">总体掌握率</span>
-                                  <span className="text-lg font-bold text-purple-600">{masteryRate}%</span>
-                                </div>
-                                <div className="h-3 bg-purple-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
-                                    style={{ width: `${masteryRate}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-purple-50">
-                                <div className="text-center">
-                                  <div className="text-2xl font-bold text-green-600">{masteredCount}</div>
-                                  <div className="text-xs text-[#888] mt-1">已掌握</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-2xl font-bold text-blue-600">{learningCount}</div>
-                                  <div className="text-xs text-[#888] mt-1">学习中</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-2xl font-bold text-gray-400">{notStartedCount}</div>
-                                  <div className="text-xs text-[#888] mt-1">未开始</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 作业完成趋势 */}
-                          {homeworkTrend.length > 0 && (
-                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-purple-50">
-                              <h4 className="text-sm font-semibold text-[#555] mb-4">作业完成度趋势</h4>
-                              <div className="space-y-3">
-                                {homeworkTrend.map((h, i) => (
-                                  <div key={i} className="flex items-center gap-3">
-                                    <div className="w-12 text-xs text-[#888]">{h.date}</div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xs text-[#666] truncate flex-1">{h.title}</span>
-                                        <span className={`text-sm font-bold ${h.score >= 90 ? 'text-green-600' : h.score >= 70 ? 'text-blue-600' : 'text-orange-600'}`}>
-                                          {h.score}%
-                                        </span>
-                                      </div>
-                                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div 
-                                          className={`h-full rounded-full transition-all duration-500 ${
-                                            h.score >= 90 ? 'bg-gradient-to-r from-green-400 to-green-500' :
-                                            h.score >= 70 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
-                                            'bg-gradient-to-r from-orange-400 to-orange-500'
-                                          }`}
-                                          style={{ width: `${h.score}%` }}
-                                        ></div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })()}

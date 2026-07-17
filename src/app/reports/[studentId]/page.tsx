@@ -1881,6 +1881,97 @@ export default function ReportPage() {
                       );
                     })()}
 
+                    {/* 图形化课程：学习进度可视化 */}
+                    {isVisualCourse && (() => {
+                      // 计算作业完成趋势数据
+                      const homeworkTrend = monthData.homework.map(h => ({
+                        date: h.date.slice(5), // 只显示月-日
+                        score: h.score || 0,
+                        title: h.title || '作业'
+                      }));
+
+                      // 计算知识点掌握进度
+                      const masteredCount = knowledge.filter(k => k.status === 'mastered').length;
+                      const learningCount = knowledge.filter(k => k.status === 'learning').length;
+                      const notStartedCount = knowledge.filter(k => k.status === 'not_started').length;
+                      const totalKnowledge = masteredCount + learningCount + notStartedCount;
+                      const masteryRate = totalKnowledge > 0 ? Math.round((masteredCount / totalKnowledge) * 100) : 0;
+
+                      return (
+                        <div className="mt-8">
+                          <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
+                            学习进度可视化
+                          </h3>
+                          
+                          {/* 知识点掌握进度 */}
+                          <div className="bg-white rounded-2xl p-6 shadow-sm border border-purple-50 mb-6">
+                            <h4 className="text-sm font-semibold text-[#555] mb-4">知识点掌握进度</h4>
+                            <div className="space-y-4">
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm text-[#666]">总体掌握率</span>
+                                  <span className="text-lg font-bold text-purple-600">{masteryRate}%</span>
+                                </div>
+                                <div className="h-3 bg-purple-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
+                                    style={{ width: `${masteryRate}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-3 pt-3 border-t border-purple-50">
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-green-600">{masteredCount}</div>
+                                  <div className="text-xs text-[#888] mt-1">已掌握</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-blue-600">{learningCount}</div>
+                                  <div className="text-xs text-[#888] mt-1">学习中</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-2xl font-bold text-gray-400">{notStartedCount}</div>
+                                  <div className="text-xs text-[#888] mt-1">未开始</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 作业完成趋势 */}
+                          {homeworkTrend.length > 0 && (
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-purple-50">
+                              <h4 className="text-sm font-semibold text-[#555] mb-4">作业完成度趋势</h4>
+                              <div className="space-y-3">
+                                {homeworkTrend.map((h, i) => (
+                                  <div key={i} className="flex items-center gap-3">
+                                    <div className="w-12 text-xs text-[#888]">{h.date}</div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs text-[#666] truncate flex-1">{h.title}</span>
+                                        <span className={`text-sm font-bold ${h.score >= 90 ? 'text-green-600' : h.score >= 70 ? 'text-blue-600' : 'text-orange-600'}`}>
+                                          {h.score}%
+                                        </span>
+                                      </div>
+                                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                        <div 
+                                          className={`h-full rounded-full transition-all duration-500 ${
+                                            h.score >= 90 ? 'bg-gradient-to-r from-green-400 to-green-500' :
+                                            h.score >= 70 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
+                                            'bg-gradient-to-r from-orange-400 to-orange-500'
+                                          }`}
+                                          style={{ width: `${h.score}%` }}
+                                        ></div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* 本月完成题目 */}
                     <div>
                       <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">

@@ -152,6 +152,8 @@ export default function ReportPage() {
   // 可编辑的出勤和作业统计
   const [editableAttendanceDays, setEditableAttendanceDays] = useState<Record<string, number>>({});
   const [editableHomeworkCount, setEditableHomeworkCount] = useState<Record<string, number>>({});
+  const [editableFullAttendanceDays, setEditableFullAttendanceDays] = useState<Record<string, number>>({});
+  const [editableHomeworkStandard, setEditableHomeworkStandard] = useState<Record<string, number>>({});
   
   // 可编辑的成长建议和家校tip
   const [editableGrowthSuggestions, setEditableGrowthSuggestions] = useState<Record<string, string[]>>({});
@@ -471,6 +473,24 @@ export default function ReportPage() {
       setSprintCompetitionIds([]);
     }
   }, [student, course, selectedMonth, autoSprintGoal]);
+
+  // Initialize editable strengths and weaknesses from teacher tags
+  const teacherTagsInitializedRef = useRef(false);
+  useEffect(() => {
+    if (teacherTagsInitializedRef.current) return;
+    if (teacherTags.praiseTags.length > 0 || teacherTags.improveTags.length > 0 || teacherTags.growthSuggestions.length > 0) {
+      if (teacherTags.praiseTags.length > 0) {
+        setEditableStrengths(teacherTags.praiseTags);
+      }
+      if (teacherTags.improveTags.length > 0) {
+        setEditableWeaknesses(teacherTags.improveTags);
+      }
+      if (teacherTags.growthSuggestions.length > 0) {
+        setEditableGrowthSuggestions({ [selectedMonth]: teacherTags.growthSuggestions });
+      }
+      teacherTagsInitializedRef.current = true;
+    }
+  }, [teacherTags, selectedMonth]);
 
   // Save sprint goal when changed
   const handleSaveSprintGoal = useCallback(() => {
@@ -2213,23 +2233,31 @@ export default function ReportPage() {
                       monthHomework.forEach(h => allDates.add(h.date));
                       const attendanceCount = allDates.size;
                       // 满勤标准：每月4天
-                      const FULL_ATTENDANCE_DAYS = 4;
+                      const fullAttendanceDays = editableFullAttendanceDays[monthKey] ?? 4;
                       const actualAttendanceDays = editableAttendanceDays[monthKey] ?? attendanceCount;
-                      const attendanceRate = Math.round(actualAttendanceDays / FULL_ATTENDANCE_DAYS * 100);
-                      const isFullAttendance = actualAttendanceDays >= FULL_ATTENDANCE_DAYS;
+                      const attendanceRate = Math.round(actualAttendanceDays / fullAttendanceDays * 100);
+                      const isFullAttendance = actualAttendanceDays >= fullAttendanceDays;
                       return (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">出勤天数</span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-baseline gap-1">
                               <input
                                 type="number"
                                 min="0"
-                                value={editableAttendanceDays[monthKey] ?? attendanceCount}
+                                value={actualAttendanceDays}
                                 onChange={(e) => setEditableAttendanceDays(prev => ({ ...prev, [monthKey]: Math.max(0, parseInt(e.target.value) || 0) }))}
                                 className="w-12 text-right text-2xl font-bold text-purple-600 bg-transparent border-b border-purple-200 focus:border-purple-500 focus:outline-none"
                               />
-                              <span className="text-sm text-[#888] font-normal"> / {FULL_ATTENDANCE_DAYS} 天</span>
+                              <span className="text-sm text-[#888] font-normal"> / </span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={fullAttendanceDays}
+                                onChange={(e) => setEditableFullAttendanceDays(prev => ({ ...prev, [monthKey]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                className="w-10 text-right text-sm text-[#888] bg-transparent border-b border-gray-200 focus:border-purple-500 focus:outline-none"
+                              />
+                              <span className="text-sm text-[#888] font-normal"> 天</span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
@@ -2269,16 +2297,16 @@ export default function ReportPage() {
                       作业记录
                     </h3>
                     {(() => {
-                      // 每月作业标准：4次
-                      const HOMEWORK_STANDARD = 4;
+                      // 每月作业标准：可手动修改
+                      const homeworkStandard = editableHomeworkStandard[monthKey] ?? 4;
                       const actualHomeworkCount = editableHomeworkCount[monthKey] ?? monthHomework.length;
-                      const homeworkRate = Math.round(actualHomeworkCount / HOMEWORK_STANDARD * 100);
-                      const isHomeworkComplete = actualHomeworkCount >= HOMEWORK_STANDARD;
+                      const homeworkRate = Math.round(actualHomeworkCount / homeworkStandard * 100);
+                      const isHomeworkComplete = actualHomeworkCount >= homeworkStandard;
                       return monthHomework.length > 0 ? (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">作业次数</span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-baseline gap-1">
                               <input
                                 type="number"
                                 min="0"
@@ -2286,7 +2314,15 @@ export default function ReportPage() {
                                 onChange={(e) => setEditableHomeworkCount(prev => ({ ...prev, [monthKey]: Math.max(0, parseInt(e.target.value) || 0) }))}
                                 className="w-12 text-right text-2xl font-bold text-violet-600 bg-transparent border-b border-violet-200 focus:border-violet-500 focus:outline-none"
                               />
-                              <span className="text-sm text-[#888] font-normal"> / {HOMEWORK_STANDARD} 次</span>
+                              <span className="text-sm text-[#888] font-normal"> / </span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={homeworkStandard}
+                                onChange={(e) => setEditableHomeworkStandard(prev => ({ ...prev, [monthKey]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                className="w-10 text-right text-sm text-[#888] bg-transparent border-b border-gray-200 focus:border-violet-500 focus:outline-none"
+                              />
+                              <span className="text-sm text-[#888] font-normal"> 次</span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">

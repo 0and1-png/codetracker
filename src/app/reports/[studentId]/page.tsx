@@ -584,6 +584,10 @@ export default function ReportPage() {
   const exportPDF = async () => {
     if (!reportRef.current || !student) return;
     setExporting(true);
+    
+    // Wait for DOM to update (certificates to expand)
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     try {
       const { domToCanvas } = await import('modern-screenshot');
       const { jsPDF } = await import('jspdf');
@@ -2640,7 +2644,7 @@ export default function ReportPage() {
                                       </span>
                                     )}
                                   </button>
-                                  {certUrl && expandedGespLevel === gesp.level && (
+                                  {certUrl && (expandedGespLevel === gesp.level || exporting) && (
                                     <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                       <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
@@ -2690,7 +2694,7 @@ export default function ReportPage() {
                                       </span>
                                     )}
                                   </button>
-                                  {certUrl && expandedGespLevel === gesp.level && (
+                                  {certUrl && (expandedGespLevel === gesp.level || exporting) && (
                                     <div className="mt-2 ml-9 mr-2 rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                       <img src={certUrl} alt={`${gesp.name}证书`} className="w-full max-h-64 object-contain" />
                                     </div>
@@ -2789,7 +2793,7 @@ export default function ReportPage() {
                                       )}
                                       {hasCert && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">已上传</span>}
                                     </div>
-                                    {hasCert && isExpanded && (
+                                    {hasCert && (isExpanded || exporting) && (
                                       <div className="mt-2 ml-11 mr-2 rounded-lg overflow-hidden border border-purple-200 shadow-sm bg-purple-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                         <img src={comp.certificateUrl} alt={`${comp.title}证书`} className="w-full max-h-72 object-contain" />
                                       </div>

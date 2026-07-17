@@ -1343,11 +1343,11 @@ export default function ReportPage() {
                           p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
                         );
                         
-                        // 获取该知识点关联的作业
-                        const kpHomework = monthHomeworkRecords.filter(h => {
-                          const hwKpId = h.content?.match(/知识点[：:]\s*(\S+)/)?.[1];
-                          return hwKpId === kpId || h.title?.includes(kpDef?.name || '');
-                        });
+                        // 获取该知识点关联的作业（通过标题或内容匹配知识点名称）
+                        const kpName = kpDef?.name || kpId;
+                        const kpHomework = monthHomeworkRecords.filter(h => 
+                          h.title?.includes(kpName) || h.content?.includes(kpName)
+                        );
                         
                         const problemNames = [
                           ...kpProblems.map(p => p.name),

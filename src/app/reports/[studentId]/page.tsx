@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
 import {
   getStudents,
@@ -142,6 +142,20 @@ export default function ReportPage() {
   
   // 合并模式：将多个月份合并为一个报告
   const [mergeMode, setMergeMode] = useState(false);
+  
+  // 可编辑的能力反馈标签
+  const [editableStrengths, setEditableStrengths] = useState<string[]>([]);
+  const [editableWeaknesses, setEditableWeaknesses] = useState<string[]>([]);
+  const [newStrengthTag, setNewStrengthTag] = useState('');
+  const [newWeaknessTag, setNewWeaknessTag] = useState('');
+  
+  // 可编辑的出勤和作业统计
+  const [editableAttendanceDays, setEditableAttendanceDays] = useState<Record<string, number>>({});
+  const [editableHomeworkCount, setEditableHomeworkCount] = useState<Record<string, number>>({});
+  
+  // 可编辑的成长建议和家校tip
+  const [editableGrowthSuggestions, setEditableGrowthSuggestions] = useState<Record<string, string[]>>({});
+  const [editableHomeSchoolTips, setEditableHomeSchoolTips] = useState<Record<string, string>>({});
   const [selectedMergeMonths, setSelectedMergeMonths] = useState<string[]>([]);
   const [mergeTitle, setMergeTitle] = useState('');
   const [mergedQuote, setMergedQuote] = useState('');
@@ -351,6 +365,11 @@ export default function ReportPage() {
     setAllRetry(retry);
     setAllHomework(homework);
     setKnowledge(know);
+
+    // 初始化可编辑字段
+    setEditableStrengths(teacherTags.praiseTags.length > 0 ? teacherTags.praiseTags : strongPoints.slice(0, 5).map(kp => kp.knowledgePointName));
+    setEditableWeaknesses(teacherTags.improveTags.length > 0 ? teacherTags.improveTags : weakPoints.slice(0, 5).map(kp => kp.knowledgePointName));
+    // 成长建议、家校tip、家校共育、老师寄语使用默认值（已在 state 初始化时设置）
   }, [studentId]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -1991,28 +2010,31 @@ export default function ReportPage() {
                     </div>
                     点赞
                   </h3>
-                  {teacherTags.praiseTags.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {teacherTags.praiseTags.map((tag) => (
-                        <span key={tag} className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl text-sm font-medium border border-emerald-100 shadow-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : strongPoints.length > 0 ? (
-                    <div className="space-y-3">
-                      {strongPoints.slice(0, 5).map((kp, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2 px-4 rounded-xl bg-white/70">
-                          <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <span className="text-emerald-500 text-xs">✓</span>
-                          </div>
-                          <span className="text-[#333344] text-sm">{kp.knowledgePointName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[#888] text-sm">暂无数据</p>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {editableStrengths.map((tag, i) => (
+                      <span key={i} className="group inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl text-sm font-medium border border-emerald-100 shadow-sm">
+                        {tag}
+                        <button
+                          onClick={() => setEditableStrengths(prev => prev.filter((_, idx) => idx !== i))}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-emerald-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const newTag = prompt('请输入点赞标签：');
+                        if (newTag?.trim()) {
+                          setEditableStrengths(prev => [...prev, newTag.trim()]);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-2 bg-white text-emerald-600 rounded-2xl text-sm border border-dashed border-emerald-200 hover:bg-emerald-50 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      添加
+                    </button>
+                  </div>
                 </div>
 
                 {/* 待提升 */}
@@ -2023,28 +2045,31 @@ export default function ReportPage() {
                     </div>
                     待提升
                   </h3>
-                  {teacherTags.improveTags.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {teacherTags.improveTags.map((tag) => (
-                        <span key={tag} className="px-4 py-2 bg-orange-50 text-orange-600 rounded-2xl text-sm font-medium border border-orange-100 shadow-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : weakPoints.length > 0 ? (
-                    <div className="space-y-3">
-                      {weakPoints.slice(0, 5).map((kp, i) => (
-                        <div key={i} className="flex items-center gap-3 py-2 px-4 rounded-xl bg-white/70">
-                          <div className="h-6 w-6 rounded-full bg-orange-100 flex items-center justify-center">
-                            <span className="text-orange-500 text-xs">→</span>
-                          </div>
-                          <span className="text-[#333344] text-sm">{kp.knowledgePointName}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[#888] text-sm">暂无数据</p>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {editableWeaknesses.map((tag, i) => (
+                      <span key={i} className="group inline-flex items-center gap-1.5 px-4 py-2 bg-orange-50 text-orange-600 rounded-2xl text-sm font-medium border border-orange-100 shadow-sm">
+                        {tag}
+                        <button
+                          onClick={() => setEditableWeaknesses(prev => prev.filter((_, idx) => idx !== i))}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-orange-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const newTag = prompt('请输入待提升标签：');
+                        if (newTag?.trim()) {
+                          setEditableWeaknesses(prev => [...prev, newTag.trim()]);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-2 bg-white text-orange-600 rounded-2xl text-sm border border-dashed border-orange-200 hover:bg-orange-50 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      添加
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2154,7 +2179,9 @@ export default function ReportPage() {
           </div>
 
           {/* ========== 出勤与作业统计 ========== */}
-          {(monthHomework.length > 0 || monthRetry.length > 0) && (
+          {(() => {
+            const monthKey = periodStart ? `${periodStart.slice(0, 7)}` : '';
+            return (monthHomework.length > 0 || monthRetry.length > 0) && (
             <div className="rounded-[20px] shadow-xl shadow-purple-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #faf5ff, #f3e8ff)' }}>
               <div className="p-10">
                 {/* 标题 */}
@@ -2164,7 +2191,7 @@ export default function ReportPage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">月度出勤与作业</h2>
-                    <p className="text-xs text-[#888]">修行勤勉 · 作业完成</p>
+                    <p className="text-xs text-[#888]">出勤记录 · 作业完成</p>
                   </div>
                   <div className="flex-1 h-px bg-gradient-to-r from-purple-200 to-transparent ml-4"></div>
                 </div>
@@ -2176,7 +2203,7 @@ export default function ReportPage() {
                       <div className="h-6 w-6 rounded-lg bg-purple-100 flex items-center justify-center">
                         <Calendar className="h-3.5 w-3.5 text-purple-500" />
                       </div>
-                      修行勤勉（出勤）
+                      出勤记录
                     </h3>
                     {(() => {
                       // Count unique dates from all records as attendance
@@ -2187,13 +2214,23 @@ export default function ReportPage() {
                       const attendanceCount = allDates.size;
                       // 满勤标准：每月4天
                       const FULL_ATTENDANCE_DAYS = 4;
-                      const attendanceRate = Math.round(attendanceCount / FULL_ATTENDANCE_DAYS * 100);
-                      const isFullAttendance = attendanceCount >= FULL_ATTENDANCE_DAYS;
+                      const actualAttendanceDays = editableAttendanceDays[monthKey] ?? attendanceCount;
+                      const attendanceRate = Math.round(actualAttendanceDays / FULL_ATTENDANCE_DAYS * 100);
+                      const isFullAttendance = actualAttendanceDays >= FULL_ATTENDANCE_DAYS;
                       return (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">出勤天数</span>
-                            <span className="text-2xl font-bold text-purple-600">{attendanceCount}<span className="text-sm text-[#888] font-normal"> / {FULL_ATTENDANCE_DAYS} 天</span></span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                value={editableAttendanceDays[monthKey] ?? attendanceCount}
+                                onChange={(e) => setEditableAttendanceDays(prev => ({ ...prev, [monthKey]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                className="w-12 text-right text-2xl font-bold text-purple-600 bg-transparent border-b border-purple-200 focus:border-purple-500 focus:outline-none"
+                              />
+                              <span className="text-sm text-[#888] font-normal"> / {FULL_ATTENDANCE_DAYS} 天</span>
+                            </div>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">出勤率</span>
@@ -2234,13 +2271,23 @@ export default function ReportPage() {
                     {(() => {
                       // 每月作业标准：4次
                       const HOMEWORK_STANDARD = 4;
-                      const homeworkRate = Math.round(monthHomework.length / HOMEWORK_STANDARD * 100);
-                      const isHomeworkComplete = monthHomework.length >= HOMEWORK_STANDARD;
+                      const actualHomeworkCount = editableHomeworkCount[monthKey] ?? monthHomework.length;
+                      const homeworkRate = Math.round(actualHomeworkCount / HOMEWORK_STANDARD * 100);
+                      const isHomeworkComplete = actualHomeworkCount >= HOMEWORK_STANDARD;
                       return monthHomework.length > 0 ? (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">作业次数</span>
-                            <span className="text-2xl font-bold text-violet-600">{monthHomework.length}<span className="text-sm text-[#888] font-normal"> / {HOMEWORK_STANDARD} 次</span></span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                value={actualHomeworkCount}
+                                onChange={(e) => setEditableHomeworkCount(prev => ({ ...prev, [monthKey]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                className="w-12 text-right text-2xl font-bold text-violet-600 bg-transparent border-b border-violet-200 focus:border-violet-500 focus:outline-none"
+                              />
+                              <span className="text-sm text-[#888] font-normal"> / {HOMEWORK_STANDARD} 次</span>
+                            </div>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-[#666]">完成率</span>
@@ -2284,9 +2331,13 @@ export default function ReportPage() {
                 </div>
               </div>
             </div>
-          )}
+          );
+})()}
 
           {/* ========== 第五页：成长建议 ========== */}
+          {(() => {
+            const monthKey = periodStart ? `${periodStart.slice(0, 7)}` : '';
+            return (
           <div className="rounded-[20px] shadow-xl shadow-amber-100/50 overflow-hidden" style={{ background: 'linear-gradient(180deg, #fffbeb, #fef3c7)' }}>
             <div className="p-10">
               {/* 标题 */}
@@ -2302,35 +2353,94 @@ export default function ReportPage() {
 
               <div className="space-y-5">
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
-                    <span className="text-lg">💡</span> 提升Tip
-                  </h3>
-                  {teacherTags.growthSuggestions.length > 0 ? (
-                    <div className="space-y-3">
-                      {teacherTags.growthSuggestions.map((sug, i) => (
-                        <div key={i} className="flex items-start gap-3 py-2 px-4 rounded-xl bg-amber-50/50">
-                          <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
-                            <span className="text-amber-500 text-xs">{i + 1}</span>
-                          </div>
-                          <p className="text-[#555] text-sm leading-relaxed">{sug}</p>
-                        </div>
-                      ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-[#333344] flex items-center gap-2">
+                      <span className="text-lg">💡</span> 提升Tip
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newSug = prompt('输入新的提升建议：');
+                          if (newSug?.trim()) {
+                            setEditableGrowthSuggestions({
+                              ...editableGrowthSuggestions,
+                              [monthKey]: [...(editableGrowthSuggestions[monthKey] || []), newSug.trim()]
+                            });
+                          }
+                        }}
+                        className="h-7 text-xs rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
+                      >
+                        <Plus className="mr-1 h-3 w-3" />
+                        添加
+                      </Button>
                     </div>
-                  ) : (
-                    <p className="text-[#555] leading-relaxed text-sm">
-                      {weakPoints.length > 0 
-                        ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
-                        : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
-                    </p>
-                  )}
+                  </div>
+                  {(() => {
+                    const suggestions = editableGrowthSuggestions[monthKey] || teacherTags.growthSuggestions;
+                    if (suggestions.length > 0) {
+                      return (
+                        <div className="space-y-3">
+                          {suggestions.map((sug, i) => (
+                            <div key={i} className="flex items-start gap-3 py-2 px-4 rounded-xl bg-amber-50/50 group">
+                              <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
+                                <span className="text-amber-500 text-xs">{i + 1}</span>
+                              </div>
+                              <p className="text-[#555] text-sm leading-relaxed flex-1">{sug}</p>
+                              <button
+                                onClick={() => {
+                                  const newSuggestions = suggestions.filter((_, idx) => idx !== i);
+                                  setEditableGrowthSuggestions({
+                                    ...editableGrowthSuggestions,
+                                    [monthKey]: newSuggestions
+                                  });
+                                }}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-[#555] leading-relaxed text-sm">
+                        {weakPoints.length > 0 
+                          ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
+                          : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
-                    <span className="text-lg">🏠</span> 家校Tip
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-[#333344] flex items-center gap-2">
+                      <span className="text-lg">🏠</span> 家校Tip
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentTip = editableHomeSchoolTips[monthKey] || '鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。';
+                        const newTip = prompt('修改家校Tip：', currentTip);
+                        if (newTip !== null) {
+                          setEditableHomeSchoolTips({
+                            ...editableHomeSchoolTips,
+                            [monthKey]: newTip
+                          });
+                        }
+                      }}
+                      className="h-7 text-xs rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
+                    >
+                      <Edit3 className="mr-1 h-3 w-3" />
+                      修改
+                    </Button>
+                  </div>
                   <p className="text-[#555] leading-relaxed text-sm">
-                    鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
+                    {editableHomeSchoolTips[monthKey] || '鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。'}
                   </p>
                 </div>
 
@@ -2684,6 +2794,8 @@ export default function ReportPage() {
               </div>
             </div>
           </div>
+          )
+        })()}
 
           {/* ========== 第六页：课堂风采 ========== */}
           <div className="rounded-[20px] shadow-xl overflow-hidden relative" style={{ background: 'linear-gradient(180deg, #fef7f0, #fdf2e9)' }}>
@@ -2758,21 +2870,41 @@ export default function ReportPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-5 mb-8">
-                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="bg-white rounded-2xl p-6 shadow-sm group relative">
+                  <button
+                    onClick={() => {
+                      const newTip = prompt('编辑陪伴创新建议：', editableHomeSchoolTips.innovation);
+                      if (newTip !== null) setEditableHomeSchoolTips(prev => ({ ...prev, innovation: newTip }));
+                    }}
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-gray-100"
+                    title="编辑"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-gray-400" />
+                  </button>
                   <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
                     <span className="text-lg">💡</span> 陪伴创新
                   </h3>
                   <p className="text-[#555] text-sm leading-relaxed">
-                    鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。
+                    {editableHomeSchoolTips.innovation}
                   </p>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="bg-white rounded-2xl p-6 shadow-sm group relative">
+                  <button
+                    onClick={() => {
+                      const newTip = prompt('编辑学业跟进建议：', editableHomeSchoolTips.academic);
+                      if (newTip !== null) setEditableHomeSchoolTips(prev => ({ ...prev, academic: newTip }));
+                    }}
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-gray-100"
+                    title="编辑"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-gray-400" />
+                  </button>
                   <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
                     <span className="text-lg">📚</span> 学业跟进
                   </h3>
                   <p className="text-[#555] text-sm leading-relaxed">
-                    关注孩子的学习进度，定期检查作业完成情况。建议每天安排固定的编程练习时间，保持学习连贯性。
+                    {editableHomeSchoolTips.academic}
                   </p>
                 </div>
               </div>

@@ -1495,6 +1495,16 @@ export default function HomePage() {
             </button>
           </div>
 
+          {/* Add existing student button - shown when a class is selected */}
+          {selectedClass !== 'all' && (
+            <div className="px-3 py-2 border-b border-gray-100">
+              <button onClick={() => setShowAddExistingStudent(true)}
+                className="w-full px-3 py-1.5 rounded-lg text-xs text-purple-600 bg-purple-50 hover:bg-purple-100 transition-all flex items-center justify-center gap-1.5 border border-purple-200">
+                <UserPlus className="h-3.5 w-3.5" /> 添加已有学员到「{selectedClass}」
+              </button>
+            </div>
+          )}
+
           {/* Student list */}
           <div className="flex-1 overflow-y-auto">
             {filteredStudents.length === 0 ? (

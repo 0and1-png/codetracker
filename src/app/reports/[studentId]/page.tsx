@@ -149,6 +149,8 @@ export default function ReportPage() {
   const [editableWeaknesses, setEditableWeaknesses] = useState<string[]>([]);
   const [newStrengthTag, setNewStrengthTag] = useState('');
   const [newWeaknessTag, setNewWeaknessTag] = useState('');
+  const [showStrengthInput, setShowStrengthInput] = useState(false);
+  const [showWeaknessInput, setShowWeaknessInput] = useState(false);
   
   // 可编辑的出勤和作业统计
   const [editableAttendanceDays, setEditableAttendanceDays] = useState<Record<string, number>>({});
@@ -1288,10 +1290,63 @@ export default function ReportPage() {
                 <div>
                   <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
-                    本月完成题目
+                    {isVisualCourse ? '本月学习知识点' : '本月完成题目'}
                   </h3>
                   {(() => {
-                    // 从三刷记录获取题目
+                    // 图形化课程：显示本月学习的知识点
+                    if (isVisualCourse) {
+                      const monthKey = selectedMonth;
+                      const monthKnowledge = knowledge.filter(k => k.updatedAt?.startsWith(monthKey));
+                      
+                      if (monthKnowledge.length === 0) {
+                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">暂无学习记录</p></div>;
+                      }
+
+                      // 按知识点分组
+                      const kpGroups = monthKnowledge.reduce((acc, k) => {
+                        if (!acc[k.knowledgePointId]) acc[k.knowledgePointId] = [];
+                        acc[k.knowledgePointId].push(k);
+                        return acc;
+                      }, {} as Record<string, typeof knowledge>);
+
+                      return (
+                        <div className="space-y-3">
+                          {Object.entries(kpGroups).map(([kpId, records]) => {
+                            const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
+                            const kpName = kpDef?.name || kpId;
+                            const latestRecord = records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+                            const statusLabel = latestRecord.status === 'mastered' ? '已掌握' : latestRecord.status === 'learning' ? '学习中' : '未开始';
+                            const statusColor = latestRecord.status === 'mastered' ? 'bg-green-100 text-green-700' : latestRecord.status === 'learning' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
+                            
+                            return (
+                              <div key={kpId} className="bg-white rounded-xl p-4 border border-violet-50 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium text-[#333]">{kpName}</span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor}`}>
+                                    {statusLabel}
+                                  </span>
+                                </div>
+                                {latestRecord.description && (
+                                  <p className="text-xs text-[#666] mt-1">{latestRecord.description}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <div className="flex items-center gap-1 flex-1">
+                                    {Array.from({ length: 10 }).map((_, i) => (
+                                      <div key={i} className={`h-1.5 flex-1 rounded-full ${
+                                        i < (latestRecord.score || 0) ? 'bg-gradient-to-r from-violet-400 to-purple-500' : 'bg-gray-100'
+                                      }`} />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-[#888]">{((latestRecord.score || 0) * 10)}%</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    // C++/Python课程：从三刷记录获取题目
                     const problemGroups = monthRetry.reduce((acc, r) => {
                       if (!acc[r.problemId]) acc[r.problemId] = [];
                       acc[r.problemId].push(r);
@@ -1321,48 +1376,8 @@ export default function ReportPage() {
 
                     return (
                       <div className="space-y-6">
-                        {/* 图形化课程：知识点掌握情况 */}
-                        {isVisualCourse && (
-                          <div className="bg-gradient-to-br from-white to-violet-50/30 rounded-2xl p-6 shadow-sm border border-violet-100/50">
-                            <div className="flex items-center gap-3 mb-5">
-                              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center shadow-md shadow-violet-200/50">
-                                <BookOpen className="h-4 w-4 text-white" />
-                              </div>
-                              <div>
-                                <h4 className="text-lg font-bold text-[#333344]">知识点掌握情况</h4>
-                                <p className="text-xs text-[#888]">图形化编程学习进度</p>
-                              </div>
-                              <div className="flex-1 h-px bg-gradient-to-r from-violet-200 to-transparent ml-2"></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              {knowledgeMastery.map((km, idx) => (
-                                <div key={idx} className="bg-white rounded-xl p-3 border border-violet-50">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-[#333]">{km.knowledgePointName}</span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                      km.status === 'mastered' ? 'bg-green-100 text-green-700' :
-                                      km.status === 'learning' ? 'bg-amber-100 text-amber-700' :
-                                      'bg-gray-100 text-gray-600'
-                                    }`}>
-                                      {km.status === 'mastered' ? '已掌握' : km.status === 'learning' ? '学习中' : '未开始'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    {Array.from({ length: 10 }).map((_, i) => (
-                                      <div key={i} className={`h-1.5 flex-1 rounded-full ${
-                                        i < Math.floor(km.masteryPercent / 10) ? 'bg-gradient-to-r from-violet-400 to-purple-500' : 'bg-gray-100'
-                                      }`} />
-                                    ))}
-                                  </div>
-                                  <p className="text-xs text-[#888] mt-2">掌握度 {km.masteryPercent}%</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
                         {/* C++/Python课程：重点题型 - 汇总表格 */}
-                        {!isVisualCourse && keyProblems.length > 0 && (
+                        {keyProblems.length > 0 && (
                           <div className="bg-gradient-to-br from-white to-orange-50/30 rounded-2xl p-6 shadow-sm border border-orange-100/50">
                             <div className="flex items-center gap-3 mb-5">
                               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md shadow-orange-200/50">
@@ -2047,18 +2062,57 @@ export default function ReportPage() {
                         </button>
                       </span>
                     ))}
-                    <button
-                      onClick={() => {
-                        const newTag = prompt('请输入点赞标签：');
-                        if (newTag?.trim()) {
-                          setEditableStrengths(prev => [...prev, newTag.trim()]);
-                        }
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-2 bg-white text-emerald-600 rounded-2xl text-sm border border-dashed border-emerald-200 hover:bg-emerald-50 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      添加
-                    </button>
+                    {showStrengthInput ? (
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={newStrengthTag}
+                          onChange={(e) => setNewStrengthTag(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newStrengthTag.trim()) {
+                              setEditableStrengths(prev => [...prev, newStrengthTag.trim()]);
+                              setNewStrengthTag('');
+                              setShowStrengthInput(false);
+                            } else if (e.key === 'Escape') {
+                              setNewStrengthTag('');
+                              setShowStrengthInput(false);
+                            }
+                          }}
+                          placeholder="输入标签..."
+                          className="px-3 py-2 bg-white border border-emerald-200 rounded-2xl text-sm text-emerald-600 placeholder:text-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 w-24"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => {
+                            if (newStrengthTag.trim()) {
+                              setEditableStrengths(prev => [...prev, newStrengthTag.trim()]);
+                              setNewStrengthTag('');
+                              setShowStrengthInput(false);
+                            }
+                          }}
+                          className="p-2 bg-emerald-500 text-white rounded-full hover:bg-emerald-600 transition-colors"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setNewStrengthTag('');
+                            setShowStrengthInput(false);
+                          }}
+                          className="p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowStrengthInput(true)}
+                        className="inline-flex items-center gap-1 px-3 py-2 bg-white text-emerald-600 rounded-2xl text-sm border border-dashed border-emerald-200 hover:bg-emerald-50 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        添加
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2082,18 +2136,57 @@ export default function ReportPage() {
                         </button>
                       </span>
                     ))}
-                    <button
-                      onClick={() => {
-                        const newTag = prompt('请输入待提升标签：');
-                        if (newTag?.trim()) {
-                          setEditableWeaknesses(prev => [...prev, newTag.trim()]);
-                        }
-                      }}
-                      className="inline-flex items-center gap-1 px-3 py-2 bg-white text-orange-600 rounded-2xl text-sm border border-dashed border-orange-200 hover:bg-orange-50 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      添加
-                    </button>
+                    {showWeaknessInput ? (
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={newWeaknessTag}
+                          onChange={(e) => setNewWeaknessTag(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newWeaknessTag.trim()) {
+                              setEditableWeaknesses(prev => [...prev, newWeaknessTag.trim()]);
+                              setNewWeaknessTag('');
+                              setShowWeaknessInput(false);
+                            } else if (e.key === 'Escape') {
+                              setNewWeaknessTag('');
+                              setShowWeaknessInput(false);
+                            }
+                          }}
+                          placeholder="输入标签..."
+                          className="px-3 py-2 bg-white border border-orange-200 rounded-2xl text-sm text-orange-600 placeholder:text-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-300 w-24"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => {
+                            if (newWeaknessTag.trim()) {
+                              setEditableWeaknesses(prev => [...prev, newWeaknessTag.trim()]);
+                              setNewWeaknessTag('');
+                              setShowWeaknessInput(false);
+                            }
+                          }}
+                          className="p-2 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setNewWeaknessTag('');
+                            setShowWeaknessInput(false);
+                          }}
+                          className="p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowWeaknessInput(true)}
+                        className="inline-flex items-center gap-1 px-3 py-2 bg-white text-orange-600 rounded-2xl text-sm border border-dashed border-orange-200 hover:bg-orange-50 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        添加
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -302,10 +302,31 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   const linkKnowledgePoint = (nodeId: string, kpId: string) => {
     if (!course) return;
-    const updated = updateNodeInTree(course.curriculum, nodeId, (node) => ({
-      ...node,
-      knowledgePointId: node.knowledgePointId === kpId ? undefined : kpId,
-    }));
+    const updated = updateNodeInTree(course.curriculum, nodeId, (node) => {
+      const isLinking = node.knowledgePointId !== kpId;
+      // 如果关联知识点，同步关联该知识点下的所有题目
+      let problemIds = node.problemIds || [];
+      if (isLinking) {
+        const relatedProblems = course.problems.filter(
+          (p) => p.knowledgePointId === kpId || p.knowledgePointIds?.includes(kpId)
+        );
+        const relatedProblemIds = relatedProblems.map((p) => p.id);
+        // 合并并去重
+        problemIds = [...new Set([...problemIds, ...relatedProblemIds])];
+      } else {
+        // 取消关联时，移除该知识点关联的题目
+        const relatedProblems = course.problems.filter(
+          (p) => p.knowledgePointId === kpId || p.knowledgePointIds?.includes(kpId)
+        );
+        const relatedProblemIds = new Set(relatedProblems.map((p) => p.id));
+        problemIds = problemIds.filter((id) => !relatedProblemIds.has(id));
+      }
+      return {
+        ...node,
+        knowledgePointId: isLinking ? kpId : undefined,
+        problemIds,
+      };
+    });
     save({ ...course, curriculum: updated });
   };
 

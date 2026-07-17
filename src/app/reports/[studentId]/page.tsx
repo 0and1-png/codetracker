@@ -165,6 +165,10 @@ export default function ReportPage() {
   const [mergeTitle, setMergeTitle] = useState('');
   const [mergedQuote, setMergedQuote] = useState('');
   
+  // 可编辑的知识点描述
+  const [editableKpDescriptions, setEditableKpDescriptions] = useState<Record<string, string>>({});
+  const [editingKpId, setEditingKpId] = useState<string | null>(null);
+  
   // 获取某个月份的数据
   const getMonthData = useCallback((monthKey: string) => {
     const [year, month] = monthKey.split('-').map(Number);
@@ -1293,55 +1297,116 @@ export default function ReportPage() {
                     {isVisualCourse ? '本月学习知识点' : '本月完成题目'}
                   </h3>
                   {(() => {
-                    // 图形化课程：显示本月已完成的知识点及题目
+                    // 图形化课程：显示本月完成的作业和知识点
                     if (isVisualCourse) {
                       const monthKey = selectedMonth;
-                      // 只筛选已掌握（mastered）的知识点
-                      const monthKnowledge = knowledge.filter(k => 
-                        k.updatedAt?.startsWith(monthKey) && k.status === 'mastered'
-                      );
                       
-                      if (monthKnowledge.length === 0) {
-                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无已完成的知识点</p></div>;
+                      // 获取本月作业记录（作为完成的题目）
+                      const monthHomeworkRecords = monthHomework.filter(h => h.date.startsWith(monthKey));
+                      
+                      // 获取本月有进度记录的知识点（包括 learning 和 mastered）
+                      const monthKnowledgeRecords = knowledge.filter(k => k.updatedAt?.startsWith(monthKey));
+                      
+                      // 从课程体系中获取知识点（自动生成）
+                      const curriculumKpIds = new Set<string>();
+                      const collectKpFromCurriculum = (nodes: any[]) => {
+                        nodes.forEach(node => {
+                          if (node.knowledgePointId) curriculumKpIds.add(node.knowledgePointId);
+                          if (node.children) collectKpFromCurriculum(node.children);
+                        });
+                      };
+                      if (course?.curriculum) collectKpFromCurriculum(course.curriculum);
+                      
+                      // 合并所有知识点来源
+                      const allKpIds = new Set([
+                        ...monthKnowledgeRecords.map(k => k.knowledgePointId),
+                        ...curriculumKpIds
+                      ]);
+                      
+                      // 构建知识点映射
+                      const kpMap = new Map<string, { name: string; description: string; problems: string[]; status: string }>();
+                      
+                      allKpIds.forEach(kpId => {
+                        const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
+                        const progress = monthKnowledgeRecords.find(k => k.knowledgePointId === kpId);
+                        
+                        // 获取该知识点关联的题目
+                        const kpProblems = (course?.problems || []).filter(p => 
+                          p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
+                        );
+                        
+                        // 获取该知识点关联的作业
+                        const kpHomework = monthHomeworkRecords.filter(h => {
+                          const hwKpId = h.content?.match(/知识点[：:]\s*(\S+)/)?.[1];
+                          return hwKpId === kpId || h.title?.includes(kpDef?.name || '');
+                        });
+                        
+                        const problemNames = [
+                          ...kpProblems.map(p => p.name),
+                          ...kpHomework.map(h => h.title)
+                        ];
+                        
+                        kpMap.set(kpId, {
+                          name: kpDef?.name || kpId,
+                          description: progress?.description || kpDef?.description || '',
+                          problems: problemNames,
+                          status: progress?.status || 'learning'
+                        });
+                      });
+                      
+                      if (kpMap.size === 0) {
+                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无学习记录</p></div>;
                       }
-
-                      // 按知识点分组
-                      const kpGroups = monthKnowledge.reduce((acc, k) => {
-                        if (!acc[k.knowledgePointId]) acc[k.knowledgePointId] = [];
-                        acc[k.knowledgePointId].push(k);
-                        return acc;
-                      }, {} as Record<string, typeof knowledge>);
 
                       return (
                         <div className="space-y-4">
-                          {Object.entries(kpGroups).map(([kpId, records]) => {
-                            const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
-                            const kpName = kpDef?.name || kpId;
-                            const latestRecord = records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+                          {Array.from(kpMap.entries()).map(([kpId, kp]) => {
+                            const currentDescription = editableKpDescriptions[kpId] !== undefined 
+                              ? editableKpDescriptions[kpId] 
+                              : kp.description;
+                            const isEditing = editingKpId === kpId;
                             
-                            // 获取该知识点关联的题目
-                            const kpProblems = (course?.problems || []).filter(p => 
-                              p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
-                            );
-
                             return (
-                              <div key={kpId} className="bg-white rounded-xl p-4 border border-violet-50 shadow-sm">
+                              <div key={kpId} className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
                                 <div className="flex items-center justify-between mb-3">
-                                  <span className="text-sm font-semibold text-[#333]">{kpName}</span>
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                    已完成
-                                  </span>
+                                  <span className="text-base font-semibold text-[#333]">{kp.name}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs px-2.5 py-1 rounded-full ${
+                                      kp.status === 'mastered' 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {kp.status === 'mastered' ? '已掌握' : '学习中'}
+                                    </span>
+                                    <button
+                                      onClick={() => setEditingKpId(isEditing ? null : kpId)}
+                                      className="text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-50"
+                                    >
+                                      {isEditing ? '完成' : '编辑'}
+                                    </button>
+                                  </div>
                                 </div>
-                                {latestRecord.description && (
-                                  <p className="text-xs text-[#666] mb-3">{latestRecord.description}</p>
+                                {isEditing ? (
+                                  <textarea
+                                    value={currentDescription}
+                                    onChange={(e) => setEditableKpDescriptions(prev => ({ ...prev, [kpId]: e.target.value }))}
+                                    className="w-full text-sm text-[#666] leading-relaxed p-2 border border-violet-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                    rows={3}
+                                    placeholder="输入知识点描述..."
+                                  />
+                                ) : (
+                                  currentDescription && (
+                                    <p className="text-sm text-[#666] mb-3 leading-relaxed">{currentDescription}</p>
+                                  )
                                 )}
-                                {kpProblems.length > 0 && (
-                                  <div className="mt-2">
-                                    <p className="text-xs text-[#888] mb-1.5">完成题目：</p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {kpProblems.map(p => (
-                                        <span key={p.id} className="inline-flex items-center px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs border border-violet-100">
-                                          {p.name}
+                                {kp.problems.length > 0 && (
+                                  <div className="mt-3 pt-3 border-t border-gray-100">
+                                    <p className="text-xs text-[#888] mb-2 font-medium">完成内容：</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {kp.problems.map((p, idx) => (
+                                        <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 text-xs border border-violet-100 shadow-sm">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mr-1.5"></span>
+                                          {p}
                                         </span>
                                       ))}
                                     </div>

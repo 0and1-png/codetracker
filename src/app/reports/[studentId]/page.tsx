@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
 import {
   getStudents,
@@ -113,6 +113,28 @@ export default function ReportPage() {
     return `${months[now.getMonth()]}-${now.getFullYear()}`;
   });
   const [monthlyQuote, setMonthlyQuote] = useState('所有的运气和惊喜，都来自你去年的努力和今年的坚持。');
+  
+  // 励志文案库
+  const quoteTemplates = [
+    '所有的运气和惊喜，都来自你去年的努力和今年的坚持。',
+    '每一行代码，都是通往未来的阶梯。',
+    '编程不仅是技能，更是思维的锻炼。',
+    '今天的努力，是明天成功的基石。',
+    '每一次调试，都是成长的机会。',
+    '代码改变世界，学习改变自己。',
+    '坚持练习，你会看到不一样的自己。',
+    '编程之路，始于足下，成于坚持。',
+    '每一个bug都是学习的机会，每一次解决都是进步。',
+    '用代码创造未来，用坚持成就梦想。',
+    '学习编程，就是学习如何思考。',
+    '今天的你比昨天更优秀，因为你在不断进步。',
+  ];
+  
+  // 自动生成励志文案
+  const generateQuote = useCallback(() => {
+    const randomIndex = Math.floor(Math.random() * quoteTemplates.length);
+    setMonthlyQuote(quoteTemplates[randomIndex]);
+  }, []);
   
   // 时间轴模式：显示所有有数据的月份
   const [timelineMode, setTimelineMode] = useState(false);
@@ -1154,13 +1176,22 @@ export default function ReportPage() {
                 placeholder="Jan-2026"
               />
               {/* 励志文案 - 白色居中 */}
-              <textarea
-                value={monthlyQuote}
-                onChange={(e) => setMonthlyQuote(e.target.value)}
-                className="text-center text-sm text-white bg-transparent border-none outline-none resize-none w-full max-w-lg leading-relaxed"
-                rows={2}
-                placeholder="输入本月励志文案..."
-              />
+              <div className="flex items-center gap-2 max-w-lg mx-auto">
+                <textarea
+                  value={monthlyQuote}
+                  onChange={(e) => setMonthlyQuote(e.target.value)}
+                  className="flex-1 text-center text-sm text-white bg-transparent border-none outline-none resize-none leading-relaxed"
+                  rows={2}
+                  placeholder="输入本月励志文案..."
+                />
+                <button
+                  onClick={generateQuote}
+                  className="shrink-0 p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors"
+                  title="随机生成励志文案"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             <div className="p-10">

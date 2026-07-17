@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Activity, Keyboard } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Keyboard } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   getStudents,
@@ -1716,29 +1716,45 @@ export default function ReportPage() {
                     };
                   });
 
-                  // 知识点学习进度
-                  const knowledgeProgress = course?.knowledgePoints?.slice(0, 5).map(kp => {
-                    const progress = knowledge.find(k => k.knowledgePointId === kp.id);
-                    const status = progress?.status || 'not_started';
-                    return {
-                      name: kp.name.length > 6 ? kp.name.slice(0, 6) + '...' : kp.name,
-                      进度: status === 'mastered' ? 100 : status === 'learning' ? 50 : 0
-                    };
-                  }) || [];
+                  // 知识点学习进度 - 根据课程体系中的知识点题库
+                  const curriculumKpIds: string[] = [];
+                  const collectKpFromCurriculum = (nodes: any[]) => {
+                    nodes.forEach(node => {
+                      if (node.knowledgePointId) curriculumKpIds.push(node.knowledgePointId);
+                      if (node.children) collectKpFromCurriculum(node.children);
+                    });
+                  };
+                  if (course?.curriculum) collectKpFromCurriculum(course.curriculum);
 
-                  // 学习活跃度（基于作业和打字记录）
-                  const activityData = Array.from({ length: 7 }, (_, i) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() - (6 - i));
-                    const dateStr = date.toISOString().slice(0, 10);
-                    
-                    const dayHomework = allHomework.filter(h => h.date === dateStr).length;
-                    const dayTyping = allTyping.filter(t => t.date === dateStr).length;
-                    
+                  const knowledgeProgress = curriculumKpIds.map(kpId => {
+                    const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
+                    const progress = knowledge.find(k => k.knowledgePointId === kpId);
+                    // 获取该知识点关联的题目
+                    const kpProblems = (course?.problems || []).filter(p =>
+                      p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
+                    );
+                    // 获取该知识点关联的作业
+                    const kpName = kpDef?.name || kpId;
+                    const kpHomework = monthHomework.filter(h =>
+                      h.date.startsWith(selectedMonth) && (h.title?.includes(kpName) || h.content?.includes(kpName))
+                    );
+                    const totalProblems = kpProblems.length + kpHomework.length;
+                    const completedProblems = kpHomework.filter(h => (h.score || 0) >= 80).length;
+                    const status = progress?.status || 'not_started';
+                    // 计算进度：如果有完成记录则按完成比例，否则按状态
+                    let pct = 0;
+                    if (totalProblems > 0) {
+                      pct = Math.round((completedProblems / totalProblems) * 100);
+                    } else if (status === 'mastered') {
+                      pct = 100;
+                    } else if (status === 'learning') {
+                      pct = 50;
+                    }
                     return {
-                      day: ['日', '一', '二', '三', '四', '五', '六'][date.getDay()],
-                      作业: dayHomework,
-                      练习: dayTyping
+                      name: (kpDef?.name || kpId).length > 8 ? (kpDef?.name || kpId).slice(0, 8) + '...' : (kpDef?.name || kpId),
+                      进度: pct,
+                      total: totalProblems,
+                      completed: completedProblems
                     };
                   });
 
@@ -1784,46 +1800,34 @@ export default function ReportPage() {
                       </div>
 
                       {/* 知识点学习进度 */}
-                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
-                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
-                          <Target className="w-4 h-4 text-purple-500" />
-                          知识点学习进度
-                        </h4>
-                        <div className="space-y-3">
-                          {knowledgeProgress.map((kp, idx) => (
-                            <div key={idx}>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span className="text-[#333] font-medium">{kp.name}</span>
-                                <span className="text-[#888]">{kp.进度}%</span>
+                      {knowledgeProgress.length > 0 && (
+                        <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                          <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-purple-500" />
+                            知识点学习进度
+                          </h4>
+                          <div className="space-y-3">
+                            {knowledgeProgress.map((kp, idx) => (
+                              <div key={idx}>
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span className="text-[#333] font-medium">{kp.name}</span>
+                                  <span className="text-[#888]">{kp.completed}/{kp.total} ({kp.进度}%)</span>
+                                </div>
+                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      kp.进度 >= 100 ? 'bg-gradient-to-r from-green-400 to-green-500' :
+                                      kp.进度 >= 50 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
+                                      'bg-gradient-to-r from-purple-400 to-purple-600'
+                                    }`}
+                                    style={{ width: `${kp.进度}%` }}
+                                  />
+                                </div>
                               </div>
-                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-500"
-                                  style={{ width: `${kp.进度}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-
-                      {/* 学习活跃度 */}
-                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
-                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
-                          <Activity className="w-4 h-4 text-orange-500" />
-                          学习活跃度（近7天）
-                        </h4>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <BarChart data={activityData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#888' }} />
-                            <YAxis tick={{ fontSize: 12, fill: '#888' }} />
-                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                            <Bar dataKey="作业" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="练习" fill="#f97316" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
+                      )}
 
                       {/* 打字速度可视化 */}
                       {typingTrendData.length > 0 && (

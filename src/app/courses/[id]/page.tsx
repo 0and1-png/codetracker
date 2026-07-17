@@ -410,6 +410,21 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     });
   };
 
+  const moveKnowledgePoint = (id: string, direction: 'up' | 'down') => {
+    if (!course) return;
+    const kps = [...course.knowledgePoints];
+    const idx = kps.findIndex((kp) => kp.id === id);
+    if (idx === -1) return;
+    if (direction === 'up' && idx > 0) {
+      [kps[idx - 1], kps[idx]] = [kps[idx], kps[idx - 1]];
+    } else if (direction === 'down' && idx < kps.length - 1) {
+      [kps[idx + 1], kps[idx]] = [kps[idx], kps[idx + 1]];
+    } else {
+      return;
+    }
+    save({ ...course, knowledgePoints: kps });
+  };
+
   const addProblem = (kpId?: string) => {
     if (!course || !newProblemName.trim()) return;
     const targetKpId = kpId || newProblemKpId || undefined;
@@ -875,14 +890,34 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 </Badge>
                               )}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 hover:bg-red-900/30 hover:text-red-400"
-                              onClick={(e) => { e.stopPropagation(); removeKnowledgePoint(kp.id); }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-gray-200 text-gray-700"
+                                onClick={(e) => { e.stopPropagation(); moveKnowledgePoint(kp.id, 'up'); }}
+                                title="上移"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-gray-200 text-gray-700"
+                                onClick={(e) => { e.stopPropagation(); moveKnowledgePoint(kp.id, 'down'); }}
+                                title="下移"
+                              >
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-red-900/30 hover:text-red-400"
+                                onClick={(e) => { e.stopPropagation(); removeKnowledgePoint(kp.id); }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                           {isExpanded && (
                             <div className="px-4 pb-3 pt-1 space-y-2 bg-white">

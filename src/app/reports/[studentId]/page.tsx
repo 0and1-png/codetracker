@@ -1293,13 +1293,16 @@ export default function ReportPage() {
                     {isVisualCourse ? '本月学习知识点' : '本月完成题目'}
                   </h3>
                   {(() => {
-                    // 图形化课程：显示本月学习的知识点
+                    // 图形化课程：显示本月已完成的知识点及题目
                     if (isVisualCourse) {
                       const monthKey = selectedMonth;
-                      const monthKnowledge = knowledge.filter(k => k.updatedAt?.startsWith(monthKey));
+                      // 只筛选已掌握（mastered）的知识点
+                      const monthKnowledge = knowledge.filter(k => 
+                        k.updatedAt?.startsWith(monthKey) && k.status === 'mastered'
+                      );
                       
                       if (monthKnowledge.length === 0) {
-                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">暂无学习记录</p></div>;
+                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无已完成的知识点</p></div>;
                       }
 
                       // 按知识点分组
@@ -1310,35 +1313,40 @@ export default function ReportPage() {
                       }, {} as Record<string, typeof knowledge>);
 
                       return (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {Object.entries(kpGroups).map(([kpId, records]) => {
                             const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
                             const kpName = kpDef?.name || kpId;
                             const latestRecord = records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-                            const statusLabel = latestRecord.status === 'mastered' ? '已掌握' : latestRecord.status === 'learning' ? '学习中' : '未开始';
-                            const statusColor = latestRecord.status === 'mastered' ? 'bg-green-100 text-green-700' : latestRecord.status === 'learning' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
                             
+                            // 获取该知识点关联的题目
+                            const kpProblems = (course?.problems || []).filter(p => 
+                              p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
+                            );
+
                             return (
                               <div key={kpId} className="bg-white rounded-xl p-4 border border-violet-50 shadow-sm">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium text-[#333]">{kpName}</span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor}`}>
-                                    {statusLabel}
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-sm font-semibold text-[#333]">{kpName}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                    已完成
                                   </span>
                                 </div>
                                 {latestRecord.description && (
-                                  <p className="text-xs text-[#666] mt-1">{latestRecord.description}</p>
+                                  <p className="text-xs text-[#666] mb-3">{latestRecord.description}</p>
                                 )}
-                                <div className="flex items-center gap-2 mt-2">
-                                  <div className="flex items-center gap-1 flex-1">
-                                    {Array.from({ length: 10 }).map((_, i) => (
-                                      <div key={i} className={`h-1.5 flex-1 rounded-full ${
-                                        i < (latestRecord.score || 0) ? 'bg-gradient-to-r from-violet-400 to-purple-500' : 'bg-gray-100'
-                                      }`} />
-                                    ))}
+                                {kpProblems.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-[#888] mb-1.5">完成题目：</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {kpProblems.map(p => (
+                                        <span key={p.id} className="inline-flex items-center px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs border border-violet-100">
+                                          {p.name}
+                                        </span>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <span className="text-xs text-[#888]">{((latestRecord.score || 0) * 10)}%</span>
-                                </div>
+                                )}
                               </div>
                             );
                           })}

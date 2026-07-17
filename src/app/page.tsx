@@ -1020,6 +1020,7 @@ export default function HomePage() {
   // Class management
   const [showCreateClass, setShowCreateClass] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
+  const [showAddExistingStudent, setShowAddExistingStudent] = useState(false);
   const [createClass, setCreateClass] = useState('');
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState('');
@@ -1473,6 +1474,12 @@ export default function HomePage() {
                 className="px-2 py-1 rounded text-xs text-green-500 hover:bg-green-50 transition-all flex items-center gap-1 shrink-0">
                 <UserPlus className="h-3 w-3" /> 学员
               </button>
+              {selectedClass !== 'all' && (
+                <button onClick={() => setShowAddExistingStudent(true)}
+                  className="px-2 py-1 rounded text-xs text-purple-500 hover:bg-purple-50 transition-all flex items-center gap-1 shrink-0">
+                  <UserPlus className="h-3 w-3" /> 添加已有学员
+                </button>
+              )}
             </div>
           </div>
 
@@ -1513,8 +1520,8 @@ export default function HomePage() {
                           <div className="text-xs text-gray-400 truncate">{student.className}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-0.5">
-                        <button className="p-1 hover:bg-blue-50 rounded opacity-60 hover:opacity-100 transition-all"
+                      <div className="flex items-center gap-1">
+                        <button className="p-1.5 hover:bg-blue-100 rounded opacity-80 hover:opacity-100 transition-all"
                           title="更换班级"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1522,15 +1529,15 @@ export default function HomePage() {
                             setMoveStudentClass(student.className || '');
                             setMoveStudentOpen(true);
                           }}>
-                          <Users className="h-3 w-3 text-blue-400 hover:text-blue-600" />
+                          <Users className="h-4 w-4 text-blue-500 hover:text-blue-700" />
                         </button>
-                        <Link href={`/reports/${student.id}`} className="p-1 hover:bg-blue-50 rounded opacity-60 hover:opacity-100 transition-all"
+                        <Link href={`/reports/${student.id}`} className="p-1.5 hover:bg-blue-100 rounded opacity-80 hover:opacity-100 transition-all"
                           title="查看成长报告" onClick={(e) => e.stopPropagation()}>
-                          <FileText className="h-3 w-3 text-blue-500" />
+                          <FileText className="h-4 w-4 text-blue-600" />
                         </Link>
-                        <button className="p-1 hover:bg-red-50 rounded opacity-60 hover:opacity-100 transition-all"
+                        <button className="p-1.5 hover:bg-red-100 rounded opacity-80 hover:opacity-100 transition-all"
                           onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
-                          <Trash2 className="h-3 w-3 text-gray-400 hover:text-red-500" />
+                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
                         </button>
                       </div>
                     </div>
@@ -1752,6 +1759,39 @@ export default function HomePage() {
             <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white" onClick={handleAddStudent} disabled={!newName.trim()}>
               确认添加
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Existing Student to Class Dialog */}
+      <Dialog open={showAddExistingStudent} onOpenChange={setShowAddExistingStudent}>
+        <DialogContent className="bg-white border-gray-200 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-gray-800">添加已有学员到「{selectedClass}」</DialogTitle>
+            <DialogDescription className="text-gray-500">
+              选择未分配班级的学员添加到当前班级
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {courseStudents.filter((s: Student) => !s.className).map((student: Student) => (
+              <div key={student.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                <div>
+                  <div className="text-sm font-medium text-gray-800">{student.name}</div>
+                  {student.notes && <div className="text-xs text-gray-400">{student.notes}</div>}
+                </div>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
+                  const updated = { ...student, className: selectedClass };
+                  updateStudent(updated);
+                  loadData();
+                  setShowAddExistingStudent(false);
+                }}>
+                  添加
+                </Button>
+              </div>
+            ))}
+            {courseStudents.filter((s: Student) => !s.className).length === 0 && (
+              <div className="text-center text-gray-400 text-sm py-4">没有未分配班级的学员</div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

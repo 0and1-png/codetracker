@@ -446,7 +446,7 @@ export default function ReportPage() {
   // New: Teacher tags collected from records
   const teacherTags = collectTeacherTags(monthTyping, monthRetry, monthHomework);
   // New: Auto sprint goal from next chapter
-  const autoSprintGoal = getNextChapterContent(knowledge, course || undefined);
+  const autoSprintGoal = getNextChapterContent(knowledge, course || undefined, allHomework);
 
   // Initialize nextGoal with auto-generated content if empty
   useEffect(() => {
@@ -1290,14 +1290,8 @@ export default function ReportPage() {
                   </div>
                 </div>
 
-                {/* 本月完成题目 - 图形化课程：只有已完成的知识点才显示 */}
+                {/* 本月完成题目 - 图形化课程：显示所有学习记录 */}
                 {(() => {
-                  if (isVisualCourse) {
-                    const monthKey = selectedMonth;
-                    const monthKnowledgeRecords = knowledge.filter(k => k.updatedAt?.startsWith(monthKey));
-                    const hasMasteredKnowledge = monthKnowledgeRecords.some(k => k.status === 'mastered');
-                    if (!hasMasteredKnowledge) return null;
-                  }
                   return (
                     <div>
                       <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
@@ -1801,11 +1795,11 @@ export default function ReportPage() {
                       </div>
                     </div>
 
-                    {/* 能力雷达图 - 图形化课程专属 */}
-                    {isVisualCourse && (() => {
+                    {/* 能力雷达图 - 所有课程通用 */}
+                    {(() => {
                       // 从点赞和待提升标签中提取能力维度
-                      const allPraiseTags = monthData.homework.flatMap(h => h.praiseTags || []);
-                      const allImproveTags = monthData.homework.flatMap(h => h.improveTags || []);
+                      const allPraiseTags = [...teacherTags.praiseTags, ...monthData.homework.flatMap(h => h.praiseTags || [])];
+                      const allImproveTags = [...teacherTags.improveTags, ...monthData.homework.flatMap(h => h.improveTags || [])];
                       
                       // 定义能力维度
                       const skillDimensions = [

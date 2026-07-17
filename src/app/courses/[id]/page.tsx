@@ -805,9 +805,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                               {kpProblems.length > 0 && (
                                 <div className="space-y-1.5">
                                   {kpProblems.map((p) => (
-                                    <div key={p.id} className="flex items-center justify-between bg-emerald-900/20 rounded-lg px-3 py-2">
+                                    <div key={p.id} className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-200">
                                       <span
-                                        className="text-sm text-emerald-300 cursor-pointer hover:text-emerald-200 hover:underline flex-1 truncate"
+                                        className="text-sm text-emerald-700 cursor-pointer hover:text-emerald-900 hover:underline flex-1 truncate font-medium"
                                         onClick={() => { setSelectedProblem({ problem: p, kpName: kp.name }); setProblemDetailOpen(true); }}
                                         title="点击查看详情"
                                       >

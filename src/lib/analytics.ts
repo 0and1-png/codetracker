@@ -597,7 +597,8 @@ export function collectTeacherTags(
  */
 export function getNextChapterContent(
   knowledge: { knowledgePointId: string; status: string }[],
-  course?: Course
+  course?: Course,
+  homeworkRecords?: HomeworkRecord[]
 ): string {
   if (!course || !course.curriculum || course.curriculum.length === 0) return '';
 
@@ -611,8 +612,23 @@ export function getNextChapterContent(
   };
   flattenNodes(course.curriculum);
 
-  // Find the last learned/mastered KP
-  const learnedIds = new Set(knowledge.filter((k) => k.status !== 'not_started').map((k) => k.knowledgePointId));
+  // Find the last learned/mastered KP from knowledge progress
+  let learnedIds = new Set(knowledge.filter((k) => k.status !== 'not_started').map((k) => k.knowledgePointId));
+
+  // If no knowledge progress, use homework records to determine covered KPs
+  if (learnedIds.size === 0 && homeworkRecords && homeworkRecords.length > 0) {
+    const coveredKpNames = new Set<string>();
+    homeworkRecords.forEach((hr) => {
+      // Check if homework title or content matches any knowledge point name
+      course.knowledgePoints.forEach((kp) => {
+        if (hr.title?.includes(kp.name) || hr.content?.includes(kp.name)) {
+          coveredKpNames.add(kp.id);
+        }
+      });
+    });
+    learnedIds = coveredKpNames;
+  }
+
   let lastLearnedIdx = -1;
   for (let i = orderedKpIds.length - 1; i >= 0; i--) {
     if (learnedIds.has(orderedKpIds[i])) {

@@ -62,7 +62,8 @@ export default function ReportPage() {
   const [programmingTime, setProgrammingTime] = useState('');
   const [learningContent, setLearningContent] = useState('');
   const [interests, setInterests] = useState('');
-  const [studentPhoto, setStudentPhoto] = useState<string>('');
+  const [studentPhoto, setStudentPhoto] = useState<string>(''); // 第一页大头贴
+  const [studentAvatarPhoto, setStudentAvatarPhoto] = useState<string>(''); // 第二页圆形头像
   const [coverPhoto, setCoverPhoto] = useState<string>('');
   const [classroomPhotos, setClassroomPhotos] = useState<string[]>([]);
 
@@ -1064,10 +1065,10 @@ export default function ReportPage() {
                 <div 
                   className="w-52 h-52 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-xl"
                   style={{ border: '6px solid #7ba4c7', boxShadow: '0 4px 20px rgba(123,164,199,0.25)' }}
-                  onClick={() => handleImageUpload(setStudentPhoto)}
+                  onClick={() => handleImageUpload(setStudentAvatarPhoto)}
                 >
-                  {studentPhoto ? (
-                    <img src={studentPhoto} alt="学生照片" className="w-full h-full object-cover" />
+                  {studentAvatarPhoto ? (
+                    <img src={studentAvatarPhoto} alt="学生照片" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={{ background: '#ede6d8' }}>
                       <div className="text-center">
@@ -2452,32 +2453,19 @@ export default function ReportPage() {
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-[#333344] flex items-center gap-2">
-                      <span className="text-lg">🏠</span> 家校Tip
-                    </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentTip = editableHomeSchoolTips[monthKey] || '鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。';
-                        const newTip = prompt('修改家校Tip：', currentTip);
-                        if (newTip !== null) {
-                          setEditableHomeSchoolTips({
-                            ...editableHomeSchoolTips,
-                            [monthKey]: newTip
-                          });
-                        }
-                      }}
-                      className="h-7 text-xs rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
-                    >
-                      <Edit3 className="mr-1 h-3 w-3" />
-                      修改
-                    </Button>
-                  </div>
-                  <p className="text-[#555] leading-relaxed text-sm">
-                    {editableHomeSchoolTips[monthKey] || '鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。'}
-                  </p>
+                  <h3 className="text-base font-semibold text-[#333344] mb-4 flex items-center gap-2">
+                    <span className="text-lg">🏠</span> 家校Tip
+                  </h3>
+                  <Textarea
+                    value={editableHomeSchoolTips[monthKey] || '鼓励孩子尝试不同的解题方法，培养创新思维。当孩子遇到困难时，引导他们思考而不是直接给出答案。'}
+                    onChange={(e) => {
+                      setEditableHomeSchoolTips({
+                        ...editableHomeSchoolTips,
+                        [monthKey]: e.target.value
+                      });
+                    }}
+                    className="min-h-[80px] resize-none rounded-lg border-amber-200/50 bg-amber-50/30 text-sm text-[#555] leading-relaxed focus-visible:ring-amber-200"
+                  />
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
@@ -2906,42 +2894,26 @@ export default function ReportPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-5 mb-8">
-                <div className="bg-white rounded-2xl p-6 shadow-sm group relative">
-                  <button
-                    onClick={() => {
-                      const newTip = prompt('编辑陪伴创新建议：', editableHomeSchoolTips.innovation);
-                      if (newTip !== null) setEditableHomeSchoolTips(prev => ({ ...prev, innovation: newTip }));
-                    }}
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-gray-100"
-                    title="编辑"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-gray-400" />
-                  </button>
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
                   <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
                     <span className="text-lg">💡</span> 陪伴创新
                   </h3>
-                  <p className="text-[#555] text-sm leading-relaxed">
-                    {editableHomeSchoolTips.innovation}
-                  </p>
+                  <Textarea
+                    value={editableHomeSchoolTips.innovation || '鼓励孩子尝试不同的编程项目，如制作小游戏或动画，激发创造力和学习兴趣。'}
+                    onChange={(e) => setEditableHomeSchoolTips(prev => ({ ...prev, innovation: e.target.value }))}
+                    className="min-h-[100px] resize-none rounded-lg border-indigo-200/50 bg-indigo-50/30 text-sm text-[#555] leading-relaxed focus-visible:ring-indigo-200"
+                  />
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 shadow-sm group relative">
-                  <button
-                    onClick={() => {
-                      const newTip = prompt('编辑学业跟进建议：', editableHomeSchoolTips.academic);
-                      if (newTip !== null) setEditableHomeSchoolTips(prev => ({ ...prev, academic: newTip }));
-                    }}
-                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-gray-100"
-                    title="编辑"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-gray-400" />
-                  </button>
+                <div className="bg-white rounded-2xl p-6 shadow-sm">
                   <h3 className="text-base font-semibold text-[#333344] mb-3 flex items-center gap-2">
                     <span className="text-lg">📚</span> 学业跟进
                   </h3>
-                  <p className="text-[#555] text-sm leading-relaxed">
-                    {editableHomeSchoolTips.academic}
-                  </p>
+                  <Textarea
+                    value={editableHomeSchoolTips.academic || '关注孩子的学习进度，定期查看作业完成情况。遇到难题时，鼓励孩子先独立思考，再寻求帮助。'}
+                    onChange={(e) => setEditableHomeSchoolTips(prev => ({ ...prev, academic: e.target.value }))}
+                    className="min-h-[100px] resize-none rounded-lg border-indigo-200/50 bg-indigo-50/30 text-sm text-[#555] leading-relaxed focus-visible:ring-indigo-200"
+                  />
                 </div>
               </div>
 

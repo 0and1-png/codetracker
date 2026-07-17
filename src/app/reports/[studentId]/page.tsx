@@ -1326,7 +1326,7 @@ export default function ReportPage() {
                       ]);
                       
                       // 构建知识点映射
-                      const kpMap = new Map<string, { name: string; description: string; problems: string[]; status: string }>();
+                      const kpMap = new Map<string, { name: string; description: string; problems: string[]; status: string; totalProblems: number }>();
                       
                       allKpIds.forEach(kpId => {
                         const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
@@ -1348,11 +1348,14 @@ export default function ReportPage() {
                           ...kpHomework.map(h => h.title)
                         ];
                         
+                        const totalProblems = kpProblems.length + kpHomework.length;
+                        
                         kpMap.set(kpId, {
                           name: kpDef?.name || kpId,
                           description: progress?.description || kpDef?.description || '',
                           problems: problemNames,
-                          status: progress?.status || 'learning'
+                          status: progress?.status || 'learning',
+                          totalProblems
                         });
                       });
                       
@@ -1376,13 +1379,18 @@ export default function ReportPage() {
                                 <div className="flex items-center justify-between mb-3">
                                   <span className="text-base font-semibold text-[#333]">{kp.name}</span>
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-xs px-2.5 py-1 rounded-full ${
-                                      kp.status === 'mastered' 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {kp.status === 'mastered' ? '已掌握' : '学习中'}
-                                    </span>
+                                    {(() => {
+                                      const isAllCompleted = kp.totalProblems > 0 && kp.problems.length === kp.totalProblems;
+                                      return (
+                                        <span className={`text-xs px-2.5 py-1 rounded-full ${
+                                          isAllCompleted
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                          {isAllCompleted ? '全部完成' : '学习中'}
+                                        </span>
+                                      );
+                                    })()}
                                     <button
                                       onClick={() => setEditingKpId(isEditing ? null : kpId)}
                                       className="text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-50"
@@ -1392,13 +1400,27 @@ export default function ReportPage() {
                                   </div>
                                 </div>
                                 {isEditing ? (
-                                  <textarea
-                                    value={currentDescription}
-                                    onChange={(e) => setEditableKpDescriptions(prev => ({ ...prev, [kpId]: e.target.value }))}
-                                    className="w-full text-sm text-[#666] leading-relaxed p-2 border border-violet-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                                    rows={3}
-                                    placeholder="输入知识点描述..."
-                                  />
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-[#888]">知识点描述</span>
+                                      <button
+                                        onClick={() => {
+                                          const autoDesc = `${kp.name}知识点学习：本月完成了${kp.problems.length}道题目，包括${kp.problems.slice(0, 3).join('、')}${kp.problems.length > 3 ? '等' : ''}。学员通过实践掌握了相关编程概念和技能。`;
+                                          setEditableKpDescriptions(prev => ({ ...prev, [kpId]: autoDesc }));
+                                        }}
+                                        className="text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-50"
+                                      >
+                                        自动生成
+                                      </button>
+                                    </div>
+                                    <textarea
+                                      value={currentDescription}
+                                      onChange={(e) => setEditableKpDescriptions(prev => ({ ...prev, [kpId]: e.target.value }))}
+                                      className="w-full text-sm text-[#666] leading-relaxed p-2 border border-violet-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                      rows={3}
+                                      placeholder="输入知识点描述..."
+                                    />
+                                  </div>
                                 ) : (
                                   currentDescription && (
                                     <p className="text-sm text-[#666] mb-3 leading-relaxed">{currentDescription}</p>

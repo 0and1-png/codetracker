@@ -42,7 +42,7 @@ const COURSE_ICONS: Record<string, React.ReactNode> = {
 const NODE_TYPE_CONFIG: Record<CurriculumNodeType, { label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
   chapter: { label: '章', icon: <Scroll className="h-3.5 w-3.5" />, color: 'text-gray-700', bgColor: 'bg-gray-100' },
   section: { label: '篇', icon: <BookOpen className="h-3.5 w-3.5" />, color: 'text-sky-400', bgColor: 'bg-sky-900/30' },
-  topic: { label: '知识点', icon: <Tag className="h-3.5 w-3.5" />, color: 'text-emerald-400', bgColor: 'bg-emerald-900/30' },
+  topic: { label: '知识点题库', icon: <Tag className="h-3.5 w-3.5" />, color: 'text-emerald-400', bgColor: 'bg-emerald-900/30' },
 };
 
 const LANGUAGES = ['C++', 'Python', 'JavaScript', 'Java', 'HTML/CSS', '其他'];
@@ -444,7 +444,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 <ChevronDown className="h-3 w-3 text-gray-700" />
               </button>
             )}
-            <button className="p-0.5 hover:bg-gray-100 rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子知识点">
+            <button className="p-0.5 hover:bg-gray-100 rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子知识点题库">
               <Plus className="h-3 w-3 text-gray-700" />
             </button>
             <button className="p-0.5 hover:bg-red-900/30 rounded" onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} title="删除">
@@ -468,7 +468,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-700 py-20">
           <Scroll className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-sm">选择左侧知识点查看详情</p>
+          <p className="text-sm">选择左侧知识点题库查看详情</p>
           <p className="text-xs mt-1">或点击「添加卷章」开始构建课程体系</p>
         </div>
       );
@@ -517,12 +517,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             className="border-gray-200 text-gray-700 hover:bg-gray-100 h-7"
             onClick={() => openAddNodeDialog(selectedNode.id)}
           >
-            <Plus className="h-3.5 w-3.5 mr-1" />添加子知识点
+            <Plus className="h-3.5 w-3.5 mr-1" />添加子知识点题库
           </Button>
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1.5 block">知识点描述</label>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">知识点题库描述</label>
           <Textarea
             value={selectedNode.content || ''}
             onChange={(e) => updateNodeField(selectedNode.id, 'content', e.target.value)}
@@ -533,7 +533,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1.5 block">关联知识点</label>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">关联知识点题库</label>
           {linkedKp ? (
             <div className="flex items-center gap-2">
               <Badge className="bg-gray-100 text-gray-700 border-gray-200">
@@ -552,7 +552,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <Select onValueChange={(val) => linkKnowledgePoint(selectedNode.id, val)}>
               <SelectTrigger className="h-8 w-64 border-dashed border-gray-200 bg-white border-gray-200 text-gray-700">
-                <SelectValue placeholder="选择关联知识点..." />
+                <SelectValue placeholder="选择关联知识点题库..." />
               </SelectTrigger>
               <SelectContent>
                 {course.knowledgePoints.map((kp) => (
@@ -651,7 +651,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </SelectContent>
             </Select>
           ) : (
-            <p className="text-xs text-gray-700 italic">所有题目已关联（在「知识点」Tab 可添加新题目）</p>
+            <p className="text-xs text-gray-700 italic">所有题目已关联（在「知识点题库」Tab 可添加新题目）</p>
           )}
         </div>
       </div>
@@ -675,7 +675,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               {course.name}
             </h1>
             <Badge variant="outline" className="text-xs text-gray-700 border-gray-200">
-              {totalNodes} 个知识点
+              {totalNodes} 个知识点题库
             </Badge>
           </div>
         </div>
@@ -715,7 +715,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   {course.curriculum.length === 0 ? (
                     <div className="text-center py-10 text-gray-700">
                       <Scroll className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-xs">尚无知识点心要</p>
+                      <p className="text-xs">尚无知识点题库心要</p>
                       <Button
                         size="sm"
                         variant="outline"
@@ -746,14 +746,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Flame className="h-4 w-4 text-gray-700" />
-                  <h2 className="text-base font-semibold text-gray-800 ">知识点管理</h2>
+                  <h2 className="text-base font-semibold text-gray-800 ">知识点题库管理</h2>
                 </div>
 
                 <div className="flex gap-2 mb-4">
                   <Input
                     value={newKpName}
                     onChange={(e) => setNewKpName(e.target.value)}
-                    placeholder="新知识点名称"
+                    placeholder="新知识点题库名称"
                     className="flex-1 bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') { e.preventDefault(); addKnowledgePoint(); }
@@ -765,12 +765,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     disabled={!newKpName.trim()}
                     className="bg-blue-500 hover:bg-blue-600 text-white"
                   >
-                    <Plus className="h-4 w-4 mr-1" />添加知识点
+                    <Plus className="h-4 w-4 mr-1" />添加知识点题库
                   </Button>
                 </div>
 
                 {course.knowledgePoints.length === 0 ? (
-                  <div className="text-center py-8 text-gray-700">暂无知识点，请添加</div>
+                  <div className="text-center py-8 text-gray-700">暂无知识点题库，请添加</div>
                 ) : (
                   <div className="space-y-2">
                     {course.knowledgePoints.map((kp) => {
@@ -851,7 +851,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
                 {getUnassignedProblems().length > 0 && (
                   <div className="mt-6">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">未关联知识点的题目</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">未关联知识点题库的题目</h3>
                     <div className="space-y-1.5">
                       {getUnassignedProblems().map((p) => (
                         <div key={p.id} className="flex items-center justify-between bg-gray-100 rounded-lg px-3 py-2">
@@ -867,7 +867,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                               }}
                             >
                               <SelectTrigger className="h-7 w-28 text-xs border-gray-200 bg-white border-gray-200 text-gray-700">
-                                <SelectValue placeholder="关联知识点" />
+                                <SelectValue placeholder="关联知识点题库" />
                               </SelectTrigger>
                               <SelectContent>
                                 {course.knowledgePoints.map((kp) => (
@@ -886,7 +886,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 )}
 
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">添加题目（选择关联知识点）</h3>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">添加题目（选择关联知识点题库）</h3>
                   <div className="flex gap-2">
                     <Input
                       value={newProblemName}
@@ -897,7 +897,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     />
                     <Select value={newProblemKpId} onValueChange={setNewProblemKpId}>
                       <SelectTrigger className="w-40 border-gray-200 bg-white border-gray-200 text-gray-700">
-                        <SelectValue placeholder="关联知识点" />
+                        <SelectValue placeholder="关联知识点题库" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">不关联</SelectItem>
@@ -921,16 +921,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       <Dialog open={addNodeDialogOpen} onOpenChange={setAddNodeDialogOpen}>
         <DialogContent className="sm:max-w-md bg-white border-gray-200">
           <DialogHeader>
-            <DialogTitle className="text-gray-800 ">添加{addNodeParentId ? '子' : ''}知识点</DialogTitle>
+            <DialogTitle className="text-gray-800 ">添加{addNodeParentId ? '子' : ''}知识点题库</DialogTitle>
             <DialogDescription className="text-gray-700">
               {addNodeParentId
-                ? `在「${findNodeById(course.curriculum, addNodeParentId)?.title || ''}」下添加子知识点`
+                ? `在「${findNodeById(course.curriculum, addNodeParentId)?.title || ''}」下添加子知识点题库`
                 : '添加新的顶层卷章'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点类型</label>
+              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点题库类型</label>
               <div className="flex gap-2">
                 {(['chapter', 'section', 'topic'] as CurriculumNodeType[]).map((type) => {
                   const cfg = NODE_TYPE_CONFIG[type];
@@ -951,11 +951,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点名称</label>
+              <label className="text-sm font-medium mb-1.5 block text-gray-700">知识点题库名称</label>
               <Input
                 value={newNodeTitle}
                 onChange={(e) => setNewNodeTitle(e.target.value)}
-                placeholder="输入知识点名称"
+                placeholder="输入知识点题库名称"
                 className="bg-white border-gray-200 border-gray-200 text-gray-700 placeholder:text-gray-700"
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmAddNode(); } }}
                 autoFocus
@@ -1015,7 +1015,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             </DialogTitle>
             <DialogDescription className="text-gray-700">
               {selectedProblem?.problem.id && <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">ID: {selectedProblem.problem.id}</span>}
-              {selectedProblem?.kpName && <span className="text-xs bg-purple-900/30 px-2 py-0.5 rounded ml-2">知识点: {selectedProblem.kpName}</span>}
+              {selectedProblem?.kpName && <span className="text-xs bg-purple-900/30 px-2 py-0.5 rounded ml-2">知识点题库: {selectedProblem.kpName}</span>}
             </DialogDescription>
           </DialogHeader>
           {selectedProblem && (
@@ -1036,7 +1036,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               )}
               {selectedProblem.problem.knowledgePointIds && selectedProblem.problem.knowledgePointIds.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium mb-1 block text-gray-700">关联知识点</label>
+                  <label className="text-sm font-medium mb-1 block text-gray-700">关联知识点题库</label>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedProblem.problem.knowledgePointIds.map((kpId: string) => {
                       const kp = course?.curriculum.find(k => k.id === kpId);

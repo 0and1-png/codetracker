@@ -1290,12 +1290,20 @@ export default function ReportPage() {
                   </div>
                 </div>
 
-                {/* 本月完成题目 */}
-                <div>
-                  <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
-                    {isVisualCourse ? '本月学习知识点' : '本月完成题目'}
-                  </h3>
+                {/* 本月完成题目 - 图形化课程：只有已完成的知识点才显示 */}
+                {(() => {
+                  if (isVisualCourse) {
+                    const monthKey = selectedMonth;
+                    const monthKnowledgeRecords = knowledge.filter(k => k.updatedAt?.startsWith(monthKey));
+                    const hasMasteredKnowledge = monthKnowledgeRecords.some(k => k.status === 'mastered');
+                    if (!hasMasteredKnowledge) return null;
+                  }
+                  return (
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+                        {isVisualCourse ? '本月学习知识点' : '本月完成题目'}
+                      </h3>
                   {(() => {
                     // 图形化课程：显示本月完成的作业和知识点
                     if (isVisualCourse) {
@@ -1664,8 +1672,10 @@ export default function ReportPage() {
                         )}
                       </div>
                     );
-                  })()}
-                </div>
+                      })()}
+                    </div>
+                  );
+                })()}
                 
                 {/* 统计信息 */}
                 <div className="grid grid-cols-3 gap-4">

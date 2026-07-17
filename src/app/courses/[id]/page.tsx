@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -20,6 +21,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectSeparator,
 } from '@/components/ui/select';
 import {
   Dialog,
@@ -134,6 +136,22 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   // Problem detail state
   const [selectedProblem, setSelectedProblem] = useState<{ problem: ProblemDef; kpName: string } | null>(null);
 
+  // Problem tag state
+  const PRESET_TAGS = ['例题', '作业', '重点', '普通'] as const;
+  const TAG_DESCRIPTIONS: Record<string, string> = {
+    '例题': '上课讲解的例题',
+    '作业': '上完课后需要完成的作业',
+    '重点': '需要掌握、三刷的题型',
+    '普通': '正常练习的题型',
+  };
+  const [customTags, setCustomTags] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const saved = localStorage.getItem('coding_custom_problem_tags');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [addingTagToProblem, setAddingTagToProblem] = useState<string | null>(null);
+  const [newCustomTag, setNewCustomTag] = useState('');
+
   // Add node dialog
   const [addNodeDialogOpen, setAddNodeDialogOpen] = useState(false);
   const [addNodeParentId, setAddNodeParentId] = useState<string | null>(null);
@@ -168,6 +186,51 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const save = (updated: Course) => {
     updateCourse(updated);
     setCourse(updated);
+  };
+
+  // ====== Problem Tag Operations ======
+  const addTagToProblem = (problemId: string, tag: string) => {
+    if (!course) return;
+    const updated = {
+      ...course,
+      problems: course.problems.map((p) => {
+        if (p.id !== problemId) return p;
+        const tags = [...(p.tags || [])];
+        if (!tags.includes(tag)) {
+          tags.push(tag);
+        }
+        return { ...p, tags };
+      }),
+    };
+    save(updated);
+  };
+
+  const removeTagFromProblem = (problemId: string, tag: string) => {
+    if (!course) return;
+    const updated = {
+      ...course,
+      problems: course.problems.map((p) => {
+        if (p.id !== problemId) return p;
+        return { ...p, tags: (p.tags || []).filter((t) => t !== tag) };
+      }),
+    };
+    save(updated);
+  };
+
+  const addCustomTag = () => {
+    if (!newCustomTag.trim()) return;
+    const tag = newCustomTag.trim();
+    if (PRESET_TAGS.includes(tag as any) || customTags.includes(tag)) return;
+    const updated = [...customTags, tag];
+    setCustomTags(updated);
+    localStorage.setItem('coding_custom_problem_tags', JSON.stringify(updated));
+    setNewCustomTag('');
+  };
+
+  const removeCustomTag = (tag: string) => {
+    const updated = customTags.filter((t) => t !== tag);
+    setCustomTags(updated);
+    localStorage.setItem('coding_custom_problem_tags', JSON.stringify(updated));
   };
 
   // ====== Curriculum Tree Operations ======
@@ -827,13 +890,101 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                                 <div className="space-y-1.5">
                                   {kpProblems.map((p) => (
                                     <div key={p.id} className="flex items-center justify-between bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-200">
-                                      <span
-                                        className="text-sm text-emerald-700 cursor-pointer hover:text-emerald-900 hover:underline flex-1 truncate font-medium"
-                                        onClick={() => { setSelectedProblem({ problem: p, kpName: kp.name }); setProblemDetailOpen(true); }}
-                                        title="点击查看详情"
-                                      >
-                                        {p.name}
-                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className="text-sm text-emerald-700 cursor-pointer hover:text-emerald-900 hover:underline truncate font-medium"
+                                            onClick={() => { setSelectedProblem({ problem: p, kpName: kp.name }); setProblemDetailOpen(true); }}
+                                            title="点击查看详情"
+                                          >
+                                            {p.name}
+                                          </span>
+                                          {/* Problem Tags */}
+                                          <div className="flex items-center gap-1 flex-shrink-0">
+                                            {(p.tags || []).map((tag) => (
+                                              <Tooltip key={tag}>
+                                                <TooltipTrigger asChild>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className={`text-xs cursor-pointer hover:bg-red-100 hover:text-red-600 hover:border-red-200 ${
+                                                      PRESET_TAGS.includes(tag as any)
+                                                        ? tag === '例题' ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        : tag === '作业' ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                        : tag === '重点' ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                                                        : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                                    }`}
+                                                    onClick={() => removeTagFromProblem(p.id, tag)}
+                                                  >
+                                                    {tag}
+                                                    <X className="h-3 w-3 ml-1" />
+                                                  </Badge>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>{TAG_DESCRIPTIONS[tag] || `自定义标记：${tag}`}</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            ))}
+                                            {addingTagToProblem === p.id ? (
+                                              <div className="flex items-center gap-1">
+                                                <Select
+                                                  value=""
+                                                  onValueChange={(val) => {
+                                                    if (val) {
+                                                      addTagToProblem(p.id, val);
+                                                      setAddingTagToProblem(null);
+                                                    }
+                                                  }}
+                                                >
+                                                  <SelectTrigger className="h-6 w-20 text-xs border-emerald-200 bg-white">
+                                                    <SelectValue placeholder="选择标记" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {PRESET_TAGS.map((tag) => (
+                                                      <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                                                    ))}
+                                                    {customTags.map((tag) => (
+                                                      <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                                                    ))}
+                                                    <SelectSeparator />
+                                                    <div className="px-2 py-1.5">
+                                                      <div className="flex gap-1">
+                                                        <Input
+                                                          value={newCustomTag}
+                                                          onChange={(e) => setNewCustomTag(e.target.value)}
+                                                          placeholder="新标记..."
+                                                          className="h-6 text-xs"
+                                                          onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                              e.preventDefault();
+                                                              addCustomTag();
+                                                            }
+                                                          }}
+                                                        />
+                                                        <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={addCustomTag}>
+                                                          <Plus className="h-3 w-3" />
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  </SelectContent>
+                                                </Select>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddingTagToProblem(null)}>
+                                                  <X className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            ) : (
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-emerald-600 hover:text-emerald-800"
+                                                onClick={() => setAddingTagToProblem(p.id)}
+                                              >
+                                                <Plus className="h-3 w-3" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
                                       <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-red-900/30 hover:text-red-400" onClick={() => removeProblem(p.id)}>
                                         <X className="h-3 w-3" />
                                       </Button>

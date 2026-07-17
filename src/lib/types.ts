@@ -36,6 +36,7 @@ export interface ProblemDef {
   description?: string;           // Problem description
   codeExample?: string;           // Code example / solution
   difficulty?: 'easy' | 'medium' | 'hard';  // Difficulty level
+  tags?: string[];                // Problem tags: 例题/作业/重点/普通/自定义
 }
 
 export interface Course {

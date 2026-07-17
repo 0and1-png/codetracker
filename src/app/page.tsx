@@ -55,10 +55,12 @@ type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'hon
 interface RetryRowForm {
   problemId: string;
   times: [string, string, string]; // [一刷, 二刷, 三刷]
+  praiseTags?: string[];
+  improveTags?: string[];
 }
 
 interface TypingForm { speed: string; praiseTags: string[]; improveTags: string[] }
-interface HomeworkForm { content: string; completion: string; comment: string }
+interface HomeworkForm { content: string; completion: string; comment: string; praiseTags?: string[]; improveTags?: string[] }
 
 // Growth suggestion presets
 const GROWTH_SUGGESTION_PRESETS = [
@@ -1127,19 +1129,19 @@ export default function HomePage() {
 
   // Form helpers
   const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', praiseTags: [], improveTags: [] };
-  const getRetryForm = (id: string): RetryRowForm[] => retryForms[id] || [{ problemId: '', times: ['', '', ''] }];
-  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { content: '', completion: '', comment: '' };
+  const getRetryForm = (id: string): RetryRowForm[] => retryForms[id] || [{ problemId: '', times: ['', '', ''], praiseTags: [], improveTags: [] }];
+  const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { content: '', completion: '', comment: '', praiseTags: [], improveTags: [] };
 
   const updateTypingForm = (id: string, field: keyof TypingForm, value: string | string[]) => {
     setTypingForms((prev) => ({ ...prev, [id]: { ...getTypingForm(id), [field]: value } }));
   };
-  const updateHomeworkForm = (id: string, field: keyof HomeworkForm, value: string) => {
+  const updateHomeworkForm = (id: string, field: keyof HomeworkForm, value: string | string[]) => {
     setHomeworkForms((prev) => ({ ...prev, [id]: { ...getHomeworkForm(id), [field]: value } }));
   };
 
-  const updateRetryRow = (studentId: string, rowIndex: number, field: 'problemId' | 'times', value: string | [string, string, string]) => {
+  const updateRetryRow = (studentId: string, rowIndex: number, field: 'problemId' | 'times' | 'praiseTags' | 'improveTags', value: string | [string, string, string] | string[]) => {
     setRetryForms(prev => {
-      const rows = [...(prev[studentId] || [{ problemId: '', times: ['', '', ''] }])];
+      const rows = [...(prev[studentId] || [{ problemId: '', times: ['', '', ''], praiseTags: [], improveTags: [] }])];
       rows[rowIndex] = { ...rows[rowIndex], [field]: value };
       return { ...prev, [studentId]: rows };
     });
@@ -1147,7 +1149,7 @@ export default function HomePage() {
 
   const addRetryRow = (studentId: string) => {
     setRetryForms(prev => {
-      const rows = [...(prev[studentId] || []), { problemId: '', times: ['', '', ''] as [string, string, string] }];
+      const rows = [...(prev[studentId] || []), { problemId: '', times: ['', '', ''] as [string, string, string], praiseTags: [], improveTags: [] }];
       return { ...prev, [studentId]: rows };
     });
   };
@@ -1261,6 +1263,8 @@ export default function HomePage() {
               id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
               problemId: row.problemId, problemName: problem?.name || '',
               attempt: idx + 1, timeSpent: t,
+              praiseTags: row.praiseTags && row.praiseTags.length > 0 ? row.praiseTags : undefined,
+              improveTags: row.improveTags && row.improveTags.length > 0 ? row.improveTags : undefined,
             });
           }
         });
@@ -1274,6 +1278,8 @@ export default function HomePage() {
         content: form.content.trim(),
         score: form.completion ? Number(form.completion) : undefined,
         comment: form.comment.trim() || undefined,
+        praiseTags: form.praiseTags && form.praiseTags.length > 0 ? form.praiseTags : undefined,
+        improveTags: form.improveTags && form.improveTags.length > 0 ? form.improveTags : undefined,
       });
     }
     setSavedStudents((prev) => new Set(prev).add(studentId));
@@ -1897,10 +1903,10 @@ interface StudentRecordCardProps {
   problemSearch: string;
   onProblemSearchChange: (v: string) => void;
   onUpdateTyping: (field: keyof TypingForm, value: string | string[]) => void;
-  onUpdateRetryRow: (rowIndex: number, field: 'problemId' | 'times', value: string | [string, string, string]) => void;
+  onUpdateRetryRow: (rowIndex: number, field: 'problemId' | 'times' | 'praiseTags' | 'improveTags', value: string | [string, string, string] | string[]) => void;
   onAddRetryRow: () => void;
   onRemoveRetryRow: (rowIndex: number) => void;
-  onUpdateHomework: (field: keyof HomeworkForm, value: string) => void;
+  onUpdateHomework: (field: keyof HomeworkForm, value: string | string[]) => void;
   onSave: () => void;
   onLoadHistory: () => void;
   onBatchRetry: () => void;
@@ -2062,18 +2068,60 @@ function StudentRecordCard({
 
         {/* Tags section (toggleable) */}
         {showTags && (
-          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+          <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+            {/* 点赞 */}
             <div>
-              <Label className="text-xs text-gray-500 mb-1 block">{XIAN.strengths}</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-gray-500">{XIAN.strengths}</Label>
+                <button
+                  onClick={() => {
+                    const customTag = prompt('输入自定义点赞标签：');
+                    if (customTag && customTag.trim()) {
+                      const trimmed = customTag.trim();
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.praiseTags || [];
+                        if (!cur.includes(trimmed)) {
+                          onUpdateTyping('praiseTags', [...cur, trimmed]);
+                        }
+                      } else if (activeTab === 'retry') {
+                        const firstRow = retryRows[0];
+                        if (firstRow) {
+                          const cur = firstRow.praiseTags || [];
+                          if (!cur.includes(trimmed)) {
+                            onUpdateRetryRow(0, 'praiseTags', [...cur, trimmed]);
+                          }
+                        }
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.praiseTags || [];
+                        if (!cur.includes(trimmed)) {
+                          onUpdateHomework('praiseTags', [...cur, trimmed]);
+                        }
+                      }
+                    }
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-0.5">
+                  <Plus className="w-3 h-3" />
+                  自定义
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {PRESET_STRENGTHS.map(tag => {
-                  const tags = activeTab === 'typing' ? typingForm.praiseTags : activeTab === 'retry' ? [] : [];
+                  let tags: string[] = [];
+                  if (activeTab === 'typing') tags = typingForm.praiseTags || [];
+                  else if (activeTab === 'retry' && retryRows[0]) tags = retryRows[0].praiseTags || [];
+                  else if (activeTab === 'homework') tags = homeworkForm.praiseTags || [];
                   const isActive = tags.includes(tag);
                   return (
                     <button key={tag} onClick={() => {
                       if (activeTab === 'typing') {
-                        const cur = typingForm.praiseTags;
+                        const cur = typingForm.praiseTags || [];
                         onUpdateTyping('praiseTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      } else if (activeTab === 'retry' && retryRows[0]) {
+                        const cur = retryRows[0].praiseTags || [];
+                        onUpdateRetryRow(0, 'praiseTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.praiseTags || [];
+                        onUpdateHomework('praiseTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
                       }
                     }}
                       className={`px-2 py-0.5 rounded text-xs transition-all ${isActive ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
@@ -2081,19 +2129,86 @@ function StudentRecordCard({
                     </button>
                   );
                 })}
+                {/* Custom tags */}
+                {(() => {
+                  let customTags: string[] = [];
+                  const presetList = PRESET_STRENGTHS as readonly string[];
+                  if (activeTab === 'typing') customTags = (typingForm.praiseTags || []).filter(t => !presetList.includes(t));
+                  else if (activeTab === 'retry' && retryRows[0]) customTags = (retryRows[0].praiseTags || []).filter(t => !presetList.includes(t));
+                  else if (activeTab === 'homework') customTags = (homeworkForm.praiseTags || []).filter(t => !presetList.includes(t));
+                  return customTags.map(tag => (
+                    <button key={`custom-${tag}`} onClick={() => {
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.praiseTags || [];
+                        onUpdateTyping('praiseTags', cur.filter(t => t !== tag));
+                      } else if (activeTab === 'retry' && retryRows[0]) {
+                        const cur = retryRows[0].praiseTags || [];
+                        onUpdateRetryRow(0, 'praiseTags', cur.filter(t => t !== tag));
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.praiseTags || [];
+                        onUpdateHomework('praiseTags', cur.filter(t => t !== tag));
+                      }
+                    }}
+                      className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 border border-green-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all">
+                      {tag} ×
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
+            {/* 待提升 */}
             <div>
-              <Label className="text-xs text-gray-500 mb-1 block">{XIAN.improvements}</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs text-gray-500">{XIAN.improvements}</Label>
+                <button
+                  onClick={() => {
+                    const customTag = prompt('输入自定义待提升标签：');
+                    if (customTag && customTag.trim()) {
+                      const trimmed = customTag.trim();
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.improveTags || [];
+                        if (!cur.includes(trimmed)) {
+                          onUpdateTyping('improveTags', [...cur, trimmed]);
+                        }
+                      } else if (activeTab === 'retry') {
+                        const firstRow = retryRows[0];
+                        if (firstRow) {
+                          const cur = firstRow.improveTags || [];
+                          if (!cur.includes(trimmed)) {
+                            onUpdateRetryRow(0, 'improveTags', [...cur, trimmed]);
+                          }
+                        }
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.improveTags || [];
+                        if (!cur.includes(trimmed)) {
+                          onUpdateHomework('improveTags', [...cur, trimmed]);
+                        }
+                      }
+                    }
+                  }}
+                  className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-0.5">
+                  <Plus className="w-3 h-3" />
+                  自定义
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {PRESET_IMPROVEMENTS.map(tag => {
-                  const tags = activeTab === 'typing' ? typingForm.improveTags : [];
+                  let tags: string[] = [];
+                  if (activeTab === 'typing') tags = typingForm.improveTags || [];
+                  else if (activeTab === 'retry' && retryRows[0]) tags = retryRows[0].improveTags || [];
+                  else if (activeTab === 'homework') tags = homeworkForm.improveTags || [];
                   const isActive = tags.includes(tag);
                   return (
                     <button key={tag} onClick={() => {
                       if (activeTab === 'typing') {
-                        const cur = typingForm.improveTags;
+                        const cur = typingForm.improveTags || [];
                         onUpdateTyping('improveTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      } else if (activeTab === 'retry' && retryRows[0]) {
+                        const cur = retryRows[0].improveTags || [];
+                        onUpdateRetryRow(0, 'improveTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.improveTags || [];
+                        onUpdateHomework('improveTags', isActive ? cur.filter(t => t !== tag) : [...cur, tag]);
                       }
                     }}
                       className={`px-2 py-0.5 rounded text-xs transition-all ${isActive ? 'bg-orange-50 text-orange-600 border border-orange-200' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
@@ -2101,6 +2216,31 @@ function StudentRecordCard({
                     </button>
                   );
                 })}
+                {/* Custom tags */}
+                {(() => {
+                  let customTags: string[] = [];
+                  const presetList = PRESET_IMPROVEMENTS as readonly string[];
+                  if (activeTab === 'typing') customTags = (typingForm.improveTags || []).filter(t => !presetList.includes(t));
+                  else if (activeTab === 'retry' && retryRows[0]) customTags = (retryRows[0].improveTags || []).filter(t => !presetList.includes(t));
+                  else if (activeTab === 'homework') customTags = (homeworkForm.improveTags || []).filter(t => !presetList.includes(t));
+                  return customTags.map(tag => (
+                    <button key={`custom-${tag}`} onClick={() => {
+                      if (activeTab === 'typing') {
+                        const cur = typingForm.improveTags || [];
+                        onUpdateTyping('improveTags', cur.filter(t => t !== tag));
+                      } else if (activeTab === 'retry' && retryRows[0]) {
+                        const cur = retryRows[0].improveTags || [];
+                        onUpdateRetryRow(0, 'improveTags', cur.filter(t => t !== tag));
+                      } else if (activeTab === 'homework') {
+                        const cur = homeworkForm.improveTags || [];
+                        onUpdateHomework('improveTags', cur.filter(t => t !== tag));
+                      }
+                    }}
+                      className="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 border border-orange-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all">
+                      {tag} ×
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
           </div>

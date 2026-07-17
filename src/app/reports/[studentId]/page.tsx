@@ -1356,13 +1356,16 @@ export default function ReportPage() {
                         });
                       });
                       
-                      if (kpMap.size === 0) {
-                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无学习记录</p></div>;
+                      // 只显示有完成内容的知识点（至少完成了一道题或作业）
+                      const visibleKpEntries = Array.from(kpMap.entries()).filter(([kpId, kp]) => kp.problems.length > 0);
+                      
+                      if (visibleKpEntries.length === 0) {
+                        return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无已完成的学习内容</p></div>;
                       }
 
                       return (
                         <div className="space-y-4">
-                          {Array.from(kpMap.entries()).map(([kpId, kp]) => {
+                          {visibleKpEntries.map(([kpId, kp]) => {
                             const currentDescription = editableKpDescriptions[kpId] !== undefined 
                               ? editableKpDescriptions[kpId] 
                               : kp.description;

@@ -28,6 +28,8 @@ import {
   saveReportData,
   cleanupOldReports,
   getLocalStorageUsage,
+  saveReportDataAsync,
+  getReportDataAsync,
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord, ReportData } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
@@ -517,11 +519,13 @@ export default function ReportPage() {
     saveSprintGoal(data);
   }, [student, selectedMonth, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds]);
 
-  // 加载已保存的报告数据
+  // 加载已保存的报告数据（文本从localStorage，图片从IndexedDB）
   useEffect(() => {
     if (!studentId || !selectedMonth) return;
-    const saved = getReportData(studentId, selectedMonth);
-    if (saved) {
+    let cancelled = false;
+    const loadSaved = async () => {
+      const saved = await getReportDataAsync(studentId, selectedMonth);
+      if (cancelled || !saved) return;
       setTeacherComment(saved.teacherComment);
       setNextGoal(saved.nextGoal);
       setStudentAge(saved.studentAge);
@@ -553,7 +557,9 @@ export default function ReportPage() {
       if (saved.editableKpDescriptions && Object.keys(saved.editableKpDescriptions).length) setEditableKpDescriptions(saved.editableKpDescriptions);
       if (saved.mergeTitle) setMergeTitle(saved.mergeTitle);
       if (saved.mergedQuote) setMergedQuote(saved.mergedQuote);
-    }
+    };
+    loadSaved();
+    return () => { cancelled = true; };
   }, [studentId, selectedMonth]);
 
   // 自动保存：当可编辑字段变化时，延迟1.5秒自动保存
@@ -579,7 +585,7 @@ export default function ReportPage() {
       clearTimeout(autoSaveTimerRef.current);
     }
     
-    autoSaveTimerRef.current = setTimeout(() => {
+    autoSaveTimerRef.current = setTimeout(async () => {
       setSaveStatus('saving');
       const data: ReportData = {
         studentId,
@@ -619,16 +625,10 @@ export default function ReportPage() {
         updatedAt: new Date().toISOString(),
       };
       try {
-        saveReportData(data);
+        await saveReportDataAsync(data);
         setSaveStatus('saved');
       } catch {
-        try {
-          cleanupOldReports(2);
-          saveReportData(data);
-          setSaveStatus('saved');
-        } catch {
-          setSaveStatus('unsaved');
-        }
+        setSaveStatus('unsaved');
       }
     }, 1500);
     
@@ -640,7 +640,7 @@ export default function ReportPage() {
   }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, honorRecords, mergeTitle, mergedQuote]);
 
   // 保存报告数据
-  const handleSaveReport = useCallback(() => {
+  const handleSaveReport = useCallback(async () => {
     if (!studentId) return;
     const data: ReportData = {
       studentId,
@@ -680,20 +680,12 @@ export default function ReportPage() {
       updatedAt: new Date().toISOString(),
     };
     try {
-      saveReportData(data);
+      await saveReportDataAsync(data);
       setSaveStatus('saved');
       alert('报告已保存！');
     } catch {
-      // 存储空间不足时，自动清理旧报告数据后重试
-      try {
-        cleanupOldReports(2); // 只保留最近2份报告
-        saveReportData(data);
-        setSaveStatus('saved');
-        alert('报告已保存！（已自动清理旧报告以释放空间）');
-      } catch {
-        setSaveStatus('unsaved');
-        alert('保存失败：存储空间不足，请尝试减少上传图片数量或清除浏览器缓存后重试。');
-      }
+      setSaveStatus('unsaved');
+      alert('保存失败，请重试。');
     }
   }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, mergeTitle, mergedQuote]);
 

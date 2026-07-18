@@ -611,3 +611,126 @@ export function updateSprintGoalCompetitions(studentId: string, month: string, c
   }
   saveSprintGoals(list);
 }
+
+// ============ IndexedDB 图片存储 ============
+// 用于存储报告中的大体积图片数据，避免 localStorage 5MB 配额溢出
+
+const IDB_NAME = 'coding_tracker_db';
+const IDB_VERSION = 1;
+const IDB_STORE = 'images';
+
+/** 打开 IndexedDB 数据库 */
+function openIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/** 保存图片数据到 IndexedDB */
+export async function saveImageToIDB(key: string, data: string): Promise<void> {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(data, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** 从 IndexedDB 加载图片数据 */
+export async function loadImageFromIDB(key: string): Promise<string | null> {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const request = tx.objectStore(IDB_STORE).get(key);
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/** 从 IndexedDB 删除图片数据 */
+export async function deleteImageFromIDB(key: string): Promise<void> {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/** 报告图片字段的 key 生成 */
+function reportImageKeys(studentId: string, month: string) {
+  const prefix = `report_${studentId}_${month}`;
+  return {
+    studentPhoto: `${prefix}_studentPhoto`,
+    studentAvatarPhoto: `${prefix}_studentAvatarPhoto`,
+    coverPhoto: `${prefix}_coverPhoto`,
+    classroomPhotos: `${prefix}_classroomPhotos`,
+  };
+}
+
+/** 保存报告数据（文本→localStorage，图片→IndexedDB） */
+export async function saveReportDataAsync(data: ReportData): Promise<void> {
+  const { studentId, month } = data;
+  const keys = reportImageKeys(studentId, month);
+
+  // 提取图片数据，保存到 IndexedDB
+  const imageEntries: [string, string][] = [];
+  if (data.studentPhoto) imageEntries.push([keys.studentPhoto, data.studentPhoto]);
+  if (data.studentAvatarPhoto) imageEntries.push([keys.studentAvatarPhoto, data.studentAvatarPhoto]);
+  if (data.coverPhoto) imageEntries.push([keys.coverPhoto, data.coverPhoto]);
+  if (data.classroomPhotos?.length) imageEntries.push([keys.classroomPhotos, JSON.stringify(data.classroomPhotos)]);
+
+  await Promise.all(imageEntries.map(([k, v]) => saveImageToIDB(k, v)));
+
+  // 文本数据（不含图片）保存到 localStorage
+  const textData = {
+    ...data,
+    studentPhoto: '',
+    studentAvatarPhoto: '',
+    coverPhoto: '',
+    classroomPhotos: [],
+  };
+  const list = getReports();
+  const idx = list.findIndex(r => r.studentId === data.studentId && r.month === data.month);
+  if (idx >= 0) {
+    list[idx] = textData;
+  } else {
+    list.push(textData);
+  }
+  saveReports(list);
+}
+
+/** 加载报告数据（文本←localStorage，图片←IndexedDB） */
+export async function getReportDataAsync(studentId: string, month: string): Promise<ReportData | null> {
+  const list = getReports();
+  const textData = list.find(r => r.studentId === studentId && r.month === month);
+  if (!textData) return null;
+
+  const keys = reportImageKeys(studentId, month);
+
+  // 从 IndexedDB 加载图片
+  const [studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotosStr] = await Promise.all([
+    loadImageFromIDB(keys.studentPhoto),
+    loadImageFromIDB(keys.studentAvatarPhoto),
+    loadImageFromIDB(keys.coverPhoto),
+    loadImageFromIDB(keys.classroomPhotos),
+  ]);
+
+  return {
+    ...textData,
+    studentPhoto: studentPhoto || '',
+    studentAvatarPhoto: studentAvatarPhoto || '',
+    coverPhoto: coverPhoto || '',
+    classroomPhotos: classroomPhotosStr ? JSON.parse(classroomPhotosStr) : [],
+  };
+}

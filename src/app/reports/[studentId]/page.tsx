@@ -556,25 +556,31 @@ export default function ReportPage() {
     }
   }, [studentId, selectedMonth]);
 
-  // 自动保存：当可编辑字段变化时，延迟2秒自动保存
+  // 自动保存：当可编辑字段变化时，延迟1.5秒自动保存
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const hasInitializedRef = useRef(false);
+  const isFirstRenderRef = useRef(true);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  
+  // 标记首次渲染完成（加载数据后）
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+    }
+  }, []);
   
   useEffect(() => {
-    // 跳过初始化时的自动保存（避免覆盖已保存的数据）
-    if (!hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      return;
-    }
+    // 跳过首次渲染（避免覆盖已加载的数据）
+    if (isFirstRenderRef.current) return;
     if (!studentId || !selectedMonth) return;
     
-    // 清除之前的定时器
+    setSaveStatus('unsaved');
+    
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
     
-    // 设置新的定时器，2秒后自动保存
     autoSaveTimerRef.current = setTimeout(() => {
+      setSaveStatus('saving');
       const data: ReportData = {
         studentId,
         month: selectedMonth,
@@ -607,30 +613,31 @@ export default function ReportPage() {
         editableGrowthSuggestions,
         editableHomeSchoolTips,
         editableKpDescriptions,
+        honorRecords,
         mergeTitle,
         mergedQuote,
         updatedAt: new Date().toISOString(),
       };
       try {
         saveReportData(data);
+        setSaveStatus('saved');
       } catch {
-        // 存储空间不足时，自动清理旧报告数据后重试
         try {
           cleanupOldReports(2);
           saveReportData(data);
+          setSaveStatus('saved');
         } catch {
-          // 静默失败，不干扰用户操作
+          setSaveStatus('unsaved');
         }
       }
-    }, 2000);
+    }, 1500);
     
-    // 清理定时器
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, mergeTitle, mergedQuote]);
+  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, honorRecords, mergeTitle, mergedQuote]);
 
   // 保存报告数据
   const handleSaveReport = useCallback(() => {
@@ -667,20 +674,24 @@ export default function ReportPage() {
       editableGrowthSuggestions,
       editableHomeSchoolTips,
       editableKpDescriptions,
+      honorRecords,
       mergeTitle,
       mergedQuote,
       updatedAt: new Date().toISOString(),
     };
     try {
       saveReportData(data);
+      setSaveStatus('saved');
       alert('报告已保存！');
     } catch {
       // 存储空间不足时，自动清理旧报告数据后重试
       try {
         cleanupOldReports(2); // 只保留最近2份报告
         saveReportData(data);
+        setSaveStatus('saved');
         alert('报告已保存！（已自动清理旧报告以释放空间）');
       } catch {
+        setSaveStatus('unsaved');
         alert('保存失败：存储空间不足，请尝试减少上传图片数量或清除浏览器缓存后重试。');
       }
     }
@@ -993,11 +1004,14 @@ export default function ReportPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex items-center gap-3">
                 <Button onClick={handleSaveReport} className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-400/50 hover:-translate-y-0.5 font-medium">
                   <Save className="mr-2 h-4 w-4" strokeWidth={1.5} />
                   保存报告
                 </Button>
+                <span className={`text-xs font-medium transition-all duration-300 ${saveStatus === 'saved' ? 'text-emerald-600' : saveStatus === 'saving' ? 'text-amber-500' : 'text-gray-400'}`}>
+                  {saveStatus === 'saved' ? '✓ 已自动保存' : saveStatus === 'saving' ? '保存中...' : '● 未保存'}
+                </span>
                 <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-400/50 hover:-translate-y-0.5 font-medium">
                   <Download className="mr-2 h-4 w-4" strokeWidth={1.5} />
                   {exporting ? '导出中...' : '导出PDF'}

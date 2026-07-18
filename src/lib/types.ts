@@ -232,6 +232,8 @@ export interface ReportData {
   editableGrowthSuggestions: Record<string, string[]>;
   editableHomeSchoolTips: Record<string, string>;
   editableKpDescriptions: Record<string, string>;
+  // 荣誉证书
+  honorRecords: HonorRecord[];
   // 合并报告
   mergeTitle: string;
   mergedQuote: string;

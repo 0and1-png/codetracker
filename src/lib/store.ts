@@ -436,6 +436,30 @@ export function saveSprintGoal(data: SprintGoalData): void {
   saveSprintGoals(list);
 }
 
+// ==================== 报告数据清理 ====================
+
+/** 清理最旧的报告数据以释放存储空间 */
+export function cleanupOldReports(keepCount = 3): void {
+  const all = getReports();
+  if (all.length <= keepCount) return;
+  // 按更新时间排序，保留最新的 keepCount 条
+  const sorted = [...all].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const toKeep = sorted.slice(0, keepCount);
+  saveReports(toKeep);
+}
+
+/** 检查 localStorage 剩余空间（返回大致可用字节数） */
+export function getLocalStorageUsage(): { used: number; total: number } {
+  let used = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      used += (localStorage.getItem(key) || '').length * 2; // UTF-16
+    }
+  }
+  return { used, total: 5 * 1024 * 1024 }; // 假设 5MB 限制
+}
+
 // ============ Reports ============
 
 function getReports(): ReportData[] {

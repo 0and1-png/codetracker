@@ -26,6 +26,8 @@ import {
   getExamRecordsByStudent,
   getReportData,
   saveReportData,
+  cleanupOldReports,
+  getLocalStorageUsage,
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord, ReportData } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
@@ -597,7 +599,14 @@ export default function ReportPage() {
       saveReportData(data);
       alert('报告已保存！');
     } catch {
-      alert('保存失败：存储空间不足，请尝试减少上传图片数量或清除浏览器缓存后重试。');
+      // 存储空间不足时，自动清理旧报告数据后重试
+      try {
+        cleanupOldReports(2); // 只保留最近2份报告
+        saveReportData(data);
+        alert('报告已保存！（已自动清理旧报告以释放空间）');
+      } catch {
+        alert('保存失败：存储空间不足，请尝试减少上传图片数量或清除浏览器缓存后重试。');
+      }
     }
   }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, mergeTitle, mergedQuote]);
 
@@ -640,8 +649,8 @@ export default function ReportPage() {
 
   const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
-  // 图片压缩：将图片压缩到指定尺寸和质量
-  const compressImage = (dataUrl: string, maxSize = 800, quality = 0.7): Promise<string> => {
+  // 图片压缩：将图片压缩到更小尺寸以节省 localStorage 空间
+  const compressImage = (dataUrl: string, maxSize = 400, quality = 0.5): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {

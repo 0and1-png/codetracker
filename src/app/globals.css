@@ -62,6 +62,84 @@
   --color-liuli: #C4A67B;
   --color-moye: #2D3748;
   --color-anye: #F7F8FA;
+
+  /* 覆盖Tailwind默认色板 → 莫兰迪色系 */
+  --color-blue-50: #F0F4F8;
+  --color-blue-100: #E8EEF3;
+  --color-blue-200: #C8D8E4;
+  --color-blue-300: #A8C2D4;
+  --color-blue-400: #8BA8BD;
+  --color-blue-500: #6B8BA4;
+  --color-blue-600: #5A7A93;
+  --color-blue-700: #4A6A80;
+  --color-blue-800: #3A5A6D;
+  --color-blue-900: #2A4A5A;
+
+  --color-green-50: #E8F5EC;
+  --color-green-100: #D4EDDA;
+  --color-green-200: #B8DFC4;
+  --color-green-300: #9BBFAB;
+  --color-green-400: #8BB59B;
+  --color-green-500: #7BA68C;
+  --color-green-600: #6B967C;
+  --color-green-700: #5A8A6B;
+  --color-green-800: #4A7A5B;
+  --color-green-900: #3A6A4B;
+
+  --color-red-50: #FCECEC;
+  --color-red-100: #F8D7D9;
+  --color-red-200: #F0B8BC;
+  --color-red-300: #D4959A;
+  --color-red-400: #C4858B;
+  --color-red-500: #C4757B;
+  --color-red-600: #B4656B;
+  --color-red-700: #A65B5B;
+  --color-red-800: #964B4B;
+  --color-red-900: #863B3B;
+
+  --color-purple-50: #F0ECF5;
+  --color-purple-100: #E4DDEE;
+  --color-purple-200: #C8BBDB;
+  --color-purple-300: #B09BC8;
+  --color-purple-400: #A38BBB;
+  --color-purple-500: #9B8BB4;
+  --color-purple-600: #8B7BA4;
+  --color-purple-700: #7B6B94;
+  --color-purple-800: #6B5B84;
+  --color-purple-900: #5B4B74;
+
+  --color-indigo-50: #EDF0F5;
+  --color-indigo-100: #DDE3ED;
+  --color-indigo-200: #BCC7DB;
+  --color-indigo-300: #9BABC8;
+  --color-indigo-400: #8B9BBB;
+  --color-indigo-500: #8B9BB4;
+  --color-indigo-600: #7B8BA4;
+  --color-indigo-700: #6B7B94;
+  --color-indigo-800: #5B6B84;
+  --color-indigo-900: #4B5B74;
+
+  --color-yellow-50: #FDF6EC;
+  --color-yellow-100: #FAEDDA;
+  --color-yellow-200: #F5DAB5;
+  --color-yellow-300: #E8C48B;
+  --color-yellow-400: #D4BE9B;
+  --color-yellow-500: #C4A67B;
+  --color-yellow-600: #B4966B;
+  --color-yellow-700: #A68B5B;
+  --color-yellow-800: #967B4B;
+  --color-yellow-900: #866B3B;
+
+  --color-amber-50: #FDF6EC;
+  --color-amber-100: #FAEDDA;
+  --color-amber-200: #F5DAB5;
+  --color-amber-300: #E8C48B;
+  --color-amber-400: #D4BE9B;
+  --color-amber-500: #C4A67B;
+  --color-amber-600: #B4966B;
+  --color-amber-700: #A68B5B;
+  --color-amber-800: #967B4B;
+  --color-amber-900: #866B3B;
 }
 
 :root {
@@ -168,76 +246,4 @@ body {
 .status-info {
   background: #EDF4F8;
   color: #5A7A93;
-}
-
-/* ============================================
-   色彩覆盖 - 将高饱和Tailwind色映射为莫兰迪色系
-   ============================================ */
-@layer utilities {
-  /* 蓝色系 → 雾感商务蓝 #6B8BA4 */
-  .bg-blue-50, .bg-blue-100 { background-color: #F0F4F8 !important; }
-  .bg-blue-500, .bg-blue-600 { background-color: #6B8BA4 !important; }
-  .bg-blue-700 { background-color: #5A7A93 !important; }
-  .text-blue-500, .text-blue-600, .text-blue-700 { color: #6B8BA4 !important; }
-  .text-blue-400 { color: #8BA8BD !important; }
-  .border-blue-500, .border-blue-600 { border-color: #6B8BA4 !important; }
-  .ring-blue-500 { --tw-ring-color: #6B8BA4 !important; }
-  .focus\:border-blue-500:focus { border-color: #6B8BA4 !important; }
-  .focus\:ring-blue-500:focus { --tw-ring-color: #6B8BA4 !important; }
-  .hover\:bg-blue-600:hover, .hover\:bg-blue-700:hover { background-color: #5A7A93 !important; }
-  .hover\:text-blue-600:hover { color: #5A7A93 !important; }
-
-  /* 绿色系 → 莫兰迪绿 #7BA68C */
-  .bg-green-50, .bg-green-100 { background-color: #E8F5EC !important; }
-  .bg-green-500, .bg-green-600 { background-color: #7BA68C !important; }
-  .text-green-500, .text-green-600, .text-green-700 { color: #7BA68C !important; }
-  .text-green-400 { color: #9BBFAB !important; }
-  .border-green-500 { border-color: #7BA68C !important; }
-
-  /* 红色系 → 莫兰迪红 #C4757B */
-  .bg-red-50, .bg-red-100 { background-color: #FCECEC !important; }
-  .bg-red-500, .bg-red-600 { background-color: #C4757B !important; }
-  .text-red-500, .text-red-600, .text-red-700 { color: #C4757B !important; }
-  .text-red-400 { color: #D4959A !important; }
-  .border-red-500 { border-color: #C4757B !important; }
-
-  /* 紫色系 → 莫兰迪紫 #9B8BB4 */
-  .bg-purple-50, .bg-purple-100 { background-color: #F0ECF5 !important; }
-  .bg-purple-500, .bg-purple-600 { background-color: #9B8BB4 !important; }
-  .text-purple-500, .text-purple-600, .text-purple-700 { color: #9B8BB4 !important; }
-  .border-purple-500 { border-color: #9B8BB4 !important; }
-
-  /* 靛蓝色系 → 莫兰迪蓝紫 #8B9BB4 */
-  .bg-indigo-50, .bg-indigo-100 { background-color: #EDF0F5 !important; }
-  .bg-indigo-500, .bg-indigo-600 { background-color: #8B9BB4 !important; }
-  .text-indigo-500, .text-indigo-600, .text-indigo-700 { color: #8B9BB4 !important; }
-
-  /* 黄色/橙色系 → 莫兰迪橙 #C4A67B */
-  .bg-yellow-50, .bg-yellow-100, .bg-amber-50, .bg-amber-100 { background-color: #FDF6EC !important; }
-  .bg-yellow-500, .bg-yellow-600, .bg-amber-500, .bg-amber-600 { background-color: #C4A67B !important; }
-  .text-yellow-500, .text-yellow-600, .text-amber-500, .text-amber-600 { color: #C4A67B !important; }
-  .text-yellow-400 { color: #D4BE9B !important; }
-
-  /* 渐变色覆盖 - 使用低饱和柔和渐变 */
-  .bg-gradient-to-r.from-blue-500, .bg-gradient-to-r.from-blue-600 { 
-    --tw-gradient-from: #6B8BA4 !important; 
-    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; 
-  }
-  .bg-gradient-to-r.to-purple-500, .bg-gradient-to-r.to-purple-600, .bg-gradient-to-r.to-indigo-500 { 
-    --tw-gradient-to: #9B8BB4 !important; 
-  }
-  .bg-gradient-to-r.to-blue-500, .bg-gradient-to-r.to-blue-600 { 
-    --tw-gradient-to: #6B8BA4 !important; 
-  }
-
-  /* Slate灰色系微调 - 更柔和的中性灰 */
-  .bg-slate-50 { background-color: #FAFBFC !important; }
-  .bg-slate-100 { background-color: #F7F8FA !important; }
-  .text-slate-900 { color: #2D3748 !important; }
-  .text-slate-800 { color: #2D3748 !important; }
-  .text-slate-700 { color: #4A5568 !important; }
-  .text-slate-600 { color: #4A5568 !important; }
-  .text-slate-500 { color: #A0AEC0 !important; }
-  .text-slate-400 { color: #CBD5E0 !important; }
-  .border-slate-200, .border-slate-300 { border-color: #EDF2F7 !important; }
 }

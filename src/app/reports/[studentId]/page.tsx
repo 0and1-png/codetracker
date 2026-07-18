@@ -1490,12 +1490,12 @@ export default function ReportPage() {
                               <div className="flex-1 h-px bg-gradient-to-r from-orange-200 to-transparent ml-2"></div>
                             </div>
                             <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
+                              <table className="w-full text-sm border-collapse">
                                 <thead>
-                                  <tr className="border-b border-orange-100">
-                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
-                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
-                                    <th className="text-left py-2.5 px-3 font-semibold text-orange-500">最近 3 次记录</th>
+                                  <tr className="bg-orange-50/60">
+                                    <th className="text-left py-3 px-4 font-semibold text-[#555] border border-orange-200/70">题目</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-[#555] border border-orange-200/70">知识点</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-orange-600 border border-orange-200/70">最近 3 次记录</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1503,25 +1503,30 @@ export default function ReportPage() {
                                     // 取最近 3 次记录
                                     const recent3 = [...p.records].sort((a, b) => a.date.localeCompare(b.date)).slice(-3);
                                     return (
-                                      <tr key={p.problemId} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
-                                        <td className="py-3 px-3 font-medium text-[#333]">{p.problemName}</td>
-                                        <td className="py-3 px-3">
+                                      <tr key={p.problemId} className="hover:bg-orange-50/40 transition-colors">
+                                        <td className="py-3 px-4 font-medium text-[#333] border border-gray-200">{p.problemName}</td>
+                                        <td className="py-3 px-4 border border-gray-200">
                                           <div className="flex flex-wrap gap-1">
                                             {p.kpNames.length > 0 ? p.kpNames.slice(0, 2).map(name => (
-                                              <span key={name} className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded">{name}</span>
+                                              <span key={name} className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">{name}</span>
                                             )) : <span className="text-xs text-[#aaa]">-</span>}
                                             {p.kpNames.length > 2 && <span className="text-xs text-[#aaa]">+{p.kpNames.length - 2}</span>}
                                           </div>
                                         </td>
-                                        <td className="py-3 px-3">
-                                          <div className="space-y-1">
+                                        <td className="py-3 px-4 border border-gray-200">
+                                          <div className="flex items-center gap-2 flex-wrap">
                                             {recent3.map((rec, i) => {
                                               const timeInMin = (rec.timeSpent / 60).toFixed(2);
                                               const statusText = rec.isQualified ? '合格' : `不合格${rec.unqualifiedReason ? `(${rec.unqualifiedReason})` : ''}`;
                                               return (
-                                                <div key={i} className="text-xs text-[#333]">
-                                                  {timeInMin}分（{statusText}）
-                                                </div>
+                                                <span key={i} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border ${
+                                                  rec.isQualified
+                                                    ? 'bg-green-50 text-green-700 border-green-200'
+                                                    : 'bg-red-50 text-red-700 border-red-200'
+                                                }`}>
+                                                  <span className="font-medium">{rec.date.slice(5)}</span>
+                                                  <span>{timeInMin}分（{statusText}）</span>
+                                                </span>
                                               );
                                             })}
                                             {recent3.length === 0 && <span className="text-xs text-[#ccc]">--</span>}
@@ -1612,31 +1617,35 @@ export default function ReportPage() {
                                         <AlertTriangle className="h-4 w-4" /> 本月未掌握（错题补练）
                                       </h5>
                                       <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-sm border-collapse">
                                           <thead>
-                                            <tr className="border-b border-gray-100">
-                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
-                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
-                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">最近 2 次记录</th>
+                                            <tr className="bg-red-50/60">
+                                              <th className="text-left py-3 px-4 font-semibold text-[#555] border border-red-200/70">题目</th>
+                                              <th className="text-left py-3 px-4 font-semibold text-[#555] border border-red-200/70">知识点</th>
+                                              <th className="text-left py-3 px-4 font-semibold text-red-600 border border-red-200/70">最近 2 次记录</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             {unqualifiedProblems.map((p) => (
-                                              <tr key={p.problemId} className="border-b border-gray-50">
-                                                <td className="py-3 px-3">
+                                              <tr key={p.problemId} className="hover:bg-red-50/30 transition-colors">
+                                                <td className="py-3 px-4 border border-gray-200">
                                                   <span className="font-medium text-[#333]">{p.problemName}</span>
                                                 </td>
-                                                <td className="py-3 px-3">
+                                                <td className="py-3 px-4 border border-gray-200">
                                                   <div className="flex flex-wrap gap-1">
                                                     {p.kpNames.length > 0 ? p.kpNames.map(name => (
-                                                      <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                                      <span key={name} className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-medium">{name}</span>
                                                     )) : <span className="text-xs text-[#888]">-</span>}
                                                   </div>
                                                 </td>
-                                                <td className="py-3 px-3">
-                                                  <div className="space-y-1.5">
+                                                <td className="py-3 px-4 border border-gray-200">
+                                                  <div className="flex items-center gap-2 flex-wrap">
                                                     {p.lastTwoRecords.map((rec, idx) => (
-                                                      <div key={idx} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${rec.isQualified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                                      <span key={idx} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border ${
+                                                        rec.isQualified
+                                                          ? 'bg-green-50 text-green-700 border-green-200'
+                                                          : 'bg-red-50 text-red-700 border-red-200'
+                                                      }`}>
                                                         <span className="font-medium">{rec.date.slice(5)}</span>
                                                         <span>{(rec.timeSpent / 60).toFixed(2)}分</span>
                                                         {rec.isQualified ? (
@@ -1644,10 +1653,10 @@ export default function ReportPage() {
                                                         ) : (
                                                           <>
                                                             <XCircle className="h-3 w-3" />
-                                                            <span className="text-[10px] text-red-500">{rec.unqualifiedReason || '不合格'}</span>
+                                                            <span className="text-[10px]">{rec.unqualifiedReason || '不合格'}</span>
                                                           </>
                                                         )}
-                                                      </div>
+                                                      </span>
                                                     ))}
                                                   </div>
                                                 </td>

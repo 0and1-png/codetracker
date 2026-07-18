@@ -8,7 +8,7 @@ import {
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
   ChevronRight, ChevronLeft, Eye, EyeOff, Edit, Award, Trophy,
-  UserPlus,
+  UserPlus, ChevronUp,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -1997,6 +1997,15 @@ function StudentRecordCard({
   onUpdateHomework, onSave, onLoadHistory, onBatchRetry,
 }: StudentRecordCardProps) {
   const retryRecords = historyRecords?.retry || [];
+  const [collapsedHistory, setCollapsedHistory] = useState<Set<number>>(new Set());
+  const toggleHistory = (rowIndex: number) => {
+    setCollapsedHistory(prev => {
+      const next = new Set(prev);
+      if (next.has(rowIndex)) next.delete(rowIndex);
+      else next.add(rowIndex);
+      return next;
+    });
+  };
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Card header */}
@@ -2116,21 +2125,30 @@ function StudentRecordCard({
                         className="h-8 text-sm" />
                     </div>
                   )}
-                  {/* History records */}
+                  {/* History records - collapsible */}
                   {row.problemId && problemHistory.length > 0 && (
                     <div>
-                      <Label className="text-xs text-gray-500 mb-2 block">历史记录</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {problemHistory.slice(-6).map((record, idx) => (
-                          <div key={idx} className="text-xs p-2 rounded bg-white border border-gray-200">
-                            <div className="text-gray-500">{new Date(record.date).toLocaleDateString('zh-CN')}</div>
-                            <div className="font-medium">{record.timeSpent}分钟</div>
-                            <div className={record.isQualified ? 'text-green-600' : 'text-red-600'}>
-                              {record.isQualified ? '合格' : '不合格'}
+                      <button
+                        type="button"
+                        onClick={() => toggleHistory(rowIndex)}
+                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-500 transition-colors mb-1"
+                      >
+                        <ChevronDown className={`h-3 w-3 transition-transform ${!collapsedHistory.has(rowIndex) ? 'rotate-180' : ''}`} />
+                        <span>历史记录 ({problemHistory.length})</span>
+                      </button>
+                      {!collapsedHistory.has(rowIndex) && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {problemHistory.slice(-6).map((record, idx) => (
+                            <div key={idx} className="text-xs p-2 rounded bg-white border border-gray-200">
+                              <div className="text-gray-500">{new Date(record.date).toLocaleDateString('zh-CN')}</div>
+                              <div className="font-medium">{record.timeSpent}分钟</div>
+                              <div className={record.isQualified ? 'text-green-600' : 'text-red-600'}>
+                                {record.isQualified ? '合格' : '不合格'}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

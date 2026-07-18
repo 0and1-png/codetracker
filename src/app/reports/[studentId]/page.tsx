@@ -887,7 +887,7 @@ export default function ReportPage() {
                 <p className="text-xs text-[#888] mt-0.5">
                   {monthFocus === 'exam' ? '本月重点准备GESP考级，加油！' :
                    monthFocus === 'competition' ? '本月重点备战编程赛事，冲刺佳绩！' :
-                   '本月重点突破打字速度与正确率！'}
+                   '本月重点突破打字速度！'}
                 </p>
               </div>
             </div>
@@ -1792,10 +1792,9 @@ export default function ReportPage() {
                   const typingTrendData = monthTypingRecords
                     .sort((a, b) => a.date.localeCompare(b.date))
                     .slice(-10)
-                    .map((t, idx) => ({
-                      序号: idx + 1,
+                    .map((t) => ({
+                      日期: t.date.slice(5),
                       速度: t.speed,
-                      正确率: t.accuracy
                     }));
 
                   return (
@@ -1868,24 +1867,16 @@ export default function ReportPage() {
                           <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={typingTrendData}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                              <XAxis dataKey="序号" tick={{ fontSize: 12, fill: '#888' }} />
-                              <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#888' }} />
-                              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#888' }} domain={[0, 100]} />
-                              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                              <Line yAxisId="left" type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-                              <Line yAxisId="right" type="monotone" dataKey="正确率" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                              <XAxis dataKey="日期" tick={{ fontSize: 12, fill: '#888' }} />
+                              <YAxis tick={{ fontSize: 12, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
+                              <Tooltip
+                                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                                formatter={(value: number) => [`${value} 字/分`, '打字速度']}
+                                labelFormatter={(label) => `测试日期：${label}`}
+                              />
+                              <Line type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} />
                             </LineChart>
                           </ResponsiveContainer>
-                          <div className="flex justify-center gap-6 mt-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                              <span className="text-xs text-[#666]">速度（字/分钟）</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                              <span className="text-xs text-[#666]">正确率（%）</span>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -2600,16 +2591,13 @@ export default function ReportPage() {
                           <tr className="bg-gradient-to-r from-emerald-50 to-teal-50">
                             <th className="text-left py-3 px-4 text-sm font-semibold text-emerald-700">测试日期</th>
                             <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">指力（字/分）</th>
-                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">悟性（正确率）</th>
                             <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">速度变化</th>
-                            <th className="text-center py-3 px-4 text-sm font-semibold text-emerald-700">正确率变化</th>
                           </tr>
                         </thead>
                         <tbody>
                           {monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map((t, i, arr) => {
                             const prev = i > 0 ? arr[i - 1] : null;
                             const speedChange = prev ? t.speed - prev.speed : 0;
-                            const accChange = prev ? t.accuracy - prev.accuracy : 0;
                             return (
                               <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-emerald-50/30'}>
                                 <td className="py-3 px-4 text-sm font-medium text-[#333]">{t.date}</td>
@@ -2618,22 +2606,9 @@ export default function ReportPage() {
                                   <span className="text-xs text-[#888] ml-1">字/分</span>
                                 </td>
                                 <td className="text-center py-3 px-4">
-                                  <span className="text-lg font-bold text-blue-600">{t.accuracy}</span>
-                                  <span className="text-xs text-[#888] ml-1">%</span>
-                                </td>
-                                <td className="text-center py-3 px-4">
                                   {prev ? (
                                     <span className={`text-sm font-bold ${speedChange > 0 ? 'text-green-500' : speedChange < 0 ? 'text-red-500' : 'text-[#888]'}`}>
                                       {speedChange > 0 ? `+${speedChange}` : speedChange}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[#ccc] text-sm">首次</span>
-                                  )}
-                                </td>
-                                <td className="text-center py-3 px-4">
-                                  {prev ? (
-                                    <span className={`text-sm font-bold ${accChange > 0 ? 'text-green-500' : accChange < 0 ? 'text-red-500' : 'text-[#888]'}`}>
-                                      {accChange > 0 ? `+${accChange}%` : `${accChange}%`}
                                     </span>
                                   ) : (
                                     <span className="text-[#ccc] text-sm">首次</span>
@@ -2652,7 +2627,6 @@ export default function ReportPage() {
                           data={monthTyping.sort((a, b) => a.date.localeCompare(b.date)).map(t => ({
                             date: t.date.slice(5),
                             速度: t.speed,
-                            正确率: t.accuracy,
                           }))}
                           margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                         >
@@ -2661,19 +2635,16 @@ export default function ReportPage() {
                               <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                               <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                             </linearGradient>
-                            <linearGradient id="colorAccuracy" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                            </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                           <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#888' }} />
-                          <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
-                          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#888' }} domain={[0, 100]} label={{ value: '正确率%', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#888' } }} />
-                          <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }} />
-                          <Legend wrapperStyle={{ fontSize: '12px' }} />
-                          <Area yAxisId="left" type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" />
-                          <Area yAxisId="right" type="monotone" dataKey="正确率" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorAccuracy)" />
+                          <YAxis tick={{ fontSize: 11, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
+                          <Tooltip
+                            contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                            formatter={(value: number) => [`${value} 字/分`, '打字速度']}
+                            labelFormatter={(label) => `测试日期：${label}`}
+                          />
+                          <Area type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>

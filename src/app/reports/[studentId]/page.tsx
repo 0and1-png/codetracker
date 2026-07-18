@@ -540,6 +540,17 @@ export default function ReportPage() {
       setReportMonth(saved.reportMonth);
       setMonthlyQuote(saved.monthlyQuote);
       setTimelineQuotes(saved.timelineQuotes);
+      if (saved.editableStrengths?.length) setEditableStrengths(saved.editableStrengths);
+      if (saved.editableWeaknesses?.length) setEditableWeaknesses(saved.editableWeaknesses);
+      if (saved.editableAttendanceDays && Object.keys(saved.editableAttendanceDays).length) setEditableAttendanceDays(saved.editableAttendanceDays);
+      if (saved.editableHomeworkCount && Object.keys(saved.editableHomeworkCount).length) setEditableHomeworkCount(saved.editableHomeworkCount);
+      if (saved.editableFullAttendanceDays && Object.keys(saved.editableFullAttendanceDays).length) setEditableFullAttendanceDays(saved.editableFullAttendanceDays);
+      if (saved.editableHomeworkStandard && Object.keys(saved.editableHomeworkStandard).length) setEditableHomeworkStandard(saved.editableHomeworkStandard);
+      if (saved.editableGrowthSuggestions && Object.keys(saved.editableGrowthSuggestions).length) setEditableGrowthSuggestions(saved.editableGrowthSuggestions);
+      if (saved.editableHomeSchoolTips && Object.keys(saved.editableHomeSchoolTips).length) setEditableHomeSchoolTips(saved.editableHomeSchoolTips);
+      if (saved.editableKpDescriptions && Object.keys(saved.editableKpDescriptions).length) setEditableKpDescriptions(saved.editableKpDescriptions);
+      if (saved.mergeTitle) setMergeTitle(saved.mergeTitle);
+      if (saved.mergedQuote) setMergedQuote(saved.mergedQuote);
     }
   }, [studentId, selectedMonth]);
 
@@ -569,11 +580,26 @@ export default function ReportPage() {
       reportMonth,
       monthlyQuote,
       timelineQuotes,
+      editableStrengths,
+      editableWeaknesses,
+      editableAttendanceDays,
+      editableHomeworkCount,
+      editableFullAttendanceDays,
+      editableHomeworkStandard,
+      editableGrowthSuggestions,
+      editableHomeSchoolTips,
+      editableKpDescriptions,
+      mergeTitle,
+      mergedQuote,
       updatedAt: new Date().toISOString(),
     };
-    saveReportData(data);
-    alert('报告已保存！');
-  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes]);
+    try {
+      saveReportData(data);
+      alert('报告已保存！');
+    } catch {
+      alert('保存失败：存储空间不足，请尝试减少上传图片数量或清除浏览器缓存后重试。');
+    }
+  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, mergeTitle, mergedQuote]);
 
   // Toggle GESP level
   const toggleGespLevel = useCallback((level: GESPLlevel) => {
@@ -614,7 +640,38 @@ export default function ReportPage() {
 
   const periodLabel = period === 'week' ? '本周' : period === 'month' ? `${selectedMonth.replace('-', '年')}月` : '自定义周期';
 
-  // 图片上传处理
+  // 图片压缩：将图片压缩到指定尺寸和质量
+  const compressImage = (dataUrl: string, maxSize = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height / width) * maxSize);
+            width = maxSize;
+          } else {
+            width = Math.round((width / height) * maxSize);
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
+  // 图片上传处理（自动压缩）
   const handleImageUpload = (setter: (value: string) => void) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -623,8 +680,10 @@ export default function ReportPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (event) => {
-          setter(event.target?.result as string);
+        reader.onload = async (event) => {
+          const raw = event.target?.result as string;
+          const compressed = await compressImage(raw);
+          setter(compressed);
         };
         reader.readAsDataURL(file);
       }
@@ -640,8 +699,10 @@ export default function ReportPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file && classroomPhotos.length < 6) {
         const reader = new FileReader();
-        reader.onload = (event) => {
-          setClassroomPhotos([...classroomPhotos, event.target?.result as string]);
+        reader.onload = async (event) => {
+          const raw = event.target?.result as string;
+          const compressed = await compressImage(raw);
+          setClassroomPhotos([...classroomPhotos, compressed]);
         };
         reader.readAsDataURL(file);
       }

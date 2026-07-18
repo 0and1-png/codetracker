@@ -222,5 +222,18 @@ export interface ReportData {
   reportMonth: string;
   monthlyQuote: string;
   timelineQuotes: Record<string, string>;
+  // 可编辑标签与统计
+  editableStrengths: string[];
+  editableWeaknesses: string[];
+  editableAttendanceDays: Record<string, number>;
+  editableHomeworkCount: Record<string, number>;
+  editableFullAttendanceDays: Record<string, number>;
+  editableHomeworkStandard: Record<string, number>;
+  editableGrowthSuggestions: Record<string, string[]>;
+  editableHomeSchoolTips: Record<string, string>;
+  editableKpDescriptions: Record<string, string>;
+  // 合并报告
+  mergeTitle: string;
+  mergedQuote: string;
   updatedAt: string;
 }

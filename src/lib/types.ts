@@ -84,6 +84,8 @@ export interface ProblemRetryRecord {
   praiseTags?: string[];       // Teacher praise tags
   improveTags?: string[];      // Teacher improvement tags
   growthSuggestions?: string[]; // Growth suggestions selected by teacher
+  isQualified?: boolean;       // 是否合格
+  unqualifiedReason?: string;  // 不合格原因
 }
 
 export interface HomeworkRecord {

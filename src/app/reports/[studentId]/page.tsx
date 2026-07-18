@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Keyboard } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Keyboard } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   getStudents,
@@ -1495,23 +1495,13 @@ export default function ReportPage() {
                                   <tr className="border-b border-orange-100">
                                     <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
                                     <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
-                                    <th className="text-center py-2.5 px-3 font-semibold text-orange-500">一刷</th>
-                                    <th className="text-center py-2.5 px-3 font-semibold text-blue-500">二刷</th>
-                                    <th className="text-center py-2.5 px-3 font-semibold text-green-500">三刷</th>
-                                    <th className="text-center py-2.5 px-3 font-semibold text-[#555]">效率提升</th>
+                                    <th className="text-left py-2.5 px-3 font-semibold text-orange-500">最近 3 次记录</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {keyProblems.map((p) => {
-                                    const formatDuration = (d: number) => {
-                                      if (!d) return '-';
-                                      const mins = Math.floor(d / 60);
-                                      const secs = d % 60;
-                                      return mins > 0 ? `${mins}分${secs}秒` : `${secs}秒`;
-                                    };
-                                    const firstTime = p.records[0]?.timeSpent || 0;
-                                    const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
-                                    const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
+                                    // 取最近 3 次记录
+                                    const recent3 = [...p.records].sort((a, b) => a.date.localeCompare(b.date)).slice(-3);
                                     return (
                                       <tr key={p.problemId} className="border-b border-gray-50 hover:bg-orange-50/30 transition-colors">
                                         <td className="py-3 px-3 font-medium text-[#333]">{p.problemName}</td>
@@ -1523,29 +1513,19 @@ export default function ReportPage() {
                                             {p.kpNames.length > 2 && <span className="text-xs text-[#aaa]">+{p.kpNames.length - 2}</span>}
                                           </div>
                                         </td>
-                                        {['一刷', '二刷', '三刷'].map((label, i) => {
-                                          const rec = p.records[i];
-                                          return (
-                                            <td key={label} className="py-3 px-3 text-center">
-                                              {rec ? (
-                                                <div>
-                                                  <div className="text-xs font-semibold text-[#333]">{formatDuration(rec.timeSpent)}</div>
-                                                  <div className="text-[10px] text-[#aaa]">{rec.date.slice(5)}</div>
+                                        <td className="py-3 px-3">
+                                          <div className="space-y-1">
+                                            {recent3.map((rec, i) => {
+                                              const timeInMin = (rec.timeSpent / 60).toFixed(2);
+                                              const statusText = rec.isQualified ? '合格' : `不合格${rec.unqualifiedReason ? `(${rec.unqualifiedReason})` : ''}`;
+                                              return (
+                                                <div key={i} className="text-xs text-[#333]">
+                                                  {timeInMin}分（{statusText}）
                                                 </div>
-                                              ) : (
-                                                <span className="text-xs text-[#ccc]">--</span>
-                                              )}
-                                            </td>
-                                          );
-                                        })}
-                                        <td className="py-3 px-3 text-center">
-                                          {improvement !== 0 ? (
-                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${improvement > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                                              {improvement > 0 ? `↑${improvement}%` : `↓${Math.abs(improvement)}%`}
-                                            </span>
-                                          ) : (
-                                            <span className="text-xs text-[#ccc]">--</span>
-                                          )}
+                                              );
+                                            })}
+                                            {recent3.length === 0 && <span className="text-xs text-[#ccc]">--</span>}
+                                          </div>
                                         </td>
                                       </tr>
                                     );
@@ -1562,87 +1542,125 @@ export default function ReportPage() {
                             <h4 className="text-base font-semibold text-orange-600 flex items-center gap-2 px-1">
                               <AlertCircle className="h-5 w-5" /> 重点题型（三刷练习）
                             </h4>
-                            {keyProblems.map((p) => {
-                              const formatDuration = (d: number) => {
-                                if (!d) return '-';
-                                const mins = Math.floor(d / 60);
-                                const secs = d % 60;
-                                return mins > 0 ? `${mins}分${secs}秒` : `${secs}秒`;
-                              };
-                              const firstTime = p.records[0]?.timeSpent || 0;
-                              const lastTime = p.records[p.records.length - 1]?.timeSpent || 0;
-                              const improvement = firstTime > 0 ? Math.round((firstTime - lastTime) / firstTime * 100) : 0;
-                              // Build chart data for this problem
-                              const chartData = p.records.map((rec, idx) => ({
-                                name: ['一刷', '二刷', '三刷', '四刷', '五刷'][idx] || `第${idx+1}次`,
-                                time: Math.round(rec.timeSpent / 60 * 10) / 10,
-                                date: rec.date,
-                              }));
-                              const colors = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899'];
-                              const lineColor = colors[['一刷', '二刷', '三刷', '四刷', '五刷'].indexOf(chartData[0]?.name) % colors.length] || '#f97316';
+                            {(() => {
+                              // 统计合格和不合格的题目数量（基于最近 2 次记录）
+                              let qualifiedCount = 0;
+                              let unqualifiedCount = 0;
+                              const unqualifiedProblems: { problemId: string; problemName: string; kpNames: string[]; lastTwoRecords: { timeSpent: number; isQualified: boolean; unqualifiedReason: string; date: string }[] }[] = [];
+
+                              keyProblems.forEach((p) => {
+                                const lastTwo = p.records.slice(-2); // 最近 2 次记录
+                                if (lastTwo.length === 0) return;
+
+                                // 检查最近 2 次是否都合格
+                                const allQualified = lastTwo.every(r => r.isQualified);
+                                const anyUnqualified = lastTwo.some(r => !r.isQualified);
+
+                                if (allQualified) {
+                                  qualifiedCount++;
+                                } else if (anyUnqualified) {
+                                  unqualifiedCount++;
+                                  // 添加到未掌握列表
+                                  unqualifiedProblems.push({
+                                    problemId: p.problemId,
+                                    problemName: p.problemName,
+                                    kpNames: p.kpNames,
+                                    lastTwoRecords: lastTwo.map(r => ({
+                                      timeSpent: r.timeSpent,
+                                      isQualified: r.isQualified ?? false,
+                                      unqualifiedReason: r.unqualifiedReason || '',
+                                      date: r.date,
+                                    })),
+                                  });
+                                }
+                              });
 
                               return (
-                                <div key={p.problemId} className="bg-white rounded-2xl p-5 shadow-sm border border-orange-100/50">
-                                  {/* 题目信息行 */}
-                                  <div className="flex items-start justify-between mb-4">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <span className="font-semibold text-[#333344] text-sm">{p.problemName}</span>
-                                        {improvement !== 0 && (
-                                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${improvement > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                                            {improvement > 0 ? `效率↑${improvement}%` : `效率↓${Math.abs(improvement)}%`}
-                                          </span>
-                                        )}
+                                <>
+                                  {/* 合格/不合格统计 */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-100">
+                                      <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                          <CheckCircle className="h-5 w-5 text-green-600" />
+                                        </div>
+                                        <div>
+                                          <div className="text-2xl font-bold text-green-700">{qualifiedCount}</div>
+                                          <div className="text-xs text-green-600">已掌握题目</div>
+                                        </div>
                                       </div>
-                                      <div className="flex flex-wrap gap-1">
-                                        {p.kpNames.length > 0 ? p.kpNames.map(name => (
-                                          <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
-                                        )) : <span className="text-xs text-[#888]">暂无知识点</span>}
+                                      <div className="text-xs text-green-500 mt-2">最近 2 次练习均合格</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl p-5 border border-red-100">
+                                      <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                          <XCircle className="h-5 w-5 text-red-600" />
+                                        </div>
+                                        <div>
+                                          <div className="text-2xl font-bold text-red-700">{unqualifiedCount}</div>
+                                          <div className="text-xs text-red-600">未掌握题目</div>
+                                        </div>
                                       </div>
+                                      <div className="text-xs text-red-500 mt-2">最近 2 次练习有不合格</div>
                                     </div>
                                   </div>
 
-                                  {/* 迷你折线图 + 刷次明细并排 */}
-                                  <div className="flex gap-4">
-                                    {/* 左侧：迷你折线图 */}
-                                    <div className="flex-1 h-[120px] bg-gradient-to-br from-orange-50/30 to-amber-50/20 rounded-xl p-2">
-                                      <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={chartData} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
-                                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
-                                          <YAxis tick={{ fontSize: 10, fill: '#aaa' }} axisLine={false} tickLine={false} unit="分" />
-                                          <Tooltip
-                                            contentStyle={{ borderRadius: '8px', border: '1px solid #f0f0f0', fontSize: '11px', padding: '6px 10px' }}
-                                            formatter={(value: number, _name: string, props: { payload?: { date?: string } }) => [`${value}分钟`, props.payload?.date || '']}
-                                          />
-                                          <Line type="monotone" dataKey="time" stroke={lineColor} strokeWidth={2.5} dot={{ r: 5, fill: lineColor, stroke: '#fff', strokeWidth: 2 }} activeDot={{ r: 7 }} />
-                                        </LineChart>
-                                      </ResponsiveContainer>
+                                  {/* 本月未掌握（错题补练） */}
+                                  {unqualifiedProblems.length > 0 && (
+                                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-red-100/50">
+                                      <h5 className="text-sm font-semibold text-red-600 flex items-center gap-2 mb-4">
+                                        <AlertTriangle className="h-4 w-4" /> 本月未掌握（错题补练）
+                                      </h5>
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                          <thead>
+                                            <tr className="border-b border-gray-100">
+                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
+                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
+                                              <th className="text-left py-2.5 px-3 font-semibold text-[#555]">最近 2 次记录</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {unqualifiedProblems.map((p) => (
+                                              <tr key={p.problemId} className="border-b border-gray-50">
+                                                <td className="py-3 px-3">
+                                                  <span className="font-medium text-[#333]">{p.problemName}</span>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                  <div className="flex flex-wrap gap-1">
+                                                    {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                                      <span key={name} className="text-xs px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full">{name}</span>
+                                                    )) : <span className="text-xs text-[#888]">-</span>}
+                                                  </div>
+                                                </td>
+                                                <td className="py-3 px-3">
+                                                  <div className="space-y-1.5">
+                                                    {p.lastTwoRecords.map((rec, idx) => (
+                                                      <div key={idx} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${rec.isQualified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                                        <span className="font-medium">{rec.date.slice(5)}</span>
+                                                        <span>{(rec.timeSpent / 60).toFixed(2)}分</span>
+                                                        {rec.isQualified ? (
+                                                          <CheckCircle className="h-3 w-3" />
+                                                        ) : (
+                                                          <>
+                                                            <XCircle className="h-3 w-3" />
+                                                            <span className="text-[10px] text-red-500">{rec.unqualifiedReason || '不合格'}</span>
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
                                     </div>
-
-                                    {/* 右侧：刷次明细 */}
-                                    <div className="w-[200px] flex flex-col gap-1.5">
-                                      {['一刷', '二刷', '三刷'].map((label, i) => {
-                                        const rec = p.records[i];
-                                        return (
-                                          <div key={label} className={`flex items-center justify-between py-1.5 px-3 rounded-lg ${rec ? 'bg-[#F7F8FC]' : 'bg-gray-50'}`}>
-                                            <span className="text-xs font-medium text-[#888] w-8">{label}</span>
-                                            {rec ? (
-                                              <div className="text-right">
-                                                <span className="text-xs font-semibold text-orange-600">{formatDuration(rec.timeSpent)}</span>
-                                                <span className="text-[10px] text-[#aaa] ml-1.5">{rec.date.slice(5)}</span>
-                                              </div>
-                                            ) : (
-                                              <span className="text-xs text-[#ccc]">无记录</span>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                </div>
+                                  )}
+                                </>
                               );
-                            })}
+                            })()}
                           </div>
                         )}
 
@@ -1652,40 +1670,23 @@ export default function ReportPage() {
                             <h4 className="text-base font-semibold text-[#555] flex items-center gap-2 mb-4">
                               <CheckCircle className="h-4 w-4 text-green-500" /> 已完成题目
                             </h4>
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b border-gray-100">
-                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">题目</th>
-                                    <th className="text-left py-2.5 px-3 font-semibold text-[#555]">知识点</th>
-                                    <th className="text-center py-2.5 px-3 font-semibold text-[#555]">完成时间</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {normalProblems.map((p) => (
-                                    <tr key={p.problemId} className="border-b border-gray-50 hover:bg-green-50/30 transition-colors">
-                                      <td className="py-3 px-3">
-                                        <div className="flex items-center gap-2">
-                                          <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-green-500 text-[10px]">✓</span>
-                                          </div>
-                                          <span className="font-medium text-[#333]">{p.problemName}</span>
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-3">
-                                        <div className="flex flex-wrap gap-1">
-                                          {p.kpNames.length > 0 ? p.kpNames.map(name => (
-                                            <span key={name} className="text-xs px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded">{name}</span>
-                                          )) : <span className="text-xs text-[#aaa]">-</span>}
-                                        </div>
-                                      </td>
-                                      <td className="py-3 px-3 text-center">
-                                        <span className="text-xs text-[#666]">{p.first.date}</span>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div className="grid grid-cols-4 gap-3">
+                              {normalProblems.map((p) => (
+                                <div key={p.problemId} className="bg-green-50/50 rounded-lg p-3 border border-green-100 hover:bg-green-50 transition-colors">
+                                  <div className="flex items-center gap-2 mb-1.5">
+                                    <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-green-500 text-[10px]">✓</span>
+                                    </div>
+                                    <span className="font-medium text-[#333] text-sm truncate">{p.problemName}</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1 mb-1.5">
+                                    {p.kpNames.length > 0 ? p.kpNames.map(name => (
+                                      <span key={name} className="text-[10px] px-1.5 py-0.5 bg-purple-50 text-purple-500 rounded truncate max-w-full">{name}</span>
+                                    )) : <span className="text-[10px] text-[#aaa]">-</span>}
+                                  </div>
+                                  <div className="text-[10px] text-[#888]">{p.first.date}</div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}

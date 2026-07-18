@@ -54,8 +54,12 @@ import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS, getGespLeve
 type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'honor';
 
 interface RetryRowForm {
+  id: string;
   problemId: string;
-  times: [string, string, string]; // [一刷, 二刷, 三刷]
+  problemName: string;
+  timeSpent: string; // 本次用时（分钟）
+  isQualified: boolean; // 是否合格
+  unqualifiedReason?: string; // 不合格原因
   praiseTags?: string[];
   improveTags?: string[];
 }
@@ -1132,7 +1136,7 @@ export default function HomePage() {
 
   // Form helpers
   const getTypingForm = (id: string): TypingForm => typingForms[id] || { speed: '', praiseTags: [], improveTags: [] };
-  const getRetryForm = (id: string): RetryRowForm[] => retryForms[id] || [{ problemId: '', times: ['', '', ''], praiseTags: [], improveTags: [] }];
+  const getRetryForm = (id: string): RetryRowForm[] => retryForms[id] || [{ problemId: '', problemName: '', timeSpent: '', isQualified: true, unqualifiedReason: '', praiseTags: [], improveTags: [] }];
   const getHomeworkForm = (id: string): HomeworkForm => homeworkForms[id] || { content: '', completion: '', comment: '', praiseTags: [], improveTags: [] };
 
   const updateTypingForm = (id: string, field: keyof TypingForm, value: string | string[]) => {
@@ -1142,9 +1146,9 @@ export default function HomePage() {
     setHomeworkForms((prev) => ({ ...prev, [id]: { ...getHomeworkForm(id), [field]: value } }));
   };
 
-  const updateRetryRow = (studentId: string, rowIndex: number, field: 'problemId' | 'times' | 'praiseTags' | 'improveTags', value: string | [string, string, string] | string[]) => {
+  const updateRetryRow = (studentId: string, rowIndex: number, field: keyof RetryRowForm, value: string | boolean | string[]) => {
     setRetryForms(prev => {
-      const rows = [...(prev[studentId] || [{ problemId: '', times: ['', '', ''], praiseTags: [], improveTags: [] }])];
+      const rows = [...(prev[studentId] || [{ problemId: '', problemName: '', timeSpent: '', isQualified: true, unqualifiedReason: '', praiseTags: [], improveTags: [] }])];
       rows[rowIndex] = { ...rows[rowIndex], [field]: value };
       return { ...prev, [studentId]: rows };
     });
@@ -1152,7 +1156,7 @@ export default function HomePage() {
 
   const addRetryRow = (studentId: string) => {
     setRetryForms(prev => {
-      const rows = [...(prev[studentId] || []), { problemId: '', times: ['', '', ''] as [string, string, string], praiseTags: [], improveTags: [] }];
+      const rows = [...(prev[studentId] || []), { id: Date.now().toString(), problemId: '', problemName: '', timeSpent: '', isQualified: true, unqualifiedReason: '', praiseTags: [], improveTags: [] }];
       return { ...prev, [studentId]: rows };
     });
   };
@@ -1160,7 +1164,7 @@ export default function HomePage() {
   const removeRetryRow = (studentId: string, rowIndex: number) => {
     setRetryForms(prev => {
       const rows = (prev[studentId] || []).filter((_, i) => i !== rowIndex);
-      if (rows.length === 0) rows.push({ problemId: '', times: ['', '', ''] });
+      if (rows.length === 0) rows.push({ id: Date.now().toString(), problemId: '', problemName: '', timeSpent: '', isQualified: true, unqualifiedReason: '', praiseTags: [], improveTags: [] });
       return { ...prev, [studentId]: rows };
     });
   };
@@ -1259,18 +1263,18 @@ export default function HomePage() {
       for (const row of rows) {
         if (!row.problemId) continue;
         const problem = activeCourse?.problems.find((p) => p.id === row.problemId);
-        row.times.forEach((time, idx) => {
-          const t = Number(time);
-          if (t > 0) {
-            addRetryRecord({
-              id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
-              problemId: row.problemId, problemName: problem?.name || '',
-              attempt: idx + 1, timeSpent: t,
-              praiseTags: row.praiseTags && row.praiseTags.length > 0 ? row.praiseTags : undefined,
-              improveTags: row.improveTags && row.improveTags.length > 0 ? row.improveTags : undefined,
-            });
-          }
-        });
+        // 保存本次三刷记录
+        if (row.timeSpent && Number(row.timeSpent) > 0) {
+          addRetryRecord({
+            id: uuidv4(), studentId, courseId: selectedCourseId, date: recordDate,
+            problemId: row.problemId, problemName: row.problemName || problem?.name || '',
+            attempt: 1, timeSpent: Number(row.timeSpent),
+            isQualified: row.isQualified,
+            unqualifiedReason: row.unqualifiedReason,
+            praiseTags: row.praiseTags && row.praiseTags.length > 0 ? row.praiseTags : undefined,
+            improveTags: row.improveTags && row.improveTags.length > 0 ? row.improveTags : undefined,
+          });
+        }
       }
     } else if (activeTab === 'homework') {
       const form = getHomeworkForm(studentId);
@@ -1976,7 +1980,7 @@ interface StudentRecordCardProps {
   problemSearch: string;
   onProblemSearchChange: (v: string) => void;
   onUpdateTyping: (field: keyof TypingForm, value: string | string[]) => void;
-  onUpdateRetryRow: (rowIndex: number, field: 'problemId' | 'times' | 'praiseTags' | 'improveTags', value: string | [string, string, string] | string[]) => void;
+  onUpdateRetryRow: (rowIndex: number, field: keyof RetryRowForm, value: string | boolean | string[]) => void;
   onAddRetryRow: () => void;
   onRemoveRetryRow: (rowIndex: number) => void;
   onUpdateHomework: (field: keyof HomeworkForm, value: string | string[]) => void;
@@ -1992,6 +1996,7 @@ function StudentRecordCard({
   onUpdateTyping, onUpdateRetryRow, onAddRetryRow, onRemoveRetryRow,
   onUpdateHomework, onSave, onLoadHistory, onBatchRetry,
 }: StudentRecordCardProps) {
+  const retryRecords = historyRecords?.retry || [];
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       {/* Card header */}
@@ -2021,75 +2026,116 @@ function StudentRecordCard({
         {/* Retry Tab */}
         {activeTab === 'retry' && (
           <div className="space-y-3">
-            {retryRows.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex items-start gap-2 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                {/* Problem selector */}
-                <div className="flex-1 min-w-0">
-                  <Label className="text-xs text-gray-500 mb-1 block">题目</Label>
-                  {activeCourse && activeCourse.problems.length > 0 ? (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full h-8 text-sm justify-between">
-                          {row.problemId ? (
-                            <span className="truncate text-gray-700">
-                              {activeCourse.problems.find(p => p.id === row.problemId)?.name || '选择题目'}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">搜索题号/题目名</span>
-                          )}
-                          <ChevronDown className="h-3 w-3 text-gray-400 ml-1 shrink-0" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-0 bg-white border-gray-200" align="start">
-                        <div className="p-2 border-b border-gray-100">
-                          <Input placeholder="输入题号或题目名搜索..." className="h-7 text-xs"
-                            value={problemSearch} onChange={(e) => onProblemSearchChange(e.target.value)} />
-                        </div>
-                        <div className="max-h-48 overflow-y-auto">
-                          {activeCourse.problems
-                            .filter(p => {
-                              if (!problemSearch) return true;
-                              const s = problemSearch.toLowerCase();
-                              return p.name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s);
-                            })
-                            .map((p) => (
-                              <div key={p.id}
-                                className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors ${
-                                  row.problemId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                                }`}
-                                onClick={() => { onUpdateRetryRow(rowIndex, 'problemId', p.id); onProblemSearchChange(''); }}>
-                                {p.name}
-                              </div>
-                            ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <span className="text-xs text-gray-400">请先在课程管理中添加题目</span>
+            {retryRows.map((row, rowIndex) => {
+              // 获取该题目的历史记录
+              const problemHistory = retryRecords.filter(r => r.problemId === row.problemId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              return (
+                <div key={rowIndex} className="p-3 rounded-lg bg-gray-50 border border-gray-100 space-y-3">
+                  {/* Problem selector + Time + Pass */}
+                  <div className="flex items-start gap-3">
+                    {/* Problem selector */}
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-xs text-gray-500 mb-1 block">题目</Label>
+                      {activeCourse && activeCourse.problems.length > 0 ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full h-8 text-sm justify-between">
+                              {row.problemId ? (
+                                <span className="truncate text-gray-700">
+                                  {activeCourse.problems.find(p => p.id === row.problemId)?.name || '选择题目'}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">搜索题号/题目名</span>
+                              )}
+                              <ChevronDown className="h-3 w-3 text-gray-400 ml-1 shrink-0" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0 bg-white border-gray-200" align="start">
+                            <div className="p-2 border-b border-gray-100">
+                              <Input placeholder="输入题号或题目名搜索..." className="h-7 text-xs"
+                                value={problemSearch} onChange={(e) => onProblemSearchChange(e.target.value)} />
+                            </div>
+                            <div className="max-h-48 overflow-y-auto">
+                              {activeCourse.problems
+                                .filter(p => {
+                                  if (!problemSearch) return true;
+                                  const s = problemSearch.toLowerCase();
+                                  return p.name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s);
+                                })
+                                .map((p) => (
+                                  <div key={p.id}
+                                    className={`px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 transition-colors ${
+                                      row.problemId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                    }`}
+                                    onClick={() => { onUpdateRetryRow(rowIndex, 'problemId', p.id); onProblemSearchChange(''); }}>
+                                    {p.name}
+                                  </div>
+                                ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <span className="text-xs text-gray-400">请先在课程管理中添加题目</span>
+                      )}
+                    </div>
+                    {/* Time input */}
+                    <div className="w-24">
+                      <Label className="text-xs text-gray-500 mb-1 block">本次用时</Label>
+                      <Input type="number" placeholder="分钟"
+                        value={row.timeSpent}
+                        onChange={(e) => onUpdateRetryRow(rowIndex, 'timeSpent', e.target.value)}
+                        className="h-8 text-sm" />
+                    </div>
+                    {/* Pass/Fail selector */}
+                    <div className="w-24">
+                      <Label className="text-xs text-gray-500 mb-1 block">是否合格</Label>
+                      <Select value={row.isQualified ? 'yes' : 'no'} onValueChange={(v) => onUpdateRetryRow(rowIndex, 'isQualified', v === 'yes')}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">合格</SelectItem>
+                          <SelectItem value="no">不合格</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Remove row */}
+                    {retryRows.length > 1 && (
+                      <button onClick={() => onRemoveRetryRow(rowIndex)} className="mt-5 p-1 text-gray-400 hover:text-red-500">
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Fail reason */}
+                  {!row.isQualified && (
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1 block">不合格原因</Label>
+                      <Input placeholder="请输入不合格原因..."
+                        value={row.unqualifiedReason || ''}
+                        onChange={(e) => onUpdateRetryRow(rowIndex, 'unqualifiedReason', e.target.value)}
+                        className="h-8 text-sm" />
+                    </div>
+                  )}
+                  {/* History records */}
+                  {row.problemId && problemHistory.length > 0 && (
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-2 block">历史记录</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {problemHistory.slice(-6).map((record, idx) => (
+                          <div key={idx} className="text-xs p-2 rounded bg-white border border-gray-200">
+                            <div className="text-gray-500">{new Date(record.date).toLocaleDateString('zh-CN')}</div>
+                            <div className="font-medium">{record.timeSpent}分钟</div>
+                            <div className={record.isQualified ? 'text-green-600' : 'text-red-600'}>
+                              {record.isQualified ? '合格' : '不合格'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-                {/* Time inputs - horizontal */}
-                {(['一刷', '二刷', '三刷'] as const).map((label, timeIdx) => (
-                  <div key={label} className="w-20">
-                    <Label className="text-xs text-gray-500 mb-1 block">{label}</Label>
-                    <Input type="number" placeholder="分钟"
-                      value={row.times[timeIdx]}
-                      onChange={(e) => {
-                        const newTimes = [...row.times] as [string, string, string];
-                        newTimes[timeIdx] = e.target.value;
-                        onUpdateRetryRow(rowIndex, 'times', newTimes);
-                      }}
-                      className="h-8 text-sm" />
-                  </div>
-                ))}
-                {/* Remove row */}
-                {retryRows.length > 1 && (
-                  <button onClick={() => onRemoveRetryRow(rowIndex)} className="mt-5 p-1 text-gray-400 hover:text-red-500">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
             <button onClick={onAddRetryRow} className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1">
               <Plus className="h-3 w-3" />添加题目
             </button>

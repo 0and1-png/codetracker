@@ -556,6 +556,82 @@ export default function ReportPage() {
     }
   }, [studentId, selectedMonth]);
 
+  // 自动保存：当可编辑字段变化时，延迟2秒自动保存
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitializedRef = useRef(false);
+  
+  useEffect(() => {
+    // 跳过初始化时的自动保存（避免覆盖已保存的数据）
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      return;
+    }
+    if (!studentId || !selectedMonth) return;
+    
+    // 清除之前的定时器
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // 设置新的定时器，2秒后自动保存
+    autoSaveTimerRef.current = setTimeout(() => {
+      const data: ReportData = {
+        studentId,
+        month: selectedMonth,
+        teacherComment,
+        nextGoal,
+        studentAge,
+        studentSchool,
+        programmingTime,
+        learningContent,
+        interests,
+        studentPhoto,
+        studentAvatarPhoto,
+        coverPhoto,
+        classroomPhotos,
+        sprintCourseGoal,
+        sprintGespLevels,
+        sprintCompetitionIds,
+        monthFocus,
+        selectedCommentPresets,
+        studentWords,
+        reportMonth,
+        monthlyQuote,
+        timelineQuotes,
+        editableStrengths,
+        editableWeaknesses,
+        editableAttendanceDays,
+        editableHomeworkCount,
+        editableFullAttendanceDays,
+        editableHomeworkStandard,
+        editableGrowthSuggestions,
+        editableHomeSchoolTips,
+        editableKpDescriptions,
+        mergeTitle,
+        mergedQuote,
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        saveReportData(data);
+      } catch {
+        // 存储空间不足时，自动清理旧报告数据后重试
+        try {
+          cleanupOldReports(2);
+          saveReportData(data);
+        } catch {
+          // 静默失败，不干扰用户操作
+        }
+      }
+    }, 2000);
+    
+    // 清理定时器
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes, editableStrengths, editableWeaknesses, editableAttendanceDays, editableHomeworkCount, editableFullAttendanceDays, editableHomeworkStandard, editableGrowthSuggestions, editableHomeSchoolTips, editableKpDescriptions, mergeTitle, mergedQuote]);
+
   // 保存报告数据
   const handleSaveReport = useCallback(() => {
     if (!studentId) return;

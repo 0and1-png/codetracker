@@ -1514,18 +1514,29 @@ export default function ReportPage() {
                                           </div>
                                         </td>
                                         <td className="py-3 px-4 border border-gray-200">
-                                          <div className="flex items-center gap-2 flex-wrap">
+                                          <div className="flex items-center gap-3 flex-wrap">
                                             {recent3.map((rec, i) => {
                                               const timeInMin = (rec.timeSpent / 60).toFixed(2);
                                               const statusText = rec.isQualified ? '合格' : `不合格${rec.unqualifiedReason ? `(${rec.unqualifiedReason})` : ''}`;
                                               return (
-                                                <span key={i} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border ${
+                                                <span key={i} className={`inline-flex items-stretch text-xs rounded-lg border overflow-hidden ${
                                                   rec.isQualified
-                                                    ? 'bg-green-50 text-green-700 border-green-200'
-                                                    : 'bg-red-50 text-red-700 border-red-200'
+                                                    ? 'border-green-200'
+                                                    : 'border-red-200'
                                                 }`}>
-                                                  <span className="font-medium">{rec.date.slice(5)}</span>
-                                                  <span>{timeInMin}分（{statusText}）</span>
+                                                  <span className={`px-2 py-1 font-semibold ${
+                                                    rec.isQualified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                  }`}>
+                                                    <Calendar className="inline h-3 w-3 mr-0.5 -mt-px" />{rec.date.slice(5)}
+                                                  </span>
+                                                  <span className={`px-2 py-1 flex items-center gap-1 ${
+                                                    rec.isQualified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                                  }`}>
+                                                    <span className="font-bold">{timeInMin}分</span>
+                                                    <span className={`text-[10px] px-1 py-0.5 rounded font-medium ${
+                                                      rec.isQualified ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+                                                    }`}>{statusText}</span>
+                                                  </span>
                                                 </span>
                                               );
                                             })}
@@ -1639,23 +1650,31 @@ export default function ReportPage() {
                                                   </div>
                                                 </td>
                                                 <td className="py-3 px-4 border border-gray-200">
-                                                  <div className="flex items-center gap-2 flex-wrap">
+                                                  <div className="flex items-center gap-3 flex-wrap">
                                                     {p.lastTwoRecords.map((rec, idx) => (
-                                                      <span key={idx} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border ${
+                                                      <span key={idx} className={`inline-flex items-stretch text-xs rounded-lg border overflow-hidden ${
                                                         rec.isQualified
-                                                          ? 'bg-green-50 text-green-700 border-green-200'
-                                                          : 'bg-red-50 text-red-700 border-red-200'
+                                                          ? 'border-green-200'
+                                                          : 'border-red-200'
                                                       }`}>
-                                                        <span className="font-medium">{rec.date.slice(5)}</span>
-                                                        <span>{(rec.timeSpent / 60).toFixed(2)}分</span>
-                                                        {rec.isQualified ? (
-                                                          <CheckCircle className="h-3 w-3" />
-                                                        ) : (
-                                                          <>
-                                                            <XCircle className="h-3 w-3" />
-                                                            <span className="text-[10px]">{rec.unqualifiedReason || '不合格'}</span>
-                                                          </>
-                                                        )}
+                                                        <span className={`px-2 py-1 font-semibold ${
+                                                          rec.isQualified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                          <Calendar className="inline h-3 w-3 mr-0.5 -mt-px" />{rec.date.slice(5)}
+                                                        </span>
+                                                        <span className={`px-2 py-1 flex items-center gap-1 ${
+                                                          rec.isQualified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                                                        }`}>
+                                                          <span className="font-bold">{(rec.timeSpent / 60).toFixed(2)}分</span>
+                                                          {rec.isQualified ? (
+                                                            <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                                                          ) : (
+                                                            <>
+                                                              <XCircle className="h-3.5 w-3.5 text-red-500" />
+                                                              <span className="text-[10px] font-medium text-red-600">{rec.unqualifiedReason || '不合格'}</span>
+                                                            </>
+                                                          )}
+                                                        </span>
                                                       </span>
                                                     ))}
                                                   </div>

@@ -425,6 +425,21 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     save({ ...course, knowledgePoints: kps });
   };
 
+  const updateProblemImage = (problemId: string, image: string) => {
+    if (!course) return;
+    save({
+      ...course,
+      problems: course.problems.map((p) => {
+        if (p.id !== problemId) return p;
+        return { ...p, image };
+      }),
+    });
+    // Update selectedProblem state
+    if (selectedProblem && selectedProblem.problem.id === problemId) {
+      setSelectedProblem({ ...selectedProblem, problem: { ...selectedProblem.problem, image } });
+    }
+  };
+
   const addProblem = (kpId?: string) => {
     if (!course || !newProblemName.trim()) return;
     const targetKpId = kpId || newProblemKpId || undefined;
@@ -1232,6 +1247,62 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 <div className="p-3 rounded-lg bg-white border-gray-200 border border-gray-200 text-gray-700 text-sm whitespace-pre-wrap min-h-[60px]">
                   {selectedProblem.problem.description || '暂无描述'}
                 </div>
+              </div>
+              {/* 题目图片上传 */}
+              <div>
+                <label className="text-sm font-medium mb-1 block text-gray-700">题目图片</label>
+                {selectedProblem.problem.image ? (
+                  <div className="relative group">
+                    <img src={selectedProblem.problem.image} alt="题目图片" className="max-w-full max-h-[300px] rounded-lg border border-gray-200" />
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => updateProblemImage(selectedProblem.problem.id, '')}
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />移除
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="h-6 w-6 mb-2 text-gray-400" />
+                      <p className="text-xs text-gray-500">点击上传题目图片</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          // Compress image
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxSize = 400;
+                            let { width, height } = img;
+                            if (width > maxSize || height > maxSize) {
+                              if (width > height) { height = (height / width) * maxSize; width = maxSize; }
+                              else { width = (width / height) * maxSize; height = maxSize; }
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx?.drawImage(img, 0, 0, width, height);
+                            const compressed = canvas.toDataURL('image/jpeg', 0.5);
+                            updateProblemImage(selectedProblem.problem.id, compressed);
+                          };
+                          img.src = reader.result as string;
+                        };
+                        reader.readAsDataURL(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                )}
               </div>
               {selectedProblem.problem.codeExample && (
                 <div>

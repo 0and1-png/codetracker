@@ -1587,7 +1587,45 @@ export default function ReportPage() {
                       }
 
                       return (
-                        <div className="space-y-4">
+                        <div className="space-y-6">
+                          {/* 知识点图片展示 - 3列网格 */}
+                          {(() => {
+                            // 收集本月学习的所有有图片的题目
+                            const problemsWithImages: { problem: typeof course.problems[0]; kpName: string }[] = [];
+                            visibleKpEntries.forEach(([kpId, kp]) => {
+                              const kpProblems = (course?.problems || []).filter(p => 
+                                (p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)) && p.image
+                              );
+                              kpProblems.forEach(p => {
+                                if (!problemsWithImages.find(existing => existing.problem.id === p.id)) {
+                                  problemsWithImages.push({ problem: p, kpName: kp.name });
+                                }
+                              });
+                            });
+
+                            if (problemsWithImages.length === 0) return null;
+
+                            return (
+                              <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
+                                <h4 className="text-sm font-semibold text-[#333] mb-4 flex items-center gap-2">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-violet-400"></span>
+                                  本月学习题目展示
+                                </h4>
+                                <div className="grid grid-cols-3 gap-4">
+                                  {problemsWithImages.map(({ problem }) => (
+                                    <div key={problem.id} className="flex flex-col items-center">
+                                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mb-2">
+                                        <img src={problem.image} alt={problem.name} className="w-full h-full object-cover" />
+                                      </div>
+                                      <span className="text-xs text-[#555] text-center font-medium leading-tight">{problem.name}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          <div className="space-y-4">
                           {visibleKpEntries.map(([kpId, kp]) => {
                             const currentDescription = editableKpDescriptions[kpId] !== undefined 
                               ? editableKpDescriptions[kpId] 
@@ -1662,6 +1700,7 @@ export default function ReportPage() {
                               </div>
                             );
                           })}
+                        </div>
                         </div>
                       );
                     }

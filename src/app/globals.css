@@ -52,81 +52,192 @@
   --font-serif:
     'Noto Serif SC', 'Songti SC', 'SimSun', ui-serif, Georgia, Cambria,
     'Times New Roman', Times, serif;
-  /* 课程主题色 */
-  --color-xianjin: #3b82f6;
-  --color-xianjin-light: #60a5fa;
-  --color-biyu: #22c55e;
-  --color-zhusa: #ef4444;
-  --color-zixia: #8b5cf6;
-  --color-tianqing: #3b82f6;
-  --color-liuli: #f59e0b;
-  --color-moye: #1e293b;
-  --color-anye: #f8fafc;
+  /* 课程主题色 - 莫兰迪低饱和 */
+  --color-xianjin: #6B8BA4;
+  --color-xianjin-light: #8BA8BD;
+  --color-biyu: #7BA68C;
+  --color-zhusa: #C4757B;
+  --color-zixia: #9B8BB4;
+  --color-tianqing: #6B8BA4;
+  --color-liuli: #C4A67B;
+  --color-moye: #2D3748;
+  --color-anye: #F7F8FA;
 }
 
 :root {
   --radius: 0.5rem;
-  /* 简洁明亮主题 */
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  /* 极简商务蓝 - 莫兰迪雾感体系 */
+  --background: #F7F8FA;
+  --foreground: #2D3748;
   --card: #ffffff;
-  --card-foreground: #1e293b;
+  --card-foreground: #2D3748;
   --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --primary: #3b82f6;
+  --popover-foreground: #2D3748;
+  --primary: #6B8BA4;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #334155;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #eff6ff;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
-  --chart-3: #8b5cf6;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
-  --sidebar: #f1f5f9;
-  --sidebar-foreground: #334155;
-  --sidebar-primary: #3b82f6;
+  --secondary: #F7F8FA;
+  --secondary-foreground: #4A5568;
+  --muted: #F7F8FA;
+  --muted-foreground: #A0AEC0;
+  --accent: #F0F4F8;
+  --accent-foreground: #2D3748;
+  --destructive: #C4757B;
+  --border: #EDF2F7;
+  --input: #E2E8F0;
+  --ring: #6B8BA4;
+  --chart-1: #6B8BA4;
+  --chart-2: #7BA68C;
+  --chart-3: #9B8BB4;
+  --chart-4: #C4A67B;
+  --chart-5: #C4757B;
+  --sidebar: #FAFBFC;
+  --sidebar-foreground: #4A5568;
+  --sidebar-primary: #6B8BA4;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e2e8f0;
-  --sidebar-accent-foreground: #1e293b;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #3b82f6;
+  --sidebar-accent: #F0F4F8;
+  --sidebar-accent-foreground: #2D3748;
+  --sidebar-border: #EDF2F7;
+  --sidebar-ring: #6B8BA4;
 }
 
 body {
   font-family: var(--font-sans);
-  background: #f8fafc;
-  color: #1e293b;
+  background: #F7F8FA;
+  color: #2D3748;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - 极简细线 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #E2E8F0;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #CBD5E0;
 }
 
-/* 动画 */
+/* 极简动效 */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in-up {
-  animation: fadeInUp 0.3s ease-out;
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* 卡片悬浮效果 */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* 按钮点击反馈 */
+.btn-press:active {
+  transform: scale(0.98);
+}
+
+/* 纤细分割线 */
+.divider-thin {
+  border-color: #F1F5F9;
+}
+
+/* 状态标签 - 莫兰迪色系 */
+.status-success {
+  background: #E8F5EC;
+  color: #5A8A6B;
+}
+.status-warning {
+  background: #FDF6EC;
+  color: #A68B5B;
+}
+.status-danger {
+  background: #FCECEC;
+  color: #A65B5B;
+}
+.status-info {
+  background: #EDF4F8;
+  color: #5A7A93;
+}
+
+/* ============================================
+   色彩覆盖 - 将高饱和Tailwind色映射为莫兰迪色系
+   ============================================ */
+@layer utilities {
+  /* 蓝色系 → 雾感商务蓝 #6B8BA4 */
+  .bg-blue-50, .bg-blue-100 { background-color: #F0F4F8 !important; }
+  .bg-blue-500, .bg-blue-600 { background-color: #6B8BA4 !important; }
+  .bg-blue-700 { background-color: #5A7A93 !important; }
+  .text-blue-500, .text-blue-600, .text-blue-700 { color: #6B8BA4 !important; }
+  .text-blue-400 { color: #8BA8BD !important; }
+  .border-blue-500, .border-blue-600 { border-color: #6B8BA4 !important; }
+  .ring-blue-500 { --tw-ring-color: #6B8BA4 !important; }
+  .focus\:border-blue-500:focus { border-color: #6B8BA4 !important; }
+  .focus\:ring-blue-500:focus { --tw-ring-color: #6B8BA4 !important; }
+  .hover\:bg-blue-600:hover, .hover\:bg-blue-700:hover { background-color: #5A7A93 !important; }
+  .hover\:text-blue-600:hover { color: #5A7A93 !important; }
+
+  /* 绿色系 → 莫兰迪绿 #7BA68C */
+  .bg-green-50, .bg-green-100 { background-color: #E8F5EC !important; }
+  .bg-green-500, .bg-green-600 { background-color: #7BA68C !important; }
+  .text-green-500, .text-green-600, .text-green-700 { color: #7BA68C !important; }
+  .text-green-400 { color: #9BBFAB !important; }
+  .border-green-500 { border-color: #7BA68C !important; }
+
+  /* 红色系 → 莫兰迪红 #C4757B */
+  .bg-red-50, .bg-red-100 { background-color: #FCECEC !important; }
+  .bg-red-500, .bg-red-600 { background-color: #C4757B !important; }
+  .text-red-500, .text-red-600, .text-red-700 { color: #C4757B !important; }
+  .text-red-400 { color: #D4959A !important; }
+  .border-red-500 { border-color: #C4757B !important; }
+
+  /* 紫色系 → 莫兰迪紫 #9B8BB4 */
+  .bg-purple-50, .bg-purple-100 { background-color: #F0ECF5 !important; }
+  .bg-purple-500, .bg-purple-600 { background-color: #9B8BB4 !important; }
+  .text-purple-500, .text-purple-600, .text-purple-700 { color: #9B8BB4 !important; }
+  .border-purple-500 { border-color: #9B8BB4 !important; }
+
+  /* 靛蓝色系 → 莫兰迪蓝紫 #8B9BB4 */
+  .bg-indigo-50, .bg-indigo-100 { background-color: #EDF0F5 !important; }
+  .bg-indigo-500, .bg-indigo-600 { background-color: #8B9BB4 !important; }
+  .text-indigo-500, .text-indigo-600, .text-indigo-700 { color: #8B9BB4 !important; }
+
+  /* 黄色/橙色系 → 莫兰迪橙 #C4A67B */
+  .bg-yellow-50, .bg-yellow-100, .bg-amber-50, .bg-amber-100 { background-color: #FDF6EC !important; }
+  .bg-yellow-500, .bg-yellow-600, .bg-amber-500, .bg-amber-600 { background-color: #C4A67B !important; }
+  .text-yellow-500, .text-yellow-600, .text-amber-500, .text-amber-600 { color: #C4A67B !important; }
+  .text-yellow-400 { color: #D4BE9B !important; }
+
+  /* 渐变色覆盖 - 使用低饱和柔和渐变 */
+  .bg-gradient-to-r.from-blue-500, .bg-gradient-to-r.from-blue-600 { 
+    --tw-gradient-from: #6B8BA4 !important; 
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important; 
+  }
+  .bg-gradient-to-r.to-purple-500, .bg-gradient-to-r.to-purple-600, .bg-gradient-to-r.to-indigo-500 { 
+    --tw-gradient-to: #9B8BB4 !important; 
+  }
+  .bg-gradient-to-r.to-blue-500, .bg-gradient-to-r.to-blue-600 { 
+    --tw-gradient-to: #6B8BA4 !important; 
+  }
+
+  /* Slate灰色系微调 - 更柔和的中性灰 */
+  .bg-slate-50 { background-color: #FAFBFC !important; }
+  .bg-slate-100 { background-color: #F7F8FA !important; }
+  .text-slate-900 { color: #2D3748 !important; }
+  .text-slate-800 { color: #2D3748 !important; }
+  .text-slate-700 { color: #4A5568 !important; }
+  .text-slate-600 { color: #4A5568 !important; }
+  .text-slate-500 { color: #A0AEC0 !important; }
+  .text-slate-400 { color: #CBD5E0 !important; }
+  .border-slate-200, .border-slate-300 { border-color: #EDF2F7 !important; }
 }

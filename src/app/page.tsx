@@ -1391,27 +1391,27 @@ export default function HomePage() {
 
   // ============ RENDER ============
   return (
-    <div className="h-screen flex flex-col bg-[#f8fafc]">
+    <div className="h-screen flex flex-col bg-[#F7F8FA]">
       {/* Header */}
-      <header className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+      <header className="h-14 shrink-0 bg-white border-b border-[#EDF2F7] flex items-center justify-between px-5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-[#6B8BA4] flex items-center justify-center">
             <Code2 className="h-4 w-4 text-white" />
           </div>
-          <h1 className="text-lg font-semibold text-gray-800">{XIAN.app}</h1>
+          <h1 className="text-base font-semibold text-[#2D3748] tracking-wide">{XIAN.app}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => { setImportOpen(true); }}>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="text-[#4A5568] hover:text-[#6B8BA4] hover:bg-[#F0F4F8] gap-1.5 h-8 px-3 rounded-lg text-sm" onClick={() => { setImportOpen(true); }}>
             <Upload className="h-4 w-4" />{XIAN.importCSV}
           </Button>
-          <Button variant="ghost" size="sm" className="text-gray-500 gap-1" onClick={() => {
+          <Button variant="ghost" size="sm" className="text-[#4A5568] hover:text-[#6B8BA4] hover:bg-[#F0F4F8] gap-1.5 h-8 px-3 rounded-lg text-sm" onClick={() => {
             if (selectedClass !== 'all') setNewClassName(selectedClass);
             setAddStudentOpen(true);
           }}>
             <Plus className="h-4 w-4" />{XIAN.addStudent}
           </Button>
           <Link href="/courses">
-            <Button variant="ghost" size="sm" className="text-gray-500 gap-1">
+            <Button variant="ghost" size="sm" className="text-[#4A5568] hover:text-[#6B8BA4] hover:bg-[#F0F4F8] gap-1.5 h-8 px-3 rounded-lg text-sm">
               <Settings className="h-4 w-4" />{XIAN.courses}
             </Button>
           </Link>
@@ -1421,18 +1421,18 @@ export default function HomePage() {
       {/* Main: Left-Right Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Student Selection */}
-        <div className="w-72 shrink-0 bg-white border-r border-gray-200 flex flex-col">
+        <div className="w-72 shrink-0 bg-white border-r border-[#EDF2F7] flex flex-col">
           {/* Course tabs */}
-          <div className="p-3 border-b border-gray-100">
+          <div className="p-3 border-b border-[#F1F5F9]">
             <div className="flex gap-1">
               {courses.map(c => {
                 const colors = COURSE_COLORS[c.id] || COURSE_COLORS.course_cpp;
                 return (
                   <button key={c.id} onClick={() => handleCourseChange(c.id)}
-                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                       selectedCourseId === c.id
                         ? `${colors.bg} ${colors.text} ${colors.border} border`
-                        : 'text-gray-500 hover:bg-gray-50'
+                        : 'text-[#A0AEC0] hover:bg-[#F7F8FA] hover:text-[#4A5568]'
                     }`}>
                     {c.name}
                   </button>
@@ -1442,9 +1442,9 @@ export default function HomePage() {
           </div>
 
           {/* Class filter as dropdown */}
-          <div className="px-3 py-2 border-b border-gray-100">
+          <div className="px-3 py-2.5 border-b border-[#F1F5F9]">
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-gray-500 shrink-0">班级</Label>
+              <Label className="text-xs text-[#A0AEC0] shrink-0 font-medium">班级</Label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger className="h-7 text-xs flex-1 min-w-[120px]">
                   <SelectValue placeholder="选择班级" />

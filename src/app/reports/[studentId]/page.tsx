@@ -1874,7 +1874,8 @@ export default function ReportPage() {
                                 formatter={(value: number) => [`${value} 字/分`, '打字速度']}
                                 labelFormatter={(label) => `测试日期：${label}`}
                               />
-                              <Line type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} />
+                              <Line type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }}
+                                label={{ position: 'top', fontSize: 11, fill: '#3b82f6', fontWeight: 600, formatter: (value: number) => `${value}` }} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -2644,7 +2645,8 @@ export default function ReportPage() {
                             formatter={(value: number) => [`${value} 字/分`, '打字速度']}
                             labelFormatter={(label) => `测试日期：${label}`}
                           />
-                          <Area type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                          <Area type="monotone" dataKey="速度" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSpeed)" dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 6 }}
+                            label={{ position: 'top', fontSize: 11, fill: '#10b981', fontWeight: 600, formatter: (value: number) => `${value}` }} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>

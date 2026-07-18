@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Keyboard } from 'lucide-react';
+import { Download, Calendar, TrendingUp, Award, BookOpen, Users, MessageCircle, Target, FileText, User, Upload, Camera, ThumbsUp, AlertCircle, Trophy, GraduationCap, Plus, X, Check, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, ChevronDown, RefreshCw, Edit3, Keyboard, Save } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   getStudents,
@@ -24,8 +24,10 @@ import {
   removeCompetition,
   getHonorRecordsByStudent,
   getExamRecordsByStudent,
+  getReportData,
+  saveReportData,
 } from '@/lib/store';
-import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord } from '@/lib/types';
+import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord, ReportData } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
 import { COMMENT_TEMPLATES, KNOWLEDGE_STATUS_LABELS, GESP_LEVELS, getGespLevelsByCourse } from '@/lib/constants';
 import type { GESPLlevelDef } from '@/lib/constants';
@@ -513,6 +515,66 @@ export default function ReportPage() {
     saveSprintGoal(data);
   }, [student, selectedMonth, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds]);
 
+  // 加载已保存的报告数据
+  useEffect(() => {
+    if (!studentId || !selectedMonth) return;
+    const saved = getReportData(studentId, selectedMonth);
+    if (saved) {
+      setTeacherComment(saved.teacherComment);
+      setNextGoal(saved.nextGoal);
+      setStudentAge(saved.studentAge);
+      setStudentSchool(saved.studentSchool);
+      setProgrammingTime(saved.programmingTime);
+      setLearningContent(saved.learningContent);
+      setInterests(saved.interests);
+      setStudentPhoto(saved.studentPhoto);
+      setStudentAvatarPhoto(saved.studentAvatarPhoto);
+      setCoverPhoto(saved.coverPhoto);
+      setClassroomPhotos(saved.classroomPhotos);
+      setSprintCourseGoal(saved.sprintCourseGoal);
+      setSprintGespLevels(saved.sprintGespLevels);
+      setSprintCompetitionIds(saved.sprintCompetitionIds);
+      setMonthFocus(saved.monthFocus as MonthFocus);
+      setSelectedCommentPresets(saved.selectedCommentPresets);
+      setStudentWords(saved.studentWords);
+      setReportMonth(saved.reportMonth);
+      setMonthlyQuote(saved.monthlyQuote);
+      setTimelineQuotes(saved.timelineQuotes);
+    }
+  }, [studentId, selectedMonth]);
+
+  // 保存报告数据
+  const handleSaveReport = useCallback(() => {
+    if (!studentId) return;
+    const data: ReportData = {
+      studentId,
+      month: selectedMonth,
+      teacherComment,
+      nextGoal,
+      studentAge,
+      studentSchool,
+      programmingTime,
+      learningContent,
+      interests,
+      studentPhoto,
+      studentAvatarPhoto,
+      coverPhoto,
+      classroomPhotos,
+      sprintCourseGoal,
+      sprintGespLevels,
+      sprintCompetitionIds,
+      monthFocus,
+      selectedCommentPresets,
+      studentWords,
+      reportMonth,
+      monthlyQuote,
+      timelineQuotes,
+      updatedAt: new Date().toISOString(),
+    };
+    saveReportData(data);
+    alert('报告已保存！');
+  }, [studentId, selectedMonth, teacherComment, nextGoal, studentAge, studentSchool, programmingTime, learningContent, interests, studentPhoto, studentAvatarPhoto, coverPhoto, classroomPhotos, sprintCourseGoal, sprintGespLevels, sprintCompetitionIds, monthFocus, selectedCommentPresets, studentWords, reportMonth, monthlyQuote, timelineQuotes]);
+
   // Toggle GESP level
   const toggleGespLevel = useCallback((level: GESPLlevel) => {
     setSprintGespLevels(prev => 
@@ -785,10 +847,16 @@ export default function ReportPage() {
                   ))}
                 </div>
               </div>
-              <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-400/50 hover:-translate-y-0.5 font-medium">
-                <Download className="mr-2 h-4 w-4" strokeWidth={1.5} />
-                {exporting ? '导出中...' : '导出PDF'}
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={handleSaveReport} className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-400/50 hover:-translate-y-0.5 font-medium">
+                  <Save className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                  保存报告
+                </Button>
+                <Button onClick={exportPDF} disabled={exporting} className="rounded-2xl bg-gradient-to-r from-[#3066FF] to-[#9933FF] hover:from-[#2855dd] hover:to-[#7b29cc] shadow-lg shadow-purple-300/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-400/50 hover:-translate-y-0.5 font-medium">
+                  <Download className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                  {exporting ? '导出中...' : '导出PDF'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

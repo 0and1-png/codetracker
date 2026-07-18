@@ -197,3 +197,30 @@ export interface SprintGoalData {
   competitionIds: string[];         // 选中的赛事 ID
   updatedAt: string;
 }
+
+/** 成长档案报告数据（按学生+月份存储） */
+export interface ReportData {
+  studentId: string;
+  month: string;                    // YYYY-MM
+  teacherComment: string;
+  nextGoal: string;
+  studentAge: string;
+  studentSchool: string;
+  programmingTime: string;
+  learningContent: string;
+  interests: string;
+  studentPhoto: string;
+  studentAvatarPhoto: string;
+  coverPhoto: string;
+  classroomPhotos: string[];
+  sprintCourseGoal: string;
+  sprintGespLevels: GESPLlevel[];
+  sprintCompetitionIds: string[];
+  monthFocus: string;
+  selectedCommentPresets: string[];
+  studentWords: string;
+  reportMonth: string;
+  monthlyQuote: string;
+  timelineQuotes: Record<string, string>;
+  updatedAt: string;
+}

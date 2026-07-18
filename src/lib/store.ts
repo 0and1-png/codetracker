@@ -13,6 +13,7 @@ import type {
   ExamRecord,
   CompetitionRecord,
   HonorRecord,
+  ReportData,
 } from './types';
 import {
   COURSE_PRESETS,
@@ -30,6 +31,7 @@ const HOMEWORK_KEY = 'coding_homework_records';
 const KNOWLEDGE_KEY = 'coding_knowledge_progress';
 const COMPETITIONS_KEY = 'coding_competitions';
 const SPRINT_GOALS_KEY = 'coding_sprint_goals';
+const REPORTS_KEY = 'coding_reports';
 
 function getItem<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -432,6 +434,32 @@ export function saveSprintGoal(data: SprintGoalData): void {
     list.push(data);
   }
   saveSprintGoals(list);
+}
+
+// ============ Reports ============
+
+function getReports(): ReportData[] {
+  return getItem<ReportData[]>(REPORTS_KEY, []);
+}
+
+function saveReports(reports: ReportData[]): void {
+  setItem(REPORTS_KEY, reports);
+}
+
+export function getReportData(studentId: string, month: string): ReportData | null {
+  const list = getReports();
+  return list.find(r => r.studentId === studentId && r.month === month) || null;
+}
+
+export function saveReportData(data: ReportData): void {
+  const list = getReports();
+  const idx = list.findIndex(r => r.studentId === data.studentId && r.month === data.month);
+  if (idx >= 0) {
+    list[idx] = data;
+  } else {
+    list.push(data);
+  }
+  saveReports(list);
 }
 
 // ==================== 考级记录 ====================

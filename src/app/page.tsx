@@ -1025,6 +1025,7 @@ export default function HomePage() {
   const [showCreateClass, setShowCreateClass] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showAddExistingStudent, setShowAddExistingStudent] = useState(false);
+  const [addExistingSelectedIds, setAddExistingSelectedIds] = useState<string[]>([]);
   const [createClass, setCreateClass] = useState('');
   const [editingClass, setEditingClass] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState('');
@@ -1301,6 +1302,14 @@ export default function HomePage() {
         praiseTags,
         improveTags,
       });
+    }
+    // 保存后清空表单数据，防止重复提交
+    if (activeTab === 'typing') {
+      setTypingForms((prev) => ({ ...prev, [studentId]: { speed: '', praiseTags: [], improveTags: [] } }));
+    } else if (activeTab === 'retry') {
+      setRetryForms((prev) => ({ ...prev, [studentId]: [{ id: Date.now().toString(), problemId: '', problemName: '', timeSpent: '', isQualified: true, unqualifiedReason: '', praiseTags: [], improveTags: [] }] }));
+    } else if (activeTab === 'homework') {
+      setHomeworkForms((prev) => ({ ...prev, [studentId]: { content: '', completion: '', comment: '', praiseTags: [], improveTags: [] } }));
     }
     setSavedStudents((prev) => new Set(prev).add(studentId));
     setTimeout(() => {
@@ -1778,35 +1787,59 @@ export default function HomePage() {
       </Dialog>
 
       {/* Add Existing Student to Class Dialog */}
-      <Dialog open={showAddExistingStudent} onOpenChange={setShowAddExistingStudent}>
+      <Dialog open={showAddExistingStudent} onOpenChange={(open) => {
+        setShowAddExistingStudent(open);
+        if (!open) setAddExistingSelectedIds([]);
+      }}>
         <DialogContent className="bg-white border-gray-200 max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-gray-800">添加已有学员到「{selectedClass}」</DialogTitle>
             <DialogDescription className="text-gray-500">
-              选择未分配班级的学员添加到当前班级
+              勾选学员后点击底部按钮批量添加
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {courseStudents.filter((s: Student) => !s.className).map((student: Student) => (
-              <div key={student.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+              <label key={student.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={addExistingSelectedIds.includes(student.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setAddExistingSelectedIds([...addExistingSelectedIds, student.id]);
+                    } else {
+                      setAddExistingSelectedIds(addExistingSelectedIds.filter(id => id !== student.id));
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
                 <div>
                   <div className="text-sm font-medium text-gray-800">{student.name}</div>
                   {student.notes && <div className="text-xs text-gray-400">{student.notes}</div>}
                 </div>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
-                  const updated = { ...student, className: selectedClass };
-                  updateStudent(updated);
-                  loadData();
-                  setShowAddExistingStudent(false);
-                }}>
-                  添加
-                </Button>
-              </div>
+              </label>
             ))}
             {courseStudents.filter((s: Student) => !s.className).length === 0 && (
               <div className="text-center text-gray-400 text-sm py-4">没有未分配班级的学员</div>
             )}
           </div>
+          <Button
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+            disabled={addExistingSelectedIds.length === 0}
+            onClick={() => {
+              addExistingSelectedIds.forEach(id => {
+                const student = courseStudents.find(s => s.id === id);
+                if (student) {
+                  updateStudent({ ...student, className: selectedClass });
+                }
+              });
+              setAddExistingSelectedIds([]);
+              loadData();
+              setShowAddExistingStudent(false);
+            }}
+          >
+            添加已选学员 ({selectedStudentIds.length})
+          </Button>
         </DialogContent>
       </Dialog>
 

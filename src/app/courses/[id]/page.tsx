@@ -1244,9 +1244,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-1 block text-gray-700">题目描述</label>
-                <div className="p-3 rounded-lg bg-white border-gray-200 border border-gray-200 text-gray-700 text-sm whitespace-pre-wrap min-h-[60px]">
-                  {selectedProblem.problem.description || '暂无描述'}
-                </div>
+                <Textarea
+                  value={selectedProblem.problem.description || ''}
+                  onChange={(e) => {
+                    if (!selectedProblem || !course) return;
+                    const updatedProblem = { ...selectedProblem.problem, description: e.target.value };
+                    setSelectedProblem({ ...selectedProblem, problem: updatedProblem });
+                    save({
+                      ...course,
+                      problems: course.problems.map((p) => p.id === updatedProblem.id ? updatedProblem : p),
+                    });
+                  }}
+                  placeholder="输入题目描述..."
+                  className="min-h-[80px] text-sm resize-y"
+                />
               </div>
               {/* 题目图片上传 */}
               <div>

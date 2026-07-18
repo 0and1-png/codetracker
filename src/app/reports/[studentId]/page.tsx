@@ -1775,7 +1775,7 @@ export default function ReportPage() {
                                         <td className="py-3 px-4 border border-gray-200">
                                           <div className="flex items-center gap-3 flex-wrap">
                                             {recent3.map((rec, i) => {
-                                              const timeInMin = (rec.timeSpent / 60).toFixed(2);
+                                              const timeInMin = Number(rec.timeSpent).toFixed(2);
                                               const statusText = rec.isQualified ? '合格' : `不合格${rec.unqualifiedReason ? `(${rec.unqualifiedReason})` : ''}`;
                                               return (
                                                 <span key={i} className={`inline-flex items-stretch text-xs rounded-lg border overflow-hidden ${
@@ -1924,7 +1924,7 @@ export default function ReportPage() {
                                                         <span className={`px-2 py-1 flex items-center gap-1 ${
                                                           rec.isQualified ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                                                         }`}>
-                                                          <span className="font-bold">{(rec.timeSpent / 60).toFixed(2)}分</span>
+                                                          <span className="font-bold">{Number(rec.timeSpent).toFixed(2)}分</span>
                                                           {rec.isQualified ? (
                                                             <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                                                           ) : (
@@ -2392,7 +2392,7 @@ export default function ReportPage() {
                                           <div key={idx} className="flex items-center justify-between py-2 px-4 rounded-xl bg-white/70">
                                             <span className="text-sm text-[#888]">第{r.attempt || idx + 1}次</span>
                                             <span className="text-sm text-[#555]">{r.date}</span>
-                                            <span className="text-sm text-[#555]">{r.timeSpent ? `${r.timeSpent}秒` : '-'}</span>
+                                            <span className="text-sm text-[#555]">{r.timeSpent ? `${Number(r.timeSpent).toFixed(2)}分` : '-'}</span>
                                             <span className="text-xs text-[#888]">{r.notes || '-'}</span>
                                           </div>
                                         ))}
@@ -2909,13 +2909,6 @@ export default function ReportPage() {
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
-                    {typingImprovement !== 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className={`text-sm font-medium ${typingImprovement > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                          相比上期{typingImprovement > 0 ? '↑ 提升' : '↓ 下降'} {Math.abs(typingImprovement)}%
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

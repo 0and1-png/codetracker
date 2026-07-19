@@ -1580,12 +1580,20 @@ export default function ReportPage() {
                       });
                       
                       // 显示所有有学习进度或有关联题目的知识点
+                      // 如果没有任何记录，显示课程体系中所有知识点
                       const visibleKpEntries = Array.from(kpMap.entries()).filter(([kpId, kp]) => {
-                        const progress = knowledge.find(k => k.knowledgePointId === kpId);
-                        return kp.problems.length > 0 || progress?.status === 'learning' || progress?.status === 'mastered';
+                        // 检查本月是否有该知识点的学习记录
+                        const monthProgress = monthKnowledgeRecords.find(k => k.knowledgePointId === kpId);
+                        // 检查是否有任何学习记录
+                        const anyProgress = knowledge.find(k => k.knowledgePointId === kpId);
+                        // 显示条件：本月有记录，或有关联题目，或有任何学习进度，或者是课程体系中的知识点
+                        return monthProgress || kp.problems.length > 0 || anyProgress?.status === 'learning' || anyProgress?.status === 'mastered' || curriculumKpIds.has(kpId);
                       });
                       
-                      if (visibleKpEntries.length === 0) {
+                      // 如果仍然没有显示任何知识点，显示课程体系中所有知识点作为兜底
+                      const finalKpEntries = visibleKpEntries.length > 0 ? visibleKpEntries : Array.from(kpMap.entries());
+                      
+                      if (finalKpEntries.length === 0) {
                         return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无已完成的学习内容</p></div>;
                       }
 
@@ -1629,7 +1637,7 @@ export default function ReportPage() {
                           })()}
 
                           <div className="space-y-4">
-                          {visibleKpEntries.map(([kpId, kp]) => {
+                          {finalKpEntries.map(([kpId, kp]) => {
                             const currentDescription = editableKpDescriptions[kpId] !== undefined 
                               ? editableKpDescriptions[kpId] 
                               : kp.description;

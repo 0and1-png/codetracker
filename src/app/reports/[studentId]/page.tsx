@@ -1579,8 +1579,11 @@ export default function ReportPage() {
                         });
                       });
                       
-                      // 只显示有完成内容的知识点（至少完成了一道题或作业）
-                      const visibleKpEntries = Array.from(kpMap.entries()).filter(([kpId, kp]) => kp.problems.length > 0);
+                      // 显示所有有学习进度或有关联题目的知识点
+                      const visibleKpEntries = Array.from(kpMap.entries()).filter(([kpId, kp]) => {
+                        const progress = knowledge.find(k => k.knowledgePointId === kpId);
+                        return kp.problems.length > 0 || progress?.status === 'learning' || progress?.status === 'mastered';
+                      });
                       
                       if (visibleKpEntries.length === 0) {
                         return <div className="bg-white rounded-2xl p-10 text-center"><p className="text-[#888]">本月暂无已完成的学习内容</p></div>;
@@ -1984,164 +1987,7 @@ export default function ReportPage() {
                   );
                 })()}
 
-                {/* 图形化课程：学习进度可视化 */}
-                {isVisualCourse && (() => {
-                  // 作业完成趋势数据
-                  const homeworkTrendData = Array.from({ length: 4 }, (_, i) => {
-                    const weekStart = new Date();
-                    weekStart.setDate(weekStart.getDate() - (3 - i) * 7);
-                    const weekEnd = new Date(weekStart);
-                    weekEnd.setDate(weekEnd.getDate() + 6);
-                    
-                    const weekKey = weekStart.toISOString().slice(0, 7);
-                    const weekHomework = allHomework.filter(h => h.date.startsWith(weekKey));
-                    const completed = weekHomework.filter(h => (h.score || 0) >= 80).length;
-                    
-                    return {
-                      week: `第${i + 1}周`,
-                      完成: completed,
-                      总数: weekHomework.length
-                    };
-                  });
 
-                  // 知识点学习进度 - 根据课程体系中的知识点题库
-                  const curriculumKpIds: string[] = [];
-                  const collectKpFromCurriculum = (nodes: any[]) => {
-                    nodes.forEach(node => {
-                      if (node.knowledgePointId) curriculumKpIds.push(node.knowledgePointId);
-                      if (node.children) collectKpFromCurriculum(node.children);
-                    });
-                  };
-                  if (course?.curriculum) collectKpFromCurriculum(course.curriculum);
-
-                  const knowledgeProgress = curriculumKpIds.map(kpId => {
-                    const kpDef = course?.knowledgePoints?.find(k => k.id === kpId);
-                    const progress = knowledge.find(k => k.knowledgePointId === kpId);
-                    // 获取该知识点关联的题目
-                    const kpProblems = (course?.problems || []).filter(p =>
-                      p.knowledgePointId === kpId || (p.knowledgePointIds || []).includes(kpId)
-                    );
-                    // 获取该知识点关联的作业
-                    const kpName = kpDef?.name || kpId;
-                    const kpHomework = monthHomework.filter(h =>
-                      h.date.startsWith(selectedMonth) && (h.title?.includes(kpName) || h.content?.includes(kpName))
-                    );
-                    const totalProblems = kpProblems.length + kpHomework.length;
-                    const completedProblems = kpHomework.filter(h => (h.score || 0) >= 80).length;
-                    const status = progress?.status || 'not_started';
-                    // 计算进度：如果有完成记录则按完成比例，否则按状态
-                    let pct = 0;
-                    if (totalProblems > 0) {
-                      pct = Math.round((completedProblems / totalProblems) * 100);
-                    } else if (status === 'mastered') {
-                      pct = 100;
-                    } else if (status === 'learning') {
-                      pct = 50;
-                    }
-                    return {
-                      name: (kpDef?.name || kpId).length > 8 ? (kpDef?.name || kpId).slice(0, 8) + '...' : (kpDef?.name || kpId),
-                      进度: pct,
-                      total: totalProblems,
-                      completed: completedProblems
-                    };
-                  });
-
-                  // 打字速度趋势
-                  const monthTypingRecords = allTyping.filter(t => t.date.startsWith(selectedMonth));
-                  const typingTrendData = monthTypingRecords
-                    .sort((a, b) => a.date.localeCompare(b.date))
-                    .slice(-10)
-                    .map((t) => ({
-                      日期: t.date.slice(5),
-                      速度: t.speed,
-                    }));
-
-                  return (
-                    <div className="space-y-6 mt-6">
-                      <h3 className="text-lg font-semibold text-[#333344] mb-5 flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-400"></span>
-                        学习进度可视化
-                      </h3>
-
-                      {/* 作业完成趋势图 */}
-                      <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
-                        <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-green-500" />
-                          作业完成趋势
-                        </h4>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <AreaChart data={homeworkTrendData}>
-                            <defs>
-                              <linearGradient id="colorHomework" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="week" tick={{ fontSize: 12, fill: '#888' }} />
-                            <YAxis tick={{ fontSize: 12, fill: '#888' }} />
-                            <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                            <Area type="monotone" dataKey="完成" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorHomework)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* 知识点学习进度 */}
-                      {knowledgeProgress.length > 0 && (
-                        <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
-                          <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
-                            <Target className="w-4 h-4 text-purple-500" />
-                            知识点学习进度
-                          </h4>
-                          <div className="space-y-3">
-                            {knowledgeProgress.map((kp, idx) => (
-                              <div key={idx}>
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span className="text-[#333] font-medium">{kp.name}</span>
-                                  <span className="text-[#888]">{kp.completed}/{kp.total} ({kp.进度}%)</span>
-                                </div>
-                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                      kp.进度 >= 100 ? 'bg-gradient-to-r from-green-400 to-green-500' :
-                                      kp.进度 >= 50 ? 'bg-gradient-to-r from-blue-400 to-blue-500' :
-                                      'bg-gradient-to-r from-purple-400 to-purple-600'
-                                    }`}
-                                    style={{ width: `${kp.进度}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 打字速度可视化 */}
-                      {typingTrendData.length > 0 && (
-                        <div className="bg-white rounded-xl p-5 border border-violet-50 shadow-sm">
-                          <h4 className="text-base font-semibold text-[#333] mb-4 flex items-center gap-2">
-                            <Keyboard className="w-4 h-4 text-blue-500" />
-                            打字速度趋势
-                          </h4>
-                          <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={typingTrendData}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                              <XAxis dataKey="日期" tick={{ fontSize: 12, fill: '#888' }} />
-                              <YAxis tick={{ fontSize: 12, fill: '#888' }} label={{ value: '字/分', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#888' } }} />
-                              <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                                formatter={(value: number) => [`${value} 字/分`, '打字速度']}
-                                labelFormatter={(label) => `测试日期：${label}`}
-                              />
-                              <Line type="monotone" dataKey="速度" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }}
-                                label={{ position: 'top', fontSize: 11, fill: '#3b82f6', fontWeight: 600, formatter: (value: number) => `${value}` }} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
                 
                 {/* 统计信息 */}
                 <div className="grid grid-cols-3 gap-4">
@@ -3110,60 +2956,64 @@ export default function ReportPage() {
                     <h3 className="text-base font-semibold text-[#333344] flex items-center gap-2">
                       <span className="text-lg">💡</span> 提升Tip
                     </h3>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const newSug = prompt('输入新的提升建议：');
-                          if (newSug?.trim()) {
-                            setEditableGrowthSuggestions({
-                              ...editableGrowthSuggestions,
-                              [monthKey]: [...(editableGrowthSuggestions[monthKey] || []), newSug.trim()]
-                            });
-                          }
-                        }}
-                        className="h-7 text-xs rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
-                      >
-                        <Plus className="mr-1 h-3 w-3" />
-                        添加
-                      </Button>
-                    </div>
                   </div>
                   {(() => {
                     const suggestions = editableGrowthSuggestions[monthKey] || teacherTags.growthSuggestions;
-                    if (suggestions.length > 0) {
-                      return (
-                        <div className="space-y-3">
-                          {suggestions.map((sug, i) => (
-                            <div key={i} className="flex items-start gap-3 py-2 px-4 rounded-xl bg-amber-50/50 group">
-                              <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
-                                <span className="text-amber-500 text-xs">{i + 1}</span>
-                              </div>
-                              <p className="text-[#555] text-sm leading-relaxed flex-1">{sug}</p>
-                              <button
-                                onClick={() => {
-                                  const newSuggestions = suggestions.filter((_, idx) => idx !== i);
-                                  setEditableGrowthSuggestions({
-                                    ...editableGrowthSuggestions,
-                                    [monthKey]: newSuggestions
-                                  });
-                                }}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    }
                     return (
-                      <p className="text-[#555] leading-relaxed text-sm">
-                        {weakPoints.length > 0 
-                          ? `建议重点复习${weakPoints.slice(0, 3).map(kp => kp.knowledgePointName).join('、')}等知识点，多做相关练习题巩固理解。`
-                          : '继续保持当前的学习节奏，可以尝试一些进阶题目挑战自我。'}
-                      </p>
+                      <div className="space-y-3">
+                        {suggestions.map((sug, i) => (
+                          <div key={i} className="flex items-start gap-3 py-2 px-4 rounded-xl bg-amber-50/50 group">
+                            <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center mt-0.5 shrink-0">
+                              <span className="text-amber-500 text-xs">{i + 1}</span>
+                            </div>
+                            <input
+                              type="text"
+                              value={sug}
+                              onChange={(e) => {
+                                const newSuggestions = [...suggestions];
+                                newSuggestions[i] = e.target.value;
+                                setEditableGrowthSuggestions({
+                                  ...editableGrowthSuggestions,
+                                  [monthKey]: newSuggestions
+                                });
+                              }}
+                              className="flex-1 text-[#555] text-sm leading-relaxed bg-transparent border-none outline-none focus:ring-0 p-0"
+                            />
+                            <button
+                              onClick={() => {
+                                const newSuggestions = suggestions.filter((_, idx) => idx !== i);
+                                setEditableGrowthSuggestions({
+                                  ...editableGrowthSuggestions,
+                                  [monthKey]: newSuggestions
+                                });
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {/* 内联添加框 */}
+                        <div className="flex items-center gap-3 py-2 px-4 rounded-xl border border-dashed border-amber-200">
+                          <div className="h-5 w-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                            <Plus className="h-3 w-3 text-amber-500" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="输入新的提升建议..."
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                setEditableGrowthSuggestions({
+                                  ...editableGrowthSuggestions,
+                                  [monthKey]: [...suggestions, e.currentTarget.value.trim()]
+                                });
+                                e.currentTarget.value = '';
+                              }
+                            }}
+                            className="flex-1 text-[#555] text-sm leading-relaxed bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-gray-400"
+                          />
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
@@ -3274,18 +3124,16 @@ export default function ReportPage() {
                                   </div>
                                   {record.results.some(r => !r.isCorrect) && (
                                     <div className="mt-2 pt-2 border-t border-gray-100">
-                                      <div className="text-xs text-red-600 font-medium mb-1">错题详情：</div>
-                                      <div className="space-y-1">
+                                      <div className="text-xs text-red-600 font-medium mb-2">错题详情：</div>
+                                      <div className="grid grid-cols-3 gap-2">
                                         {record.results.filter(r => !r.isCorrect).map((r) => (
-                                          <div key={r.questionIndex} className="text-xs bg-red-50 px-2 py-1.5 rounded border border-red-100">
-                                            <div className="flex items-start gap-1.5">
-                                              <span className="text-red-600 font-medium shrink-0">第{r.questionIndex}题</span>
-                                              {r.note ? (
-                                                <span className="text-gray-700">错误原因：{r.note}</span>
-                                              ) : (
-                                                <span className="text-gray-400 italic">未填写错误原因</span>
-                                              )}
-                                            </div>
+                                          <div key={r.questionIndex} className="text-xs bg-red-50 px-2.5 py-2 rounded-lg border border-red-100">
+                                            <div className="font-medium text-red-600 mb-0.5">第{r.questionIndex}题</div>
+                                            {r.note ? (
+                                              <div className="text-gray-600 text-[11px] leading-relaxed">原因：{r.note}</div>
+                                            ) : (
+                                              <div className="text-gray-400 italic text-[11px]">未填写原因</div>
+                                            )}
                                           </div>
                                         ))}
                                       </div>

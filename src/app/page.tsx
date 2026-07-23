@@ -8,7 +8,7 @@ import {
   Users, Check, Keyboard, RotateCcw, BookOpen, Save, X,
   TrendingUp, ChevronDown, History, Sparkles, Scroll, Swords,
   ChevronRight, ChevronLeft, Eye, EyeOff, Edit, Award, Trophy,
-  UserPlus, ChevronUp,
+  UserPlus, ChevronUp, ImageIcon,
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,13 +36,13 @@ import {
 } from '@/components/ui/popover';
 import type { Student, Course, TypingRecord, ProblemRetryRecord, HomeworkRecord, ExamRecord, CompetitionRecord, HonorRecord, ExamQuestionResult, CompetitionQuestionResult } from '@/lib/types';
 import {
-  getCourses, getStudentsByCourse, addStudent, deleteStudent, updateStudent,
+  getCourses, getStudents, getStudentsByCourse, addStudent, deleteStudent, updateStudent,
   addTypingRecord, addRetryRecord, addHomeworkRecord, getRetryRecords,
   getTypingByStudent, getRetryByStudent, getHomeworkByStudent, getKnowledgeByStudent,
   getCourses as getCoursesForUpdate,
   addClassToCourse, removeClassFromCourse, renameClassInCourse, getCourseClasses,
   saveExamRecord, saveCompetitionRecord, saveHonorRecord, getHonorRecordsByStudent,
-  getExamRecordsByStudent,
+  getExamRecordsByStudent, getStudentPhotos, saveStudentPhotos,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -51,7 +51,7 @@ import {
 } from '@/lib/analytics';
 import { XIAN, COURSE_COLORS, PRESET_STRENGTHS, PRESET_IMPROVEMENTS, getGespLevelsByCourse } from '@/lib/constants';
 
-type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'honor';
+type RecordTab = 'retry' | 'typing' | 'homework' | 'exam' | 'competition' | 'honor' | 'photos';
 
 interface RetryRowForm {
   id: string;
@@ -648,7 +648,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
         >
-          考级练习
+          考级记录
         </button>
         <button
           onClick={() => setHonorType('competition')}
@@ -658,7 +658,7 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
         >
-          赛事练习
+          赛事记录
         </button>
       </div>
 
@@ -974,6 +974,198 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAddCompetitionDialog(false); setCompetitionName(''); setCompetitionAward(''); setCertificateImg(''); }}>取消</Button>
             <Button onClick={handleAddCompetition} disabled={!competitionName.trim()}>确认添加</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// 图片记录标签页组件
+function PhotosTab() {
+  const [studentPhotos, setStudentPhotos] = useState<Record<string, string[]>>({});
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [newPhotos, setNewPhotos] = useState<string[]>([]);
+  const students = getStudents();
+
+  // 加载学生图片
+  useEffect(() => {
+    const photos: Record<string, string[]> = {};
+    students.forEach((s: Student) => {
+      photos[s.id] = getStudentPhotos(s.id);
+    });
+    setStudentPhotos(photos);
+  }, [students]);
+
+  // 压缩图片
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxSize = 400;
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.5));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // 处理图片上传
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    const compressedPhotos: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const compressed = await compressImage(files[i]);
+        compressedPhotos.push(compressed);
+      } catch (err) {
+        console.error('图片压缩失败:', err);
+      }
+    }
+    setNewPhotos(prev => [...prev, ...compressedPhotos]);
+    e.target.value = '';
+  };
+
+  // 确认保存照片
+  const handleConfirmSave = () => {
+    if (!selectedStudentId || newPhotos.length === 0) return;
+    
+    const currentPhotos = studentPhotos[selectedStudentId] || [];
+    const updatedPhotos = [...newPhotos, ...currentPhotos].slice(0, 50); // 最多保存50张
+    saveStudentPhotos(selectedStudentId, updatedPhotos);
+    setStudentPhotos(prev => ({ ...prev, [selectedStudentId]: updatedPhotos }));
+    setNewPhotos([]);
+    setShowUploadDialog(false);
+  };
+
+  // 删除照片
+  const handleDeletePhoto = (studentId: string, index: number) => {
+    const currentPhotos = studentPhotos[studentId] || [];
+    const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
+    saveStudentPhotos(studentId, updatedPhotos);
+    setStudentPhotos(prev => ({ ...prev, [studentId]: updatedPhotos }));
+  };
+
+  const selectedStudent = students.find((s: Student) => s.id === selectedStudentId);
+  const selectedPhotos = selectedStudentId ? (studentPhotos[selectedStudentId] || []) : [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="选择学员" />
+            </SelectTrigger>
+            <SelectContent>
+              {students.map((s: Student) => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedStudentId && (
+            <Button size="sm" onClick={() => setShowUploadDialog(true)}>
+              <Upload className="h-4 w-4 mr-1" />
+              上传照片
+            </Button>
+          )}
+        </div>
+        {selectedStudentId && (
+          <span className="text-xs text-gray-500">共 {selectedPhotos.length} 张照片</span>
+        )}
+      </div>
+
+      {!selectedStudentId ? (
+        <div className="text-center py-12 text-gray-400">
+          <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">请先选择学员查看图片记录</p>
+        </div>
+      ) : selectedPhotos.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <ImageIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">暂无图片记录</p>
+          <Button size="sm" className="mt-3" onClick={() => setShowUploadDialog(true)}>
+            上传第一张照片
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          {selectedPhotos.map((photo, idx) => (
+            <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+              <img src={photo} alt={`照片 ${idx + 1}`} className="w-full h-full object-cover" />
+              <button
+                onClick={() => handleDeletePhoto(selectedStudentId, idx)}
+                className="absolute top-1 right-1 h-6 w-6 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 上传照片对话框 */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>上传照片</DialogTitle>
+            <DialogDescription>
+              为学员 {selectedStudent?.name || ''} 上传照片，最新9张将自动同步到成长档案
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* 新上传的照片预览 */}
+            {newPhotos.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">新上传的照片 ({newPhotos.length})</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {newPhotos.map((photo, idx) => (
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                      <img src={photo} alt={`新照片 ${idx + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setNewPhotos(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* 上传区域 */}
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-colors">
+              <Upload className="h-8 w-8 text-gray-400 mb-2" />
+              <span className="text-xs text-gray-500">点击选择照片（可多选）</span>
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowUploadDialog(false); setNewPhotos([]); }}>取消</Button>
+            <Button onClick={handleConfirmSave} disabled={newPhotos.length === 0}>保存照片</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1591,15 +1783,19 @@ export default function HomePage() {
                 </button>
                 <button onClick={() => setActiveTab('exam')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'exam' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  考级练习
+                  考级记录
                 </button>
                 <button onClick={() => setActiveTab('competition')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'competition' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  赛事练习
+                  赛事记录
                 </button>
                 <button onClick={() => setActiveTab('honor')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'honor' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
                   荣誉
+                </button>
+                <button onClick={() => setActiveTab('photos')}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'photos' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  图片记录
                 </button>
                 <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
                 <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
@@ -1727,6 +1923,7 @@ export default function HomePage() {
                 {activeTab === 'exam' && <ExamTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
                 {activeTab === 'competition' && <CompetitionTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
                 {activeTab === 'honor' && <HonorTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
+                {activeTab === 'photos' && <PhotosTab />}
               </div>
             )}
           </div>

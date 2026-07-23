@@ -5,10 +5,18 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+# Cloudflare Pages 环境检测
+if [ "${CF_PAGES:-}" = "1" ]; then
+  echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
+  pnpm install
+  npx @cloudflare/next-on-pages
+  echo "Cloudflare Pages build completed successfully!"
+  exit 0
+fi
+
 # Vercel 环境检测
 if [ "${VERCEL:-}" = "1" ]; then
   echo "Detected Vercel environment, using Vercel-optimized build..."
-  # Vercel 会自动安装依赖，这里只构建
   pnpm next build
   echo "Vercel build completed successfully!"
   exit 0

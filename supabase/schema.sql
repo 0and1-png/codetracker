@@ -1,16 +1,13 @@
 -- ============================================
 -- 仙码录 (CodeTracker) Supabase 数据库 Schema
--- ============================================
--- 在 Supabase SQL Editor 中执行此文件创建所有表
+-- 修复版：修正触发器语法，兼容 PostgreSQL
 -- ============================================
 
 -- 启用 UUID 扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ============================================
--- 1. 课程表 (courses)
--- ============================================
-CREATE TABLE courses (
+-- 1. 课程表
+CREATE TABLE IF NOT EXISTS courses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   curriculum JSONB DEFAULT '[]'::jsonb,
@@ -22,10 +19,8 @@ CREATE TABLE courses (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================
--- 2. 学员表 (students)
--- ============================================
-CREATE TABLE students (
+-- 2. 学员表
+CREATE TABLE IF NOT EXISTS students (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -35,13 +30,11 @@ CREATE TABLE students (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_students_course_id ON students(course_id);
-CREATE INDEX idx_students_class_name ON students(class_name);
+CREATE INDEX IF NOT EXISTS idx_students_course_id ON students(course_id);
+CREATE INDEX IF NOT EXISTS idx_students_class_name ON students(class_name);
 
--- ============================================
--- 3. 打字记录表 (typing_records)
--- ============================================
-CREATE TABLE typing_records (
+-- 3. 打字记录表
+CREATE TABLE IF NOT EXISTS typing_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -53,13 +46,11 @@ CREATE TABLE typing_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_typing_records_student_id ON typing_records(student_id);
-CREATE INDEX idx_typing_records_date ON typing_records(date);
+CREATE INDEX IF NOT EXISTS idx_typing_records_student_id ON typing_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_typing_records_date ON typing_records(date);
 
--- ============================================
--- 4. 三刷记录表 (retry_records)
--- ============================================
-CREATE TABLE retry_records (
+-- 4. 三刷记录表
+CREATE TABLE IF NOT EXISTS retry_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -77,13 +68,11 @@ CREATE TABLE retry_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_retry_records_student_id ON retry_records(student_id);
-CREATE INDEX idx_retry_records_date ON retry_records(date);
+CREATE INDEX IF NOT EXISTS idx_retry_records_student_id ON retry_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_retry_records_date ON retry_records(date);
 
--- ============================================
--- 5. 作业记录表 (homework_records)
--- ============================================
-CREATE TABLE homework_records (
+-- 5. 作业记录表
+CREATE TABLE IF NOT EXISTS homework_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -99,13 +88,11 @@ CREATE TABLE homework_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_homework_records_student_id ON homework_records(student_id);
-CREATE INDEX idx_homework_records_date ON homework_records(date);
+CREATE INDEX IF NOT EXISTS idx_homework_records_student_id ON homework_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_homework_records_date ON homework_records(date);
 
--- ============================================
--- 6. 知识点进度表 (knowledge_progress)
--- ============================================
-CREATE TABLE knowledge_progress (
+-- 6. 知识点进度表
+CREATE TABLE IF NOT EXISTS knowledge_progress (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   knowledge_point_id TEXT NOT NULL,
@@ -118,12 +105,10 @@ CREATE TABLE knowledge_progress (
   UNIQUE(student_id, knowledge_point_id)
 );
 
-CREATE INDEX idx_knowledge_progress_student_id ON knowledge_progress(student_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_progress_student_id ON knowledge_progress(student_id);
 
--- ============================================
--- 7. 考级记录表 (exam_records)
--- ============================================
-CREATE TABLE exam_records (
+-- 7. 考级记录表
+CREATE TABLE IF NOT EXISTS exam_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -137,12 +122,10 @@ CREATE TABLE exam_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_exam_records_student_id ON exam_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_exam_records_student_id ON exam_records(student_id);
 
--- ============================================
--- 8. 赛事记录表 (competition_records)
--- ============================================
-CREATE TABLE competition_records (
+-- 8. 赛事记录表
+CREATE TABLE IF NOT EXISTS competition_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -156,12 +139,10 @@ CREATE TABLE competition_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_competition_records_student_id ON competition_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_competition_records_student_id ON competition_records(student_id);
 
--- ============================================
--- 9. 荣誉记录表 (honor_records)
--- ============================================
-CREATE TABLE honor_records (
+-- 9. 荣誉记录表
+CREATE TABLE IF NOT EXISTS honor_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
@@ -173,12 +154,10 @@ CREATE TABLE honor_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_honor_records_student_id ON honor_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_honor_records_student_id ON honor_records(student_id);
 
--- ============================================
--- 10. 赛事/活动表 (competition_events)
--- ============================================
-CREATE TABLE competition_events (
+-- 10. 赛事/活动表
+CREATE TABLE IF NOT EXISTS competition_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   date TEXT,
@@ -187,10 +166,8 @@ CREATE TABLE competition_events (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================
--- 11. 冲刺目标表 (sprint_goals)
--- ============================================
-CREATE TABLE sprint_goals (
+-- 11. 冲刺目标表
+CREATE TABLE IF NOT EXISTS sprint_goals (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   month TEXT NOT NULL,
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
@@ -201,12 +178,10 @@ CREATE TABLE sprint_goals (
   UNIQUE(student_id, month)
 );
 
-CREATE INDEX idx_sprint_goals_student_id ON sprint_goals(student_id);
+CREATE INDEX IF NOT EXISTS idx_sprint_goals_student_id ON sprint_goals(student_id);
 
--- ============================================
--- 12. 成长档案报告表 (report_data)
--- ============================================
-CREATE TABLE report_data (
+-- 12. 成长档案报告表
+CREATE TABLE IF NOT EXISTS report_data (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   month TEXT NOT NULL,
@@ -246,12 +221,10 @@ CREATE TABLE report_data (
   UNIQUE(student_id, month)
 );
 
-CREATE INDEX idx_report_data_student_id ON report_data(student_id);
+CREATE INDEX IF NOT EXISTS idx_report_data_student_id ON report_data(student_id);
 
--- ============================================
--- 13. 学员图片表 (student_photos)
--- ============================================
-CREATE TABLE student_photos (
+-- 13. 学员图片表
+CREATE TABLE IF NOT EXISTS student_photos (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   photo_url TEXT NOT NULL,
@@ -259,11 +232,9 @@ CREATE TABLE student_photos (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_student_photos_student_id ON student_photos(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_photos_student_id ON student_photos(student_id);
 
--- ============================================
 -- 自动更新 updated_at 触发器
--- ============================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -272,24 +243,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 使用 DROP + CREATE 替代 IF NOT EXISTS（兼容 PostgreSQL）
+DROP TRIGGER IF EXISTS update_courses_updated_at ON courses;
 CREATE TRIGGER update_courses_updated_at BEFORE UPDATE ON courses
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_students_updated_at ON students;
 CREATE TRIGGER update_students_updated_at BEFORE UPDATE ON students
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_knowledge_progress_updated_at ON knowledge_progress;
 CREATE TRIGGER update_knowledge_progress_updated_at BEFORE UPDATE ON knowledge_progress
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_sprint_goals_updated_at ON sprint_goals;
 CREATE TRIGGER update_sprint_goals_updated_at BEFORE UPDATE ON sprint_goals
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_report_data_updated_at ON report_data;
 CREATE TRIGGER update_report_data_updated_at BEFORE UPDATE ON report_data
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================
--- 行级安全策略 (RLS) - 单用户模式，允许所有操作
--- ============================================
+-- 行级安全策略 (RLS)
 ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE typing_records ENABLE ROW LEVEL SECURITY;
@@ -304,17 +279,17 @@ ALTER TABLE sprint_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE report_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_photos ENABLE ROW LEVEL SECURITY;
 
--- 允许所有操作（单用户模式，后续可添加认证后修改）
-CREATE POLICY "Allow all operations" ON courses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON students FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON typing_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON retry_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON homework_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON knowledge_progress FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON exam_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON competition_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON honor_records FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON competition_events FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON sprint_goals FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON report_data FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all operations" ON student_photos FOR ALL USING (true) WITH CHECK (true);
+-- 允许所有操作（单用户模式）
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON courses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON students FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON typing_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON retry_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON homework_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON knowledge_progress FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON exam_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON competition_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON honor_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON competition_events FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON sprint_goals FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON report_data FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Allow all operations" ON student_photos FOR ALL USING (true) WITH CHECK (true);

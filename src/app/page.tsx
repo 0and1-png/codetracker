@@ -982,24 +982,25 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
 }
 
 // 图片记录标签页组件
-function PhotosTab() {
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+function PhotosTab({ selectedStudentIds, students }: { selectedStudentIds: string[]; students: Student[] }) {
+  const defaultStudentId = selectedStudentIds.length === 1 ? selectedStudentIds[0] : '';
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(defaultStudentId);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 稳定引用 + 同步读取 localStorage，避免 useEffect 无限循环
-  const students = useMemo(() => getStudents(), [refreshKey]);
+  // 同步读取照片数据，避免 useEffect 无限循环
   const studentPhotos = useMemo(() => {
     const photos: Record<string, string[]> = {};
     students.forEach((s: Student) => {
       photos[s.id] = getStudentPhotos(s.id);
     });
     return photos;
-  }, [students]);
+  }, [refreshKey, students]);
 
   const selectedStudent = students.find((s: Student) => s.id === selectedStudentId);
   const selectedPhotos = selectedStudentId ? (studentPhotos[selectedStudentId] || []) : [];
+  const isSingleStudent = selectedStudentIds.length === 1;
 
   // 压缩图片
   const compressImage = (file: File): Promise<string> => {
@@ -1074,16 +1075,23 @@ function PhotosTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="选择学员" />
-            </SelectTrigger>
-            <SelectContent>
-              {students.map((s: Student) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isSingleStudent ? (
+            <div className="flex items-center gap-2 px-1">
+              <ImageIcon className="h-5 w-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">{selectedStudent?.name || ''}</span>
+            </div>
+          ) : (
+            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+              <SelectTrigger className="w-40 h-9">
+                <SelectValue placeholder="选择学员" />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((s: Student) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {selectedStudentId && (
             <Button size="sm" onClick={() => setShowUploadDialog(true)}>
               <Upload className="h-4 w-4 mr-1" />
@@ -1922,7 +1930,7 @@ export default function HomePage() {
                 {activeTab === 'exam' && <ExamTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
                 {activeTab === 'competition' && <CompetitionTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
                 {activeTab === 'honor' && <HonorTab selectedStudentIds={new Set(selectedStudentIds)} students={courseStudents} selectedCourseId={selectedCourseId} />}
-                {activeTab === 'photos' && <PhotosTab />}
+                {activeTab === 'photos' && <PhotosTab selectedStudentIds={selectedStudentIds} students={courseStudents} />}
               </div>
             )}
           </div>

@@ -181,6 +181,32 @@ export function saveStudents(students: Student[]): void {
   setItem(STUDENTS_KEY, students);
 }
 
+// ===== Student Photos =====
+const STUDENT_PHOTOS_KEY = 'coding_student_photos';
+
+export function getStudentPhotos(studentId: string): string[] {
+  const all = getItem<Record<string, string[]>>(STUDENT_PHOTOS_KEY, {});
+  return all[studentId] || [];
+}
+
+export function saveStudentPhotos(studentId: string, photos: string[]): void {
+  const all = getItem<Record<string, string[]>>(STUDENT_PHOTOS_KEY, {});
+  all[studentId] = photos;
+  setItem(STUDENT_PHOTOS_KEY, all);
+}
+
+export function addStudentPhoto(studentId: string, photo: string): void {
+  const photos = getStudentPhotos(studentId);
+  photos.unshift(photo); // Add to beginning (newest first)
+  saveStudentPhotos(studentId, photos);
+}
+
+export function deleteStudentPhoto(studentId: string, index: number): void {
+  const photos = getStudentPhotos(studentId);
+  photos.splice(index, 1);
+  saveStudentPhotos(studentId, photos);
+}
+
 export function addStudent(student: Student): void {
   const list = getStudents();
   list.push(student);

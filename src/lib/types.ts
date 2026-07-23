@@ -57,6 +57,7 @@ export interface Student {
   courseId: string;
   className?: string;
   notes?: string;
+  photos?: string[];  // Student photos (base64)
   createdAt: string;
 }
 

@@ -30,6 +30,7 @@ import {
   getLocalStorageUsage,
   saveReportDataAsync,
   getReportDataAsync,
+  getStudentPhotos,
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord, ReportData } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
@@ -3403,43 +3404,51 @@ export default function ReportPage() {
               </div>
 
               {/* 9宫格照片展示 - 纸质相册风格 */}
-              <div className="grid grid-cols-3 gap-5">
-                {Array.from({ length: 9 }).map((_, i) => {
-                  const photo = classroomPhotos[i];
-                  if (photo) {
-                    return (
-                      <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 hover:scale-[1.03] relative group" style={{ background: '#fff', padding: '6px' }}>
-                        <div className="w-full h-full rounded-xl overflow-hidden relative">
-                          <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </div>
-                      </div>
-                    );
-                  } else if (i === classroomPhotos.length && classroomPhotos.length < 9) {
-                    return (
-                      <div 
-                        key={i}
-                        className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-lg relative overflow-hidden"
-                        style={{ background: 'linear-gradient(135deg, #fef7f0, #fce7f3)', border: '2px dashed #e8c4b8' }}
-                        onClick={handleClassroomPhotoUpload}
-                      >
-                        <div className="text-center z-10">
-                          <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center mx-auto mb-2 shadow-md transition-transform duration-300 hover:scale-110">
-                            <Camera className="h-7 w-7 text-[#c49a8a]" strokeWidth={1.2} />
+              {(() => {
+                // 优先使用学生照片（最新9张），如果没有则使用报告中的课堂照片
+                const studentPhotos = getStudentPhotos(studentId);
+                const displayPhotos = studentPhotos.length > 0 ? studentPhotos.slice(0, 9) : classroomPhotos;
+                
+                return (
+                  <div className="grid grid-cols-3 gap-5">
+                    {Array.from({ length: 9 }).map((_, i) => {
+                      const photo = displayPhotos[i];
+                      if (photo) {
+                        return (
+                          <div key={i} className="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 hover:scale-[1.03] relative group" style={{ background: '#fff', padding: '6px' }}>
+                            <div className="w-full h-full rounded-xl overflow-hidden relative">
+                              <img src={photo} alt={`课堂照片${i + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            </div>
                           </div>
-                          <span className="text-sm font-medium text-[#c49a8a]">添加照片</span>
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div key={i} className="aspect-square rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f5f0eb, #ede5dc)', border: '1px solid rgba(200,180,160,0.2)' }}>
-                        <Camera className="h-10 w-10 text-[#d4c4b4]" strokeWidth={1} />
-                      </div>
-                    );
-                  }
-                })}
-              </div>
+                        );
+                      } else if (i === displayPhotos.length && displayPhotos.length < 9 && studentPhotos.length === 0) {
+                        return (
+                          <div 
+                            key={i}
+                            className="aspect-square rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-[1.03] hover:shadow-lg relative overflow-hidden"
+                            style={{ background: 'linear-gradient(135deg, #fef7f0, #fce7f3)', border: '2px dashed #e8c4b8' }}
+                            onClick={handleClassroomPhotoUpload}
+                          >
+                            <div className="text-center z-10">
+                              <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center mx-auto mb-2 shadow-md transition-transform duration-300 hover:scale-110">
+                                <Camera className="h-7 w-7 text-[#c49a8a]" strokeWidth={1.2} />
+                              </div>
+                              <span className="text-sm font-medium text-[#c49a8a]">添加照片</span>
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div key={i} className="aspect-square rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f5f0eb, #ede5dc)', border: '1px solid rgba(200,180,160,0.2)' }}>
+                            <Camera className="h-10 w-10 text-[#d4c4b4]" strokeWidth={1} />
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

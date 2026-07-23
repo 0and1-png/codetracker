@@ -247,3 +247,59 @@ body {
   background: #EDF4F8;
   color: #5A7A93;
 }
+
+/* ==================== 移动端响应式适配 ==================== */
+@media (max-width: 768px) {
+  /* 全局字体大小调整 */
+  html {
+    font-size: 14px;
+  }
+  
+  /* 页面内边距减小 */
+  .px-8 { padding-left: 1rem; padding-right: 1rem; }
+  .py-8 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .p-8 { padding: 1rem; }
+  .p-6 { padding: 0.75rem; }
+  
+  /* 侧边栏在小屏幕上隐藏或折叠 */
+  .w-64 { width: auto; }
+  
+  /* 卡片间距调整 */
+  .space-y-6 > * + * { margin-top: 1rem; }
+  .space-y-4 > * + * { margin-top: 0.75rem; }
+  
+  /* 表格在小屏幕上横向滚动 */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* 按钮在小屏幕上全宽 */
+  button.w-full, .btn-full-mobile {
+    width: 100%;
+  }
+  
+  /* 网格在小屏幕上改为单列 */
+  .grid-cols-2 { grid-template-columns: 1fr; }
+  .grid-cols-3 { grid-template-columns: 1fr 1fr; }
+  .grid-cols-4 { grid-template-columns: 1fr 1fr; }
+  
+  /* 对话框在小屏幕上全宽 */
+  .max-w-md, .max-w-lg, .max-w-2xl {
+    max-width: calc(100vw - 2rem);
+  }
+  
+  /* 隐藏在小屏幕上不需要的元素 */
+  .hidden-mobile {
+    display: none;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 375px) {
+  html {
+    font-size: 13px;
+  }
+  
+  .grid-cols-3 { grid-template-columns: 1fr; }
+  .grid-cols-4 { grid-template-columns: 1fr; }
+}

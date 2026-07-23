@@ -17,6 +17,10 @@ import {
   Sparkles,
   AlertTriangle,
   Calendar,
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
@@ -105,6 +109,78 @@ export default function StudentDetailPage() {
   const [homeworkRecords, setHomeworkRecords] = useState<HomeworkRecord[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeProgress[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
+  const [studentPhotos, setStudentPhotos] = useState<string[]>([]);
+
+  // 加载学生照片
+  const loadPhotos = useCallback(() => {
+    const s = getStudents().find((s) => s.id === studentId);
+    if (s?.photos) {
+      setStudentPhotos(s.photos);
+    } else {
+      setStudentPhotos([]);
+    }
+  }, [studentId]);
+
+  // 上传照片
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !student) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxSize = 400;
+          let { width, height } = img;
+          if (width > maxSize || height > maxSize) {
+            if (width > height) {
+              height = (height / width) * maxSize;
+              width = maxSize;
+            } else {
+              width = (width / height) * maxSize;
+              height = maxSize;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.6);
+
+          setStudentPhotos((prev) => {
+            const newPhotos = [...prev, compressed];
+            // 更新学生数据
+            const students = getStudents();
+            const idx = students.findIndex((s) => s.id === studentId);
+            if (idx !== -1) {
+              students[idx].photos = newPhotos;
+              localStorage.setItem('coding_students', JSON.stringify(students));
+            }
+            return newPhotos;
+          });
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  // 删除照片
+  const handleDeletePhoto = (index: number) => {
+    setStudentPhotos((prev) => {
+      const newPhotos = prev.filter((_, i) => i !== index);
+      const students = getStudents();
+      const idx = students.findIndex((s) => s.id === studentId);
+      if (idx !== -1) {
+        students[idx].photos = newPhotos;
+        localStorage.setItem('coding_students', JSON.stringify(students));
+      }
+      return newPhotos;
+    });
+  };
 
   const loadData = useCallback(() => {
     const s = getStudents().find((s) => s.id === studentId);
@@ -127,7 +203,8 @@ export default function StudentDetailPage() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadPhotos();
+  }, [loadData, loadPhotos]);
 
   if (!student) {
     return (
@@ -339,6 +416,48 @@ export default function StudentDetailPage() {
             color="sky"
           />
         </div>
+
+        {/* ===== 图片记录 ===== */}
+        <Card className="bg-[#161b22] border-[#d4a853]/15">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[#d4a853] flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                图片记录
+              </h3>
+              <label className="flex items-center gap-1.5 px-3 py-1.5 bg-[#d4a853]/10 hover:bg-[#d4a853]/20 border border-[#d4a853]/30 rounded-lg text-xs text-[#d4a853] cursor-pointer transition-colors">
+                <Upload className="h-3.5 w-3.5" />
+                上传照片
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
+              </label>
+            </div>
+            {studentPhotos.length === 0 ? (
+              <div className="text-center py-6 text-[#8b949e] text-xs">
+                暂无照片，点击"上传照片"添加学生照片
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {studentPhotos.map((photo, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-[#d4a853]/10">
+                    <img src={photo} alt={`照片${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => handleDeletePhoto(idx)}
+                      className="absolute top-1 right-1 p-1 bg-black/60 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* ===== Knowledge Mastery Bar ===== */}
         {mastery.length > 0 && (

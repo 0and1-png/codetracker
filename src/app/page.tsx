@@ -983,20 +983,23 @@ function HonorTab({ selectedStudentIds, students, selectedCourseId }: { selected
 
 // 图片记录标签页组件
 function PhotosTab() {
-  const [studentPhotos, setStudentPhotos] = useState<Record<string, string[]>>({});
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
-  const students = getStudents();
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // 加载学生图片
-  useEffect(() => {
+  // 稳定引用 + 同步读取 localStorage，避免 useEffect 无限循环
+  const students = useMemo(() => getStudents(), [refreshKey]);
+  const studentPhotos = useMemo(() => {
     const photos: Record<string, string[]> = {};
     students.forEach((s: Student) => {
       photos[s.id] = getStudentPhotos(s.id);
     });
-    setStudentPhotos(photos);
+    return photos;
   }, [students]);
+
+  const selectedStudent = students.find((s: Student) => s.id === selectedStudentId);
+  const selectedPhotos = selectedStudentId ? (studentPhotos[selectedStudentId] || []) : [];
 
   // 压缩图片
   const compressImage = (file: File): Promise<string> => {
@@ -1051,13 +1054,12 @@ function PhotosTab() {
   // 确认保存照片
   const handleConfirmSave = () => {
     if (!selectedStudentId || newPhotos.length === 0) return;
-    
     const currentPhotos = studentPhotos[selectedStudentId] || [];
-    const updatedPhotos = [...newPhotos, ...currentPhotos].slice(0, 50); // 最多保存50张
+    const updatedPhotos = [...newPhotos, ...currentPhotos].slice(0, 50);
     saveStudentPhotos(selectedStudentId, updatedPhotos);
-    setStudentPhotos(prev => ({ ...prev, [selectedStudentId]: updatedPhotos }));
     setNewPhotos([]);
     setShowUploadDialog(false);
+    setRefreshKey(k => k + 1);
   };
 
   // 删除照片
@@ -1065,11 +1067,8 @@ function PhotosTab() {
     const currentPhotos = studentPhotos[studentId] || [];
     const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
     saveStudentPhotos(studentId, updatedPhotos);
-    setStudentPhotos(prev => ({ ...prev, [studentId]: updatedPhotos }));
+    setRefreshKey(k => k + 1);
   };
-
-  const selectedStudent = students.find((s: Student) => s.id === selectedStudentId);
-  const selectedPhotos = selectedStudentId ? (studentPhotos[selectedStudentId] || []) : [];
 
   return (
     <div className="space-y-4">

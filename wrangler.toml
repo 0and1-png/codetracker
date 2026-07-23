@@ -1,0 +1,13 @@
+{
+  "build": {
+    "command": "pnpm build",
+    "output_directory": ".next",
+    "root_directory": ""
+  },
+  "routes": [
+    {
+      "pattern": "^/api/.*",
+      "script": "api"
+    }
+  ]
+}

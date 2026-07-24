@@ -9,7 +9,7 @@ cd "${COZE_WORKSPACE_PATH}"
 if [ "${CF_PAGES:-}" = "1" ]; then
   echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
   pnpm install
-  npx @cloudflare/next-on-pages
+  pnpm @cloudflare/next-on-pages
   echo "Cloudflare Pages build completed successfully!"
   exit 0
 fi

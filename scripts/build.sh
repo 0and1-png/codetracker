@@ -7,10 +7,18 @@ cd "${COZE_WORKSPACE_PATH}"
 
 # Cloudflare Pages 环境检测
 if [ "${CF_PAGES:-}" = "1" ]; then
-  echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
-  pnpm install
-  pnpm @cloudflare/next-on-pages
-  echo "Cloudflare Pages build completed successfully!"
+  # 防止 @cloudflare/next-on-pages 内部嵌套调用时重复安装依赖
+  if [ "${__CF_BUILD_STARTED:-}" != "1" ]; then
+    export __CF_BUILD_STARTED=1
+    echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
+    pnpm install
+    pnpm @cloudflare/next-on-pages
+    echo "Cloudflare Pages build completed successfully!"
+  else
+    # 嵌套调用：直接运行 Next.js 构建，不重复安装依赖
+    echo "Nested build call detected, running Next.js build directly..."
+    pnpm next build
+  fi
   exit 0
 fi
 

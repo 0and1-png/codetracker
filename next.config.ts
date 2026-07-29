@@ -1,18 +1,14 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
-const isCFPages = process.env.CF_PAGES === '1';
-
 const nextConfig: NextConfig = {
-  output: isCFPages ? 'export' : undefined,
-  trailingSlash: isCFPages,
+  reactStrictMode: true,
   images: {
-    unoptimized: isCFPages,
+    unoptimized: true,
   },
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    webpackBuildWorker: true,
   },
-  turbopack: {},
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

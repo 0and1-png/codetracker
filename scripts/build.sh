@@ -1,8 +1,14 @@
 #!/bin/bash
-# Cloudflare Pages 构建脚本 - 静态导出模式
 set -e
 
-echo "🏗️ Running Next.js static export build..."
-CF_PAGES=1 pnpm next build
+echo "️ Building with @cloudflare/next-on-pages..."
 
-echo "✅ Build complete! Output in ./out"
+# Step 1: Install dependencies
+echo "📦 Installing dependencies..."
+pnpm install
+
+# Step 2: Build with next-on-pages (includes vercel build internally)
+echo "🔧 Running @cloudflare/next-on-pages..."
+npx @cloudflare/next-on-pages
+
+echo "✅ Build complete!"

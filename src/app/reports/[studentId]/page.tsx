@@ -1,9 +1,7 @@
-import ReportClient from './page.client';
+import ReportPageClient from './page.client';
 
-export async function generateStaticParams() {
-  return [{ studentId: 'placeholder' }];
-}
+export const runtime = 'edge';
 
 export default async function ReportPage({ params }: { params: Promise<{ studentId: string }> }) {
-  return <ReportClient />;
+  return <ReportPageClient />;
 }

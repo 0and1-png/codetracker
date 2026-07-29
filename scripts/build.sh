@@ -5,10 +5,21 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
-# Cloudflare Pages 环境：使用 Next.js 静态导出
+# Cloudflare Pages 环境：使用 @cloudflare/next-on-pages 支持 SSR
 if [ "${CF_PAGES:-}" = "1" ]; then
-  echo "Detected Cloudflare Pages environment, using Next.js static export..."
+  echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
+  
+  # 确保依赖已安装（含 legacy-peer-deps）
+  pnpm install --prefer-frozen-lockfile 2>/dev/null || pnpm install
+  
+  # 先运行 Next.js 构建生成 .vercel/output
+  echo "Running Next.js build..."
   pnpm next build
+  
+  # 再用 next-on-pages 转换为 Workers 兼容格式
+  echo "Converting to Cloudflare Workers format..."
+  npx @cloudflare/next-on-pages
+  
   echo "Cloudflare Pages build completed successfully!"
   exit 0
 fi

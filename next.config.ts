@@ -1,10 +1,20 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
-const isCloudflarePages = process.env.CF_PAGES === '1';
-
 const nextConfig: NextConfig = {
-  ...(isCloudflarePages && { output: 'export', trailingSlash: true }),
+  reactStrictMode: true,
+  transpilePackages: ['lucide-react'],
+  images: {
+    unoptimized: true,
+  },
+  turbopack: {},
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -1,7 +1,14 @@
-export const runtime = 'edge';
+import CourseDetailClient from './page.client';
 
-import CourseDetailPage from './page.client';
+export async function generateStaticParams() {
+  return [
+    { id: 'course_cpp' },
+    { id: 'course_python' },
+    { id: 'course_scratch' },
+  ];
+}
 
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <CourseDetailPage params={params} />;
+export default async function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  return <CourseDetailClient params={params} />;
 }

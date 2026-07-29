@@ -1,7 +1,9 @@
-export const runtime = 'edge';
+import StudentDetailClient from './page.client';
 
-import StudentDetailPage from './page.client';
+export async function generateStaticParams() {
+  return [{ id: 'placeholder' }];
+}
 
-export default function Page() {
-  return <StudentDetailPage />;
+export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return <StudentDetailClient />;
 }

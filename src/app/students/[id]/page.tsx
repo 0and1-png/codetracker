@@ -1,3 +1,7 @@
+export function generateStaticParams() {
+  return [{ id: 'placeholder' }];
+}
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';

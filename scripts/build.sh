@@ -7,18 +7,21 @@ cd "${COZE_WORKSPACE_PATH}"
 
 # Cloudflare Pages 环境检测
 if [ "${CF_PAGES:-}" = "1" ]; then
-  # 防止 @cloudflare/next-on-pages 内部嵌套调用时重复安装依赖
-  if [ "${__CF_BUILD_STARTED:-}" != "1" ]; then
-    export __CF_BUILD_STARTED=1
-    echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
-    pnpm install
-    pnpm @cloudflare/next-on-pages
-    echo "Cloudflare Pages build completed successfully!"
-  else
-    # 嵌套调用：直接运行 Next.js 构建，不重复安装依赖
-    echo "Nested build call detected, running Next.js build directly..."
+  # 使用文件标志检测嵌套调用（环境变量在 Vercel CLI 子进程中可能不继承）
+  NESTED_FLAG="/tmp/__cf_nested_build_flag"
+  if [ -f "${NESTED_FLAG}" ]; then
+    echo "Nested build detected, running Next.js build directly (skip npm install)..."
     pnpm next build
+    exit $?
   fi
+
+  echo "Detected Cloudflare Pages environment, using @cloudflare/next-on-pages..."
+  pnpm install
+  # 创建文件标志，告诉嵌套调用跳过 install
+  touch "${NESTED_FLAG}"
+  pnpm @cloudflare/next-on-pages
+  rm -f "${NESTED_FLAG}"
+  echo "Cloudflare Pages build completed successfully!"
   exit 0
 fi
 

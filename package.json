@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build --webpack",
-    "build:cf": "bash ./scripts/build.sh",
+    "deploy-cf": "next build --webpack && pnpm exec next-on-pages",
     "dev": "bash ./scripts/dev.sh",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",

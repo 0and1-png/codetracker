@@ -9,7 +9,7 @@ pnpm install
 
 # Step 2: Build with next-on-pages (includes vercel build internally)
 echo "🔧 Running @cloudflare/next-on-pages..."
-npx @cloudflare/next-on-pages --output-dir .vercel/output/static
+npx @cloudflare/next-on-pages
 
 # Verify output exists
 if [ ! -d ".vercel/output/static" ]; then

@@ -5,5 +5,5 @@ export function generateStaticParams() {
 import CourseDetailPage from './page.client';
 
 export default function Page(props: { params: Promise<{ id: string }> }) {
-  return <CourseDetailPage {...props} />;
+  return <CourseDetailPage params={props.params} />;
 }

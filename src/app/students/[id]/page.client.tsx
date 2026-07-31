@@ -79,6 +79,7 @@ import {
   deleteHomeworkRecord,
   updateKnowledgeStatus,
   updateKnowledgeScore,
+  syncFromSupabase,
 } from '@/lib/store';
 import { KNOWLEDGE_STATUS_LABELS, KNOWLEDGE_STATUS_COLORS } from '@/lib/constants';
 import {
@@ -202,6 +203,7 @@ export default function StudentDetailPage() {
   }, [studentId]);
 
   useEffect(() => {
+    syncFromSupabase();
     loadData();
     loadPhotos();
   }, [loadData, loadPhotos]);

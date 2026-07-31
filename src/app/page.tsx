@@ -43,6 +43,7 @@ import {
   addClassToCourse, removeClassFromCourse, renameClassInCourse, getCourseClasses,
   saveExamRecord, saveCompetitionRecord, saveHonorRecord, getHonorRecordsByStudent,
   getExamRecordsByStudent, getStudentPhotos, saveStudentPhotos,
+  syncFromSupabase,
 } from '@/lib/store';
 import {
   type AutoTag, generateAutoTags, calcTypingSummary, calcRetrySummary,
@@ -1278,7 +1279,13 @@ export default function HomePage() {
     setLastRecordHints(hints);
   }, [selectedCourseId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Sync data from Supabase on mount (before loadData)
+  useEffect(() => {
+    syncFromSupabase().then(() => {
+      loadData();
+    });
+  }, []);
+
   useEffect(() => { loadStudents(); }, [loadStudents, selectedCourseId]);
 
   const [lastRecordHints, setLastRecordHints] = useState<Record<string, { lastSpeed?: number; lastAccuracy?: number }>>({});

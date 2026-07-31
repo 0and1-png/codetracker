@@ -31,6 +31,7 @@ import {
   saveReportDataAsync,
   getReportDataAsync,
   getStudentPhotos,
+  syncFromSupabase,
 } from '@/lib/store';
 import type { Student, TypingRecord, ProblemRetryRecord, HomeworkRecord, KnowledgeProgress, Course, CompetitionEvent, SprintGoalData, GESPLlevel, HonorRecord, ExamRecord, ReportData } from '@/lib/types';
 import { calcTypingSummary, calcRetrySummary, calcTypingImprovement, calcKnowledgeMastery, getStrongKnowledgePoints, getWeakKnowledgePoints, calcLearnedKnowledgeMastery, collectTeacherTags, getNextChapterContent } from '@/lib/analytics';
@@ -388,7 +389,7 @@ export default function ReportPage() {
     // 成长建议、家校tip、家校共育、老师寄语使用默认值（已在 state 初始化时设置）
   }, [studentId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { syncFromSupabase(); loadData(); }, [loadData]);
 
   const getPeriodDates = () => {
     if (period === 'custom') {

@@ -32,7 +32,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import type { Course, CurriculumNode, CurriculumNodeType, CodeBlock, KnowledgePointDef, ProblemDef } from '@/lib/types';
-import { getCourses, updateCourse } from '@/lib/store';
+import { getCourses, updateCourse, syncFromSupabase } from '@/lib/store';
 import { XIAN, COURSE_COLORS } from '@/lib/constants';
 
 const COURSE_ICONS: Record<string, React.ReactNode> = {
@@ -163,6 +163,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     params.then((p) => {
       setCourseId(p.id);
       setMounted(true);
+      syncFromSupabase();
     });
   }, [params]);
 

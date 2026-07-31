@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import type { Course } from '@/lib/types';
-import { getCourses } from '@/lib/store';
+import { getCourses, syncFromSupabase } from '@/lib/store';
 import { COURSE_COLORS } from '@/lib/constants';
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
+    syncFromSupabase();
     setCourses(getCourses());
   }, []);
 

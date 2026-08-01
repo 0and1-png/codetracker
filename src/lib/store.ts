@@ -12,7 +12,7 @@ import type {
   CompetitionRecord, HonorRecord, CompetitionEvent,
   SprintGoalData, ReportData, KnowledgeStatus,
 } from './types';
-import { COURSE_PRESETS } from './constants';
+import { COURSE_PRESETS, DEFAULT_COMPETITIONS } from './constants';
 
 // ============ LocalStorage Keys ============
 const KEYS = {
@@ -214,13 +214,13 @@ export function saveKnowledgeProgressList(items: KnowledgeProgress[]): void {
 
 export function updateKnowledgeStatus(
   studentId: string,
-  courseId: string,
   knowledgePointId: string,
-  status: KnowledgeStatus
+  status: KnowledgeStatus,
+  courseId?: string
 ): void {
   const items = lsGet<KnowledgeProgress>(KEYS.knowledgeProgress);
   const idx = items.findIndex(
-    (k) => k.studentId === studentId && k.courseId === courseId && k.knowledgePointId === knowledgePointId
+    (k) => k.studentId === studentId && k.knowledgePointId === knowledgePointId
   );
   if (idx >= 0) {
     items[idx].status = status;
@@ -249,15 +249,20 @@ export function getExamRecordsByStudent(studentId: string): ExamRecord[] {
 }
 
 export function getStudentPhotos(studentId: string): string[] {
-  const all = lsGet<{ [key: string]: string[] }>(KEYS.studentPhotos);
-  return all?.[studentId] || [];
+  try {
+    const data = localStorage.getItem(KEYS.studentPhotos);
+    const all: { [key: string]: string[] } = data ? JSON.parse(data) : {};
+    return all[studentId] || [];
+  } catch { return []; }
 }
 
 export function saveStudentPhotos(studentId: string, photos: string[]): void {
-  const all = lsGet<{ [key: string]: string[] }>(KEYS.studentPhotos);
-  const obj = all || {};
-  obj[studentId] = photos;
-  lsSet(KEYS.studentPhotos, obj);
+  try {
+    const data = localStorage.getItem(KEYS.studentPhotos);
+    const all: { [key: string]: string[] } = data ? JSON.parse(data) : {};
+    all[studentId] = photos;
+    localStorage.setItem(KEYS.studentPhotos, JSON.stringify(all));
+  } catch {}
 }
 
 export function addStudentPhoto(studentId: string, photo: string): void {
@@ -419,25 +424,29 @@ export function saveReportDataList(items: ReportData[]): void {
   lsSet(KEYS.reportData, items);
 }
 
+export function getReports(): ReportData[] {
+  return lsGet<ReportData>(KEYS.reportData);
+}
+
 export function updateKnowledgeScore(
   studentId: string,
-  courseId: string,
   knowledgePointId: string,
-  status: KnowledgeStatus,
   score: number,
-  description?: string
+  description?: string,
+  courseId?: string,
+  status?: KnowledgeStatus
 ): void {
   const items = lsGet<KnowledgeProgress>(KEYS.knowledgeProgress);
   const idx = items.findIndex(
-    (k) => k.studentId === studentId && k.courseId === courseId && k.knowledgePointId === knowledgePointId
+    (k) => k.studentId === studentId && k.knowledgePointId === knowledgePointId
   );
   const progress: KnowledgeProgress = {
     id: idx >= 0 ? items[idx].id : crypto.randomUUID(),
     studentId,
-    courseId,
+    courseId: courseId || (idx >= 0 ? items[idx].courseId : ''),
     knowledgePointId,
-    knowledgePointName: '',
-    status,
+    knowledgePointName: idx >= 0 ? items[idx].knowledgePointName : '',
+    status: status || (idx >= 0 ? items[idx].status : 'not_started'),
     score,
     description: description || '',
     updatedAt: new Date().toISOString(),
@@ -737,46 +746,43 @@ export function generateId(): string {
   return uuidv4();
 }
 
-// 竞赛记录
-export function getAllCompetitions(): CompetitionRecord[] {
-  return lsGet<CompetitionRecord[]>(KEYS.competitionRecords, []);
+// 赛事模板（CompetitionEvent）
+export function getAllCompetitions(): CompetitionEvent[] {
+  const custom = lsGet<CompetitionEvent>(KEYS.competitionEvents);
+  const defaults: CompetitionEvent[] = DEFAULT_COMPETITIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    category: c.category,
+    description: c.description,
+    createdAt: new Date().toISOString(),
+  }));
+  const customIds = new Set(custom.map((c) => c.id));
+  return [...defaults.filter((d) => !customIds.has(d.id)), ...custom];
 }
 
-export function addCompetition(record: CompetitionRecord): void {
-  const all = getAllCompetitions();
-  all.push(record);
-  lsSet(KEYS.competitionRecords, all);
-  syncCompetitionToSupabase(record);
+export function addCompetition(event: Omit<CompetitionEvent, 'id' | 'createdAt'>): CompetitionEvent {
+  const list = lsGet<CompetitionEvent>(KEYS.competitionEvents);
+  const newEvent: CompetitionEvent = {
+    ...event,
+    id: `comp_custom_${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  list.push(newEvent);
+  lsSet(KEYS.competitionEvents, list);
+  return newEvent;
 }
 
 export function removeCompetition(id: string): void {
-  lsSet(KEYS.competitionRecords, getAllCompetitions().filter(c => c.id !== id));
-  try { supabase.from('competition_records').delete().eq('id', id); } catch (e) { console.error(e); }
-}
-
-async function syncCompetitionToSupabase(record: CompetitionRecord) {
-  try {
-    await supabase.from('competition_records').insert({
-      id: record.id,
-      student_id: record.studentId,
-      course_id: record.courseId,
-      competition_name: record.competitionName,
-      competition_date: record.competitionDate,
-      total_questions: record.totalQuestions,
-      correct_count: record.correctCount,
-      wrong_count: record.wrongCount,
-      results: record.results,
-      certificate_url: record.certificateUrl,
-    });
-  } catch (e) { console.error('Sync competition failed:', e); }
+  const list = lsGet<CompetitionEvent>(KEYS.competitionEvents);
+  lsSet(KEYS.competitionEvents, list.filter((c) => c.id !== id));
 }
 
 // 冲刺目标
-export function getSprintGoal(studentId: string): SprintGoalData | undefined {
-  return lsGet<SprintGoalData[]>(KEYS.sprintGoals, []).find(g => g.studentId === studentId);
+export function getSprintGoal(studentId: string, month?: string): SprintGoalData | undefined {
+  return lsGet<SprintGoalData>(KEYS.sprintGoals).find(g => g.studentId === studentId && (!month || g.month === month));
 }
 
 // 荣誉记录
 export function getHonorRecordsByStudent(studentId: string): HonorRecord[] {
-  return lsGet<HonorRecord[]>(KEYS.honorRecords, []).filter(h => h.studentId === studentId);
+  return lsGet<HonorRecord>(KEYS.honorRecords).filter(h => h.studentId === studentId);
 }

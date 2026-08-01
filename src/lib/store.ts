@@ -33,6 +33,7 @@ const KEYS = {
 
 // ============ LocalStorage Helpers ============
 function lsGet<T>(key: string): T[] {
+  if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
@@ -40,6 +41,7 @@ function lsGet<T>(key: string): T[] {
 }
 
 function lsSet<T>(key: string, data: T[]): void {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(key, JSON.stringify(data));
 }
 

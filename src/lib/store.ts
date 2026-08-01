@@ -447,6 +447,99 @@ export function updateKnowledgeScore(
   lsSet(KEYS.knowledgeProgress, items);
 }
 
+// ============ Course Classes ============
+
+export function getCourseClasses(courseId: string): string[] {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  return course?.classes || [];
+}
+
+export function addClassToCourse(courseId: string, className: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (course) {
+    if (!course.classes) course.classes = [];
+    if (!course.classes.includes(className)) {
+      course.classes.push(className);
+      saveCourses(courses);
+    }
+  }
+}
+
+export function removeClassFromCourse(courseId: string, className: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (course?.classes) {
+    course.classes = course.classes.filter((c) => c !== className);
+    saveCourses(courses);
+  }
+}
+
+export function renameClassInCourse(courseId: string, oldName: string, newName: string): void {
+  const courses = getCourses();
+  const course = courses.find((c) => c.id === courseId);
+  if (course?.classes) {
+    const idx = course.classes.indexOf(oldName);
+    if (idx >= 0) {
+      course.classes[idx] = newName;
+      saveCourses(courses);
+    }
+  }
+}
+
+// ============ Students ============
+
+export function addStudent(student: Student): void {
+  const students = getStudents();
+  students.push(student);
+  saveStudents(students);
+}
+
+export function updateStudent(student: Student): void {
+  const students = getStudents();
+  const idx = students.findIndex((s) => s.id === student.id);
+  if (idx >= 0) {
+    students[idx] = student;
+    saveStudents(students);
+  }
+}
+
+// ============ Typing Records ============
+
+export function addTypingRecord(record: TypingRecord): void {
+  const records = getTypingRecords();
+  records.push(record);
+  saveTypingRecords(records);
+}
+
+// ============ Retry Records ============
+
+export function addRetryRecord(record: ProblemRetryRecord): void {
+  const records = getRetryRecords();
+  records.push(record);
+  saveRetryRecords(records);
+}
+
+// ============ Homework Records ============
+
+export function addHomeworkRecord(record: HomeworkRecord): void {
+  const records = getHomeworkRecords();
+  records.push(record);
+  saveHomeworkRecords(records);
+}
+
+// ============ Courses ============
+
+export function updateCourse(course: Course): void {
+  const courses = getCourses();
+  const idx = courses.findIndex((c) => c.id === course.id);
+  if (idx >= 0) {
+    courses[idx] = course;
+    saveCourses(courses);
+  }
+}
+
 // ============ Supabase Sync ============
 
 async function syncCourseToSupabase(course: Course) {

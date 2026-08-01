@@ -565,14 +565,22 @@ async function syncCourseToSupabase(course: Course) {
 
 async function syncStudentToSupabase(student: Student) {
   try {
-    await supabase.from('students').upsert({
+    console.log('[Sync] Writing student to Supabase:', student.name);
+    const { error } = await supabase.from('students').upsert({
       id: student.id,
       name: student.name,
       course_id: student.courseId,
       class_name: student.className,
       notes: student.notes,
     });
-  } catch (e) { console.error('Sync student failed:', e); }
+    if (error) {
+      console.error('[Sync] Student sync failed:', error);
+    } else {
+      console.log('[Sync] Student synced successfully:', student.name);
+    }
+  } catch (e) { 
+    console.error('[Sync] Student sync exception:', e); 
+  }
 }
 
 async function syncTypingToSupabase(record: TypingRecord) {
@@ -633,9 +641,22 @@ async function syncKnowledgeToSupabase(kp: KnowledgeProgress) {
  */
 export async function syncFromSupabase(): Promise<void> {
   try {
+    // 检查 Supabase 配置
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    console.log('[Sync] Supabase URL:', supabaseUrl ? '✓ configured' : '✗ missing');
+    console.log('[Sync] Supabase Key:', supabaseKey ? '✓ configured' : '✗ missing');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Sync] Supabase not configured! Please add environment variables.');
+      return;
+    }
+    
     // 同步课程
-    const { data: courses } = await supabase.from('courses').select('*');
-    if (courses && courses.length > 0) {
+    const { data: courses, error: coursesError } = await supabase.from('courses').select('*');
+    if (coursesError) {
+      console.error('[Sync] Failed to fetch courses:', coursesError);
+    } else if (courses && courses.length > 0) {
       const mapped: Course[] = courses.map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -737,6 +758,7 @@ export async function syncFromSupabase(): Promise<void> {
     }
 
     console.log('[Store] Synced from Supabase successfully');
+    console.log('[Store] Courses:', courses?.length || 0, '| Students:', students?.length || 0);
   } catch (e) {
     console.error('[Store] Sync from Supabase failed:', e);
   }

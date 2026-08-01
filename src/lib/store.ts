@@ -504,7 +504,9 @@ export function renameClassInCourse(courseId: string, oldName: string, newName: 
 export function addStudent(student: Student): void {
   const students = getStudents();
   students.push(student);
-  saveStudents(students);
+  lsSet(KEYS.students, students);
+  // Sync to Supabase
+  syncStudentToSupabase(student);
 }
 
 export function updateStudent(student: Student): void {
@@ -512,7 +514,9 @@ export function updateStudent(student: Student): void {
   const idx = students.findIndex((s) => s.id === student.id);
   if (idx >= 0) {
     students[idx] = student;
-    saveStudents(students);
+    lsSet(KEYS.students, students);
+    // Sync to Supabase
+    syncStudentToSupabase(student);
   }
 }
 
@@ -521,7 +525,9 @@ export function updateStudent(student: Student): void {
 export function addTypingRecord(record: TypingRecord): void {
   const records = getTypingRecords();
   records.push(record);
-  saveTypingRecords(records);
+  lsSet(KEYS.typingRecords, records);
+  // Sync to Supabase
+  syncTypingToSupabase(record);
 }
 
 // ============ Retry Records ============
@@ -529,7 +535,9 @@ export function addTypingRecord(record: TypingRecord): void {
 export function addRetryRecord(record: ProblemRetryRecord): void {
   const records = getRetryRecords();
   records.push(record);
-  saveRetryRecords(records);
+  lsSet(KEYS.retryRecords, records);
+  // Sync to Supabase
+  syncRetryToSupabase(record);
 }
 
 // ============ Homework Records ============
@@ -537,7 +545,9 @@ export function addRetryRecord(record: ProblemRetryRecord): void {
 export function addHomeworkRecord(record: HomeworkRecord): void {
   const records = getHomeworkRecords();
   records.push(record);
-  saveHomeworkRecords(records);
+  lsSet(KEYS.homeworkRecords, records);
+  // Sync to Supabase
+  syncHomeworkToSupabase(record);
 }
 
 // ============ Courses ============

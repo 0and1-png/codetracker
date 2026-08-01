@@ -1,0 +1,25 @@
+-- 检查并禁用 RLS 策略（用于测试）
+-- 在 Supabase SQL Editor 中执行
+
+-- 1. 检查当前 RLS 状态
+SELECT tablename, rowsecurity 
+FROM pg_tables 
+WHERE schemaname = 'public';
+
+-- 2. 禁用所有表的 RLS（临时测试用）
+ALTER TABLE students DISABLE ROW LEVEL SECURITY;
+ALTER TABLE courses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE typing_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE retry_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE homework_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_progress DISABLE ROW LEVEL SECURITY;
+ALTER TABLE exam_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE competition_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE honor_records DISABLE ROW LEVEL SECURITY;
+ALTER TABLE competition_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sprint_goals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE report_data DISABLE ROW LEVEL SECURITY;
+ALTER TABLE student_photos DISABLE ROW LEVEL SECURITY;
+
+-- 3. 或者创建允许所有操作的策略
+-- CREATE POLICY "Allow all" ON students FOR ALL USING (true) WITH CHECK (true);

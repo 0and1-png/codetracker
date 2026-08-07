@@ -4,8 +4,8 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: {
-    default: '编程码录 - 记录每一步成长',
-    template: '%s | 编程码录',
+    default: '编程记录 - 记录每一步成长',
+    template: '%s | 编程记录',
   },
   description: '少儿编程学习追踪系统，记录成长历程，生成月度报告',
 };
@@ -24,7 +24,7 @@ export default function RootLayout({
               <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm">
                 码
               </div>
-              <span className="text-lg font-semibold tracking-wide">编程码录</span>
+              <span className="text-lg font-semibold tracking-wide">编程记录</span>
               <span className="text-xs text-blue-300/80 ml-2 hidden sm:inline">CodeTracker</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-blue-200">

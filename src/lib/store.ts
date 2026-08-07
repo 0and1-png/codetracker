@@ -122,6 +122,13 @@ export function saveStudents(students: Student[]): void {
 
 export function deleteStudent(id: string): void {
   lsSet(KEYS.students, getStudents().filter((s) => s.id !== id));
+  // 同步删除到 Supabase
+  if (isSupabaseConfigured()) {
+    supabase.from('students').delete().eq('id', id).then(({ error }) => {
+      if (error) console.error('[Sync] Delete student failed:', error.message);
+      else console.log('[Sync] Student deleted from Supabase:', id);
+    });
+  }
 }
 
 // ============ Typing Records ============

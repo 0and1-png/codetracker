@@ -1236,6 +1236,7 @@ export default function HomePage() {
   const [moveStudentClass, setMoveStudentClass] = useState('');
   const [classRetryProblemId, setClassRetryProblemId] = useState('');
   const [classProblemSearch, setClassProblemSearch] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const courseList = getCourses();
@@ -1452,6 +1453,26 @@ export default function HomePage() {
     deleteStudent(id);
     setSelectedStudentIds((prev) => prev.filter((sid) => sid !== id));
     loadStudents();
+    setDeleteConfirmId(null);
+  };
+
+  // Avatar color helper
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      { bg: '#eef2ff', text: '#4338ca' },
+      { bg: '#faf5ff', text: '#7c3aed' },
+      { bg: '#f0fdf4', text: '#15803d' },
+      { bg: '#fff7ed', text: '#c2410c' },
+      { bg: '#fef2f2', text: '#dc2626' },
+      { bg: '#ecfeff', text: '#0e7490' },
+      { bg: '#f5f3ff', text: '#6d28d9' },
+      { bg: '#fdf2f8', text: '#be185d' },
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   };
 
   // Save student records
@@ -1615,11 +1636,11 @@ export default function HomePage() {
           </div>
           <h1 className="text-base font-semibold text-[#2D3748] tracking-wide">{XIAN.app}</h1>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="text-[#4A5568] hover:text-[#6B8BA4] hover:bg-[#F0F4F8] gap-1.5 h-8 px-3 rounded-lg text-sm" onClick={() => { setImportOpen(true); }}>
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" className="border-[#E2E8F0] text-[#4A5568] hover:bg-[#F0F4F8] hover:text-[#6B8BA4] gap-1.5 h-8 px-3 rounded-lg text-sm" onClick={() => { setImportOpen(true); }}>
             <Upload className="h-4 w-4" />{XIAN.importCSV}
           </Button>
-          <Button variant="ghost" size="sm" className="text-[#4A5568] hover:text-[#6B8BA4] hover:bg-[#F0F4F8] gap-1.5 h-8 px-3 rounded-lg text-sm" onClick={() => {
+          <Button className="bg-gradient-to-br from-[#2B3A8A] to-[#3B4FAA] hover:from-[#3B4FAA] hover:to-[#2B3A8A] text-white gap-1.5 h-8 px-4 rounded-lg text-sm shadow-sm" onClick={() => {
             if (selectedClass !== 'all') setNewClassName(selectedClass);
             setAddStudentOpen(true);
           }}>
@@ -1639,15 +1660,21 @@ export default function HomePage() {
         <div className="w-72 shrink-0 bg-white border-r border-[#EDF2F7] flex flex-col">
           {/* Course tabs */}
           <div className="p-3 border-b border-[#F1F5F9]">
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {courses.map(c => {
                 const colors = COURSE_COLORS[c.id] || COURSE_COLORS.course_cpp;
+                const courseColors: Record<string, {bg: string; text: string; border: string; active: string}> = {
+                  course_cpp: { bg: '#f3e8ff', text: '#7c3aed', border: '#e9d5ff', active: 'from-[#7c3aed] to-[#9333ea]' },
+                  course_python: { bg: '#e0f2fe', text: '#0284c7', border: '#bae6fd', active: 'from-[#0284c7] to-[#0ea5e9]' },
+                  course_scratch: { bg: '#fff7ed', text: '#ea580c', border: '#fed7aa', active: 'from-[#ea580c] to-[#f97316]' },
+                };
+                const cc = courseColors[c.id] || courseColors.course_cpp;
                 return (
                   <button key={c.id} onClick={() => handleCourseChange(c.id)}
                     className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                       selectedCourseId === c.id
-                        ? `${colors.bg} ${colors.text} ${colors.border} border`
-                        : 'text-[#A0AEC0] hover:bg-[#F7F8FA] hover:text-[#4A5568]'
+                        ? `bg-gradient-to-r ${cc.active} text-white shadow-sm`
+                        : 'bg-gray-50 text-[#A0AEC0] hover:bg-gray-100 hover:text-[#4A5568]'
                     }`}>
                     {c.name}
                   </button>
@@ -1732,25 +1759,33 @@ export default function HomePage() {
               <div className="py-1">
                 {filteredStudents.map((student) => {
                   const isSelected = selectedStudentIds.includes(student.id);
+                  const avatarColor = getAvatarColor(student.name);
                   return (
                     <div key={student.id}
-                      className={`px-3 py-2 mx-1 my-0.5 rounded-lg cursor-pointer transition-all flex items-center gap-2 ${
-                        isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50 border border-transparent'
+                      className={`px-3 py-2.5 mx-1.5 my-1 rounded-lg cursor-pointer transition-all flex items-center gap-2.5 ${
+                        isSelected ? 'bg-blue-50/80 border border-blue-200 shadow-sm' : 'hover:bg-gray-50 border border-transparent'
                       }`}
                       onClick={() => toggleStudent(student.id)}>
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
-                      }`}>
-                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                      {/* Avatar */}
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                        isSelected ? 'ring-2 ring-blue-300 ring-offset-1' : ''
+                      }`}
+                        style={{ backgroundColor: avatarColor.bg, color: avatarColor.text }}>
+                        {student.name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-800 truncate">{student.name}</div>
-                        {student.className && (
-                          <div className="text-xs text-gray-400 truncate">{student.className}</div>
-                        )}
+                        <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{student.name}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {student.className && (
+                            <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{student.className}</span>
+                          )}
+                          {(student as Student & { _autoTags?: AutoTag[] })._autoTags?.filter(t => t.type === 'highlight').slice(0, 1).map((tag, i) => (
+                            <span key={i} className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{tag.label}</span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button className="p-1.5 hover:bg-blue-100 rounded opacity-80 hover:opacity-100 transition-all"
+                      <div className="flex items-center gap-0.5">
+                        <button className="p-1.5 hover:bg-blue-100 rounded opacity-60 hover:opacity-100 transition-all"
                           title="更换班级"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1758,15 +1793,15 @@ export default function HomePage() {
                             setMoveStudentClass(student.className || '');
                             setMoveStudentOpen(true);
                           }}>
-                          <Users className="h-4 w-4 text-blue-500 hover:text-blue-700" />
+                          <Users className="h-3.5 w-3.5 text-blue-500" />
                         </button>
-                        <Link href={`/reports/${student.id}`} className="p-1.5 hover:bg-blue-100 rounded opacity-80 hover:opacity-100 transition-all"
+                        <Link href={`/reports/${student.id}`} className="p-1.5 hover:bg-blue-100 rounded opacity-60 hover:opacity-100 transition-all"
                           title="查看成长报告" onClick={(e) => e.stopPropagation()}>
-                          <FileText className="h-4 w-4 text-blue-600" />
+                          <FileText className="h-3.5 w-3.5 text-blue-600" />
                         </Link>
-                        <button className="p-1.5 hover:bg-red-100 rounded opacity-80 hover:opacity-100 transition-all"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}>
-                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                        <button className="p-1.5 hover:bg-red-100 rounded opacity-60 hover:opacity-100 transition-all"
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(student.id); }}>
+                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
                         </button>
                       </div>
                     </div>
@@ -1784,32 +1819,60 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <button onClick={() => setActiveTab('retry')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'retry' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  {XIAN.retry}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'retry' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <RotateCcw className="h-3.5 w-3.5" />{XIAN.retry}
                 </button>
                 <button onClick={() => setActiveTab('typing')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'typing' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  {XIAN.typing}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'typing' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <Keyboard className="h-3.5 w-3.5" />{XIAN.typing}
                 </button>
                 <button onClick={() => setActiveTab('homework')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'homework' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  {XIAN.homework}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'homework' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <BookOpen className="h-3.5 w-3.5" />{XIAN.homework}
                 </button>
                 <button onClick={() => setActiveTab('exam')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'exam' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  考级记录
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'exam' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <Award className="h-3.5 w-3.5" />考级
                 </button>
                 <button onClick={() => setActiveTab('competition')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'competition' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  赛事记录
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'competition' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <Trophy className="h-3.5 w-3.5" />赛事
                 </button>
                 <button onClick={() => setActiveTab('honor')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'honor' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  荣誉
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'honor' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <Sparkles className="h-3.5 w-3.5" />荣誉
                 </button>
                 <button onClick={() => setActiveTab('photos')}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'photos' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>
-                  图片记录
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                    activeTab === 'photos' 
+                      ? 'bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}>
+                  <ImageIcon className="h-3.5 w-3.5" />图片
                 </button>
                 <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
                 <Input type="date" value={recordDate} onChange={(e) => setRecordDate(e.target.value)}
@@ -1817,7 +1880,7 @@ export default function HomePage() {
                 {selectedStudentIds.length > 0 && (
                   <>
                     <Separator orientation="vertical" className="h-5 mx-2 bg-gray-200" />
-                    <Button size="sm" className="h-7 text-xs bg-blue-500 hover:bg-blue-600 text-white" onClick={handleSaveAll}>
+                    <Button size="sm" className="h-7 text-xs bg-gradient-to-r from-[#2B3A8A] to-[#3B4FAA] text-white shadow-sm hover:shadow-md" onClick={handleSaveAll}>
                       <Save className="h-3.5 w-3.5 mr-1" />全部{XIAN.save}
                     </Button>
                   </>
@@ -2161,6 +2224,29 @@ export default function HomePage() {
                 setMoveStudentClass('');
               }
             }}>确定</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              确认删除
+            </DialogTitle>
+            <DialogDescription>
+              确定要删除「{courseStudents.find(s => s.id === deleteConfirmId)?.name}」吗？此操作不可撤销，该学员的所有学习记录也将被删除。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>取消</Button>
+            <Button className="bg-red-500 hover:bg-red-600 text-white" onClick={() => {
+              if (deleteConfirmId) {
+                handleDelete(deleteConfirmId);
+              }
+            }}>确认删除</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

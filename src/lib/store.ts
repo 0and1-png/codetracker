@@ -4,7 +4,7 @@
  * - 写入：同时写入 localStorage 和 Supabase
  * - 启动时：从 Supabase 同步最新数据到 localStorage
  */
-import { supabase } from './supabase/client';
+import { supabase, isSupabaseConfigured } from './supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   Course, Student, TypingRecord, ProblemRetryRecord,

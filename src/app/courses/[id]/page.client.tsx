@@ -487,6 +487,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     return course.problems.filter((p) => !p.knowledgePointId);
   };
 
+  const countAllNodes = (nodes: CurriculumNode[]): number => {
+    return nodes.reduce((acc, n) => acc + 1 + (n.children ? countAllNodes(n.children) : 0), 0);
+  };
+
+  const countAllCodeBlocks = (nodes: CurriculumNode[]): number => {
+    return nodes.reduce((acc, n) => acc + (n.codeBlocks?.length || 0) + (n.children ? countAllCodeBlocks(n.children) : 0), 0);
+  };
+
   if (!mounted || !course) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg-gray-50">
@@ -507,63 +515,67 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const hasChildren = node.children && node.children.length > 0;
     const config = NODE_TYPE_CONFIG[node.type];
     const idx = siblings.findIndex((n) => n.id === node.id);
+    const indent = depth * 24 + 8;
 
     return (
       <div key={node.id}>
         <div
-          className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors text-sm
-            ${isSelected ? 'bg-gray-100 text-gray-700 font-medium' : 'hover:bg-white/5 text-gray-700/70'}
+          className={`group flex items-center gap-1.5 py-2 rounded-lg cursor-pointer transition-all text-sm
+            ${isSelected ? 'bg-[#EEF2F7] text-[#2D3748] font-medium shadow-sm' : 'hover:bg-[#F7F8FA] text-[#4A5568]'}
           `}
-          style={{ paddingLeft: `${depth * 20 + 8}px` }}
+          style={{ paddingLeft: `${indent}px`, paddingRight: '8px' }}
           onClick={() => {
             setSelectedNodeId(node.id);
             if (hasChildren) toggleExpand(node.id);
           }}
         >
+          {/* Depth indicator line */}
+          {depth > 0 && (
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-[#EDF2F7] ml-3" style={{ left: `${indent - 12}px` }} />
+          )}
+
           {hasChildren ? (
             <button
-              className="shrink-0 p-0.5 hover:bg-white/10 rounded"
+              className="shrink-0 p-0.5 hover:bg-[#EDF2F7] rounded"
               onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}
             >
-              {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-700" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-700" />}
+              {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-[#6B8BA4]" /> : <ChevronRight className="h-3.5 w-3.5 text-[#6B8BA4]" />}
             </button>
           ) : (
-            <span className="w-5 shrink-0" />
+            <span className="w-4 shrink-0" />
           )}
 
           <span className={`shrink-0 ${config.color}`}>{config.icon}</span>
-          <span className="truncate flex-1">{node.title}</span>
+          <span className={`truncate flex-1 ${isSelected ? 'font-medium' : ''}`}>{node.title}</span>
 
-          {node.knowledgePointId && (
-            <Tag className="h-3 w-3 text-gray-700 shrink-0" />
-          )}
+          {/* Blue badge for problem count */}
           {(node.problemIds?.length || 0) > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-emerald-900/30 text-emerald-400 border-emerald-800 shrink-0">
+            <Badge className="text-[10px] px-1.5 py-0 h-4.5 bg-[#6B8BA4]/10 text-[#5A7A93] border-0 rounded-md font-medium shrink-0">
               {node.problemIds!.length}题
             </Badge>
           )}
           {(node.codeBlocks?.length || 0) > 0 && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-sky-900/30 text-sky-400 border-sky-800 shrink-0">
+            <Badge className="text-[10px] px-1.5 py-0 h-4.5 bg-[#7BA68C]/10 text-[#7BA68C] border-0 rounded-md font-medium shrink-0">
               {node.codeBlocks!.length}码
             </Badge>
           )}
 
           <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
             {idx > 0 && (
-              <button className="p-0.5 hover:bg-white/10 rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'up'); }} title="上移">
-                <ChevronUp className="h-3 w-3 text-gray-700" />
+              <button className="p-0.5 hover:bg-[#EDF2F7] rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'up'); }} title="上移">
+                <ChevronUp className="h-3 w-3 text-[#A0AEC0]" />
               </button>
             )}
             {idx < siblings.length - 1 && (
-              <button className="p-0.5 hover:bg-white/10 rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'down'); }} title="下移">
-                <ChevronDown className="h-3 w-3 text-gray-700" />
+              <button className="p-0.5 hover:bg-[#EDF2F7] rounded" onClick={(e) => { e.stopPropagation(); handleMoveNode(node.id, 'down'); }} title="下移">
+                <ChevronDown className="h-3 w-3 text-[#A0AEC0]" />
               </button>
             )}
-            <button className="p-0.5 hover:bg-gray-100 rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子知识点题库">
-              <Plus className="h-3 w-3 text-gray-700" />
+            <button className="p-0.5 hover:bg-[#EDF2F7] rounded" onClick={(e) => { e.stopPropagation(); openAddNodeDialog(node.id); }} title="添加子知识点题库">
+              <Plus className="h-3 w-3 text-[#6B8BA4]" />
             </button>
-            <button className="p-0.5 hover:bg-red-900/30 rounded" onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} title="删除">
-              <Trash2 className="h-3 w-3 text-red-400" />
+            <button className="p-0.5 hover:bg-[#C4757B]/10 rounded" onClick={(e) => { e.stopPropagation(); deleteNode(node.id); }} title="删除">
+              <Trash2 className="h-3 w-3 text-[#C4757B]" />
             </button>
           </div>
         </div>
@@ -580,11 +592,58 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   // ============ Node Detail Editor ============
   const renderNodeDetail = () => {
     if (!selectedNode) {
+      const totalKps = course.knowledgePoints.length;
+      const totalProblems = course.problems.length;
+      const totalNodes = countAllNodes(course.curriculum);
+      const totalCodeBlocks = countAllCodeBlocks(course.curriculum);
+      const chapters = course.curriculum.length;
+      const sections = course.curriculum.reduce((acc, ch) => acc + (ch.children?.length || 0), 0);
+
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-700 py-20">
-          <Scroll className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-sm">选择左侧知识点题库查看详情</p>
-          <p className="text-xs mt-1">或点击「添加卷章」开始构建课程体系</p>
+        <div className="h-full py-6 px-4">
+          <h3 className="text-base font-semibold text-[#2D3748] mb-5">课程全局数据看板</h3>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-[#F7F8FA] rounded-xl p-4 border border-[#EDF2F7]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">📚</span>
+                <span className="text-xs text-[#A0AEC0] font-medium">章节</span>
+              </div>
+              <div className="text-2xl font-bold text-[#2D3748]">{chapters}<span className="text-sm text-[#A0AEC0] font-normal ml-1">卷</span></div>
+              <div className="text-xs text-[#A0AEC0] mt-1">{sections} 个小节</div>
+            </div>
+            <div className="bg-[#F7F8FA] rounded-xl p-4 border border-[#EDF2F7]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">📝</span>
+                <span className="text-xs text-[#A0AEC0] font-medium">总题量</span>
+              </div>
+              <div className="text-2xl font-bold text-[#2D3748]">{totalProblems}<span className="text-sm text-[#A0AEC0] font-normal ml-1">题</span></div>
+              <div className="text-xs text-[#A0AEC0] mt-1">{totalKps} 个知识点题库</div>
+            </div>
+            <div className="bg-[#F7F8FA] rounded-xl p-4 border border-[#EDF2F7]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">📖</span>
+                <span className="text-xs text-[#A0AEC0] font-medium">知识点</span>
+              </div>
+              <div className="text-2xl font-bold text-[#2D3748]">{totalNodes}<span className="text-sm text-[#A0AEC0] font-normal ml-1">个</span></div>
+              <div className="text-xs text-[#A0AEC0] mt-1">含代码示例 {totalCodeBlocks} 段</div>
+            </div>
+            <div className="bg-[#F7F8FA] rounded-xl p-4 border border-[#EDF2F7]">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🎯</span>
+                <span className="text-xs text-[#A0AEC0] font-medium">掌握度</span>
+              </div>
+              <div className="text-2xl font-bold text-[#2D3748]">--<span className="text-sm text-[#A0AEC0] font-normal ml-1">%</span></div>
+              <div className="text-xs text-[#A0AEC0] mt-1">学员学习后自动统计</div>
+            </div>
+          </div>
+          <div className="bg-[#F7F8FA] rounded-xl p-4 border border-[#EDF2F7]">
+            <h4 className="text-xs font-medium text-[#4A5568] mb-3">难度分布</h4>
+            <div className="flex items-center gap-3 text-xs text-[#4A5568]">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#7BA68C]" /> 简单: {course.problems.filter(p => p.tags?.includes('easy')).length || 0}题</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#C4A67B]" /> 中等: {course.problems.filter(p => p.tags?.includes('medium')).length || 0}题</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#C4757B]" /> 困难: {course.problems.filter(p => p.tags?.includes('hard')).length || 0}题</span>
+            </div>
+          </div>
         </div>
       );
     }
@@ -799,45 +858,57 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 bg-white border-gray-200">
-            <TabsTrigger value="curriculum" className="gap-1.5 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-700">
-              <Scroll className="h-4 w-4" />
-              {XIAN.curriculum}
-            </TabsTrigger>
-            <TabsTrigger value="knowledge" className="gap-1.5 data-[state=active]:bg-gray-100 data-[state=active]:text-gray-700">
-              <BookOpen className="h-4 w-4" />
-              {XIAN.knowledgePoints}
-            </TabsTrigger>
-          </TabsList>
+          <div className="border-b border-[#EDF2F7] mb-4">
+            <TabsList className="bg-transparent h-auto p-0 gap-0">
+              <TabsTrigger
+                value="curriculum"
+                className="relative px-4 py-2.5 text-sm font-medium rounded-none bg-transparent
+                  data-[state=active]:text-[#2D3748] data-[state=inactive]:text-[#A0AEC0]
+                  data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#6B8BA4]
+                  hover:text-[#4A5568] transition-colors"
+              >
+                <Scroll className="h-4 w-4 mr-1.5" />
+                {XIAN.curriculum}
+              </TabsTrigger>
+              <TabsTrigger
+                value="knowledge"
+                className="relative px-4 py-2.5 text-sm font-medium rounded-none bg-transparent
+                  data-[state=active]:text-[#2D3748] data-[state=inactive]:text-[#A0AEC0]
+                  data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-[#6B8BA4]
+                  hover:text-[#4A5568] transition-colors"
+              >
+                <BookOpen className="h-4 w-4 mr-1.5" />
+                题库
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ====== Tab 1: Curriculum Tree ====== */}
           <TabsContent value="curriculum">
             <div className="flex gap-4 h-[calc(100vh-180px)]">
               {/* Left: Tree navigation */}
               <div className="w-72 shrink-0 bg-white border border-gray-200 rounded-xl rounded-xl overflow-hidden flex flex-col">
-                <div className="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between bg-gray-100">
-                  <span className="text-xs font-medium text-gray-700">课程大纲</span>
+                <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-between bg-[#F7F8FA]">
+                  <span className="text-xs font-medium text-[#4A5568]">课程大纲</span>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="h-6 text-xs border-gray-200 text-gray-700 hover:bg-gray-100"
+                    className="h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
                     onClick={() => openAddNodeDialog(null)}
                   >
-                    <Plus className="h-3 w-3 mr-1" />添加卷章
+                    <Plus className="h-3.5 w-3.5 mr-1" />添加卷章
                   </Button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
                   {course.curriculum.length === 0 ? (
-                    <div className="text-center py-10 text-gray-700">
+                    <div className="text-center py-10 text-[#A0AEC0]">
                       <Scroll className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p className="text-xs">尚无知识点题库心要</p>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="mt-2 h-7 text-xs border-gray-200 text-gray-700 hover:bg-gray-100"
+                        className="mt-2 h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
                         onClick={() => openAddNodeDialog(null)}
                       >
-                        <Plus className="h-3 w-3 mr-1" />添加第一卷
+                        <Plus className="h-3.5 w-3.5 mr-1" />添加第一卷
                       </Button>
                     </div>
                   ) : (

@@ -18,6 +18,16 @@ const CustomHeading = Heading.extend({
     const id = 'h-' + text.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-|-$/g, '') || `heading-${level}-${Math.random().toString(36).slice(2, 7)}`;
     return [`h${level}`, { ...HTMLAttributes, id }, 0];
   },
+  addKeyboardShortcuts() {
+    return {
+      'Mod-1': () => this.editor.commands.toggleHeading({ level: 1 }),
+      'Mod-2': () => this.editor.commands.toggleHeading({ level: 2 }),
+      'Mod-3': () => this.editor.commands.toggleHeading({ level: 3 }),
+      'Mod-4': () => this.editor.commands.toggleHeading({ level: 4 }),
+      'Mod-5': () => this.editor.commands.toggleHeading({ level: 5 }),
+      'Mod-6': () => this.editor.commands.toggleHeading({ level: 6 }),
+    };
+  },
 });
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -162,19 +172,19 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
               type="button"
               onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="一级标题 (Ctrl+Alt+1)"
+              title="一级标题 (Ctrl+1)"
             >H1</button>
             <button
               type="button"
               onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="二级标题 (Ctrl+Alt+2)"
+              title="二级标题 (Ctrl+2)"
             >H2</button>
             <button
               type="button"
               onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 3 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="三级标题 (Ctrl+Alt+3)"
+              title="三级标题 (Ctrl+3)"
             >H3</button>
           </div>
 
@@ -253,9 +263,11 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         {/* Editor */}
         <EditorContent editor={editor} />
         <div className="flex flex-wrap gap-2 px-2 py-1 text-[10px] text-gray-400 border-t border-gray-100">
-          <span># H1</span>
-          <span>## H2</span>
-          <span>### H3</span>
+          <span>Ctrl+1 H1</span>
+          <span>Ctrl+2 H2</span>
+          <span>Ctrl+3 H3</span>
+          <span>Ctrl+B 加粗</span>
+          <span>Ctrl+U 下划线</span>
           <span>**粗体**</span>
           <span>~~删除~~</span>
           <span>`代码`</span>

@@ -625,6 +625,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
                       suppressContentEditableWarning
                       className="w-full h-full p-2 text-sm outline-none focus:outline-dashed focus:outline-2 focus:outline-blue-300"
                       style={{ fontSize: '13px', lineHeight: '1.5', color: '#374151' }}
+                      onMouseDown={(e) => { e.stopPropagation(); }}
                       onBlur={(e) => {
                         const text = e.currentTarget.textContent || '';
                         setShapes(prev => prev.map(s => s.id === shape.id ? { ...s, text } : s));

@@ -7,6 +7,8 @@ import Bold from '@tiptap/extension-bold';
 import Italic from '@tiptap/extension-italic';
 import Strike from '@tiptap/extension-strike';
 import Underline from '@tiptap/extension-underline';
+import Superscript from '@tiptap/extension-superscript';
+import Subscript from '@tiptap/extension-subscript';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
@@ -74,6 +76,8 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const [draggingShape, setDraggingShape] = useState<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
     const [resizingShape, setResizingShape] = useState<{ id: string; edge: string; startX: number; startY: number; origShape: Shape } | null>(null);
     const [draggingArrowEnd, setDraggingArrowEnd] = useState<{ id: string; startX: number; startY: number; origEndX: number; origEndY: number; isStart?: boolean } | null>(null);
+    const [showColorPicker, setShowColorPicker] = useState(false);
+    const [showBgColorPicker, setShowBgColorPicker] = useState(false);
     const overlayRef = useRef<HTMLDivElement>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const prevContentRef = useRef(content);
@@ -89,6 +93,8 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         Strike,
         CustomHeading.configure({ levels: [1, 2, 3] }),
         Underline,
+        Superscript,
+        Subscript,
         TextStyle,
         Color,
         Highlight.configure({ multicolor: true }),
@@ -353,7 +359,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     return (
       <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50/50">
+        <div className="sticky top-0 z-20 flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50/50 backdrop-blur-sm">
           {/* 标题 */}
           <div className="flex items-center gap-0.5 pr-2 border-r border-gray-200">
             <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); }}
@@ -375,35 +381,57 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
             <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
               className={`px-2 py-1 text-xs rounded underline ${editor.isActive('underline') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
               title="下划线 (Ctrl+U)">U</button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleSuperscript().run(); }}
+              className={`px-2 py-1 text-xs rounded ${editor.isActive('superscript') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="上标">X<sup>2</sup></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleSubscript().run(); }}
+              className={`px-2 py-1 text-xs rounded ${editor.isActive('subscript') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="下标">X<sub>2</sub></button>
           </div>
 
           {/* 字体颜色 */}
           <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
-            <div className="relative group">
-              <button type="button" className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1" title="字体颜色">
+            <div className="relative">
+              <button type="button"
+                onClick={() => { setShowColorPicker(!showColorPicker); setShowBgColorPicker(false); }}
+                className={`px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1 ${showColorPicker ? 'bg-gray-200' : ''}`}
+                title="字体颜色">
                 <span className="inline-block w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: '#000' }} />
                 <span className="text-[10px]">▼</span>
               </button>
-              <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:grid grid-cols-6 gap-1 z-50 w-[180px]">
-                {['#000000', '#DC2626', '#EA580C', '#D97706', '#16A34A', '#2563EB', '#7C3AED', '#0891B2', '#4B5563', '#9333EA', '#DB2777', '#059669', '#0D9488', '#4F46E5', '#A855F7', '#EC4899', '#F59E0B', '#84CC16'].map((c) => (
-                  <button key={c} type="button" className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                    style={{ backgroundColor: c }}
-                    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(c).run(); }} />
-                ))}
-              </div>
+              {showColorPicker && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowColorPicker(false)} />
+                  <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg grid grid-cols-6 gap-1 z-50 w-[180px]">
+                    {['#000000', '#DC2626', '#EA580C', '#D97706', '#16A34A', '#2563EB', '#7C3AED', '#0891B2', '#4B5563', '#9333EA', '#DB2777', '#059669', '#0D9488', '#4F46E5', '#A855F7', '#EC4899', '#F59E0B', '#84CC16'].map((c) => (
+                      <button key={c} type="button" className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: c }}
+                        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(c).run(); setShowColorPicker(false); }} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-            <div className="relative group">
-              <button type="button" className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1" title="背景颜色">
+            <div className="relative">
+              <button type="button"
+                onClick={() => { setShowBgColorPicker(!showBgColorPicker); setShowColorPicker(false); }}
+                className={`px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1 ${showBgColorPicker ? 'bg-gray-200' : ''}`}
+                title="背景颜色">
                 <span className="inline-block w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: '#FEF08A' }} />
                 <span className="text-[10px]">▼</span>
               </button>
-              <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:grid grid-cols-6 gap-1 z-50 w-[180px]">
-                {['#FEF08A', '#FECACA', '#FED7AA', '#FDE68A', '#BBF7D0', '#BFDBFE', '#DDD6FE', '#CFFAFE', '#FECDD3', '#D1FAE5', '#E0E7FF', '#FCE7F3', '#FEF3C7', '#ECFCCB', '#E5E7EB', '#FFFFFF'].map((c) => (
-                  <button key={c} type="button" className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
-                    style={{ backgroundColor: c }}
-                    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color: c }).run(); }} />
-                ))}
-              </div>
+              {showBgColorPicker && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowBgColorPicker(false)} />
+                  <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg grid grid-cols-6 gap-1 z-50 w-[180px]">
+                    {['#FEF08A', '#FECACA', '#FED7AA', '#FDE68A', '#BBF7D0', '#BFDBFE', '#DDD6FE', '#CFFAFE', '#FECDD3', '#D1FAE5', '#E0E7FF', '#FCE7F3', '#FEF3C7', '#ECFCCB', '#E5E7EB', '#FFFFFF'].map((c) => (
+                      <button key={c} type="button" className="w-6 h-6 rounded border border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: c }}
+                        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color: c }).run(); setShowBgColorPicker(false); }} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

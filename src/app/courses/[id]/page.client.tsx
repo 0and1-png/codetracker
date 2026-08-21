@@ -671,40 +671,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
     return (
       <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge className={`${config.bgColor} ${config.color} border-0`}>
-              {config.icon} {config.label}
-            </Badge>
-            {editingNodeId === selectedNode.id ? (
-              <Input
-                value={selectedNode.title}
-                onChange={(e) => updateNodeField(selectedNode.id, 'title', e.target.value)}
-                onBlur={() => setEditingNodeId(null)}
-                onKeyDown={(e) => { if (e.key === 'Enter') setEditingNodeId(null); }}
-                className="h-8 text-base font-semibold bg-white border-gray-200 border-gray-200 text-gray-700"
-                autoFocus
-              />
-            ) : (
-              <h3
-                className="text-base font-semibold cursor-pointer text-gray-700 hover:text-gray-700 transition-colors"
-                onClick={() => setEditingNodeId(selectedNode.id)}
-              >
-                {selectedNode.title}
-                <Edit3 className="h-3 w-3 inline ml-1 opacity-30" />
-              </h3>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-gray-200 text-gray-700 hover:bg-gray-100 h-7"
-            onClick={() => openAddNodeDialog(selectedNode.id)}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" />添加子知识点
-          </Button>
-        </div>
-
         <div>
           <label className="text-xs font-medium text-gray-700 mb-1.5 block">笔记记录</label>
           <RichEditor
@@ -902,7 +868,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               )}
 
               {/* Right: Node detail editor */}
-              <div className={`${editorCollapsed ? 'w-10' : 'flex-1'} transition-all duration-200 bg-white border border-gray-200 rounded-xl overflow-y-auto`}>
+              <div className={`${editorCollapsed ? 'w-10' : 'flex-1'} transition-all duration-200 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col`}>
                 {editorCollapsed ? (
                   <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-center bg-[#F7F8FA]">
                     <button onClick={() => setEditorCollapsed(false)} className="text-[#4A5568] hover:text-[#2B3A8A]">
@@ -910,15 +876,74 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                     </button>
                   </div>
                 ) : (
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs font-medium text-[#4A5568]">笔记记录</span>
-                      <button onClick={() => setEditorCollapsed(true)} className="text-[#4A5568] hover:text-[#2B3A8A]">
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
+                  <>
+                    {/* Sticky header: title + toolbar */}
+                    {selectedNode && (
+                      <div className="sticky top-0 z-30 bg-white border-b border-[#EDF2F7]">
+                        <div className="flex items-center justify-between px-4 py-2.5">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-xs font-medium text-[#4A5568] shrink-0">本章标题</span>
+                            {(() => {
+                              const config = NODE_TYPE_CONFIG[selectedNode.type];
+                              return (
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Badge className={`${config.bgColor} ${config.color} border-0 shrink-0`}>
+                                    {config.icon} {config.label}
+                                  </Badge>
+                                  {editingNodeId === selectedNode.id ? (
+                                    <Input
+                                      value={selectedNode.title}
+                                      onChange={(e) => updateNodeField(selectedNode.id, 'title', e.target.value)}
+                                      onBlur={() => setEditingNodeId(null)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') setEditingNodeId(null); }}
+                                      className="h-7 text-sm font-semibold bg-white border-gray-200 text-gray-700"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <h3
+                                      className="text-sm font-semibold truncate cursor-pointer text-gray-700 hover:text-gray-700 transition-colors"
+                                      onClick={() => setEditingNodeId(selectedNode.id)}
+                                      title={selectedNode.title}
+                                    >
+                                      {selectedNode.title}
+                                      <Edit3 className="h-3 w-3 inline ml-1 opacity-30 shrink-0" />
+                                    </h3>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-gray-200 text-gray-700 hover:bg-gray-100 h-7 text-xs"
+                              onClick={() => openAddNodeDialog(selectedNode.id)}
+                            >
+                              <Plus className="h-3.5 w-3.5 mr-1" />子知识点
+                            </Button>
+                            <button onClick={() => setEditorCollapsed(true)} className="text-[#4A5568] hover:text-[#2B3A8A] ml-1">
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!selectedNode && (
+                      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#EDF2F7]">
+                        <span className="text-xs font-medium text-[#4A5568]">笔记记录</span>
+                        <button onClick={() => setEditorCollapsed(true)} className="text-[#4A5568] hover:text-[#2B3A8A]">
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {/* Scrollable content */}
+                    <div className="flex-1 overflow-y-auto">
+                      <div className="p-5">
+                        {renderNodeDetail()}
+                      </div>
                     </div>
-                    {renderNodeDetail()}
-                  </div>
+                  </>
                 )}
               </div>
             </div>

@@ -5,7 +5,7 @@ import { RichEditor, type RichEditorHandle } from '@/components/rich-editor';
 import Link from 'next/link';
 import {
   ArrowLeft, BookOpen, Plus, Trash2, X, ChevronDown, ChevronRight,
-  FileText, Code, Palette, Edit3, Upload,
+  FileText, Palette, Edit3, Upload,
   FolderOpen, Tag, ChevronUp,
   Sparkles, Scroll, Flame, Swords,
 } from 'lucide-react';
@@ -739,67 +739,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                 ))}
               </SelectContent>
             </Select>
-          )}
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-gray-700">代码示例</label>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 text-xs border-sky-700 text-sky-400 hover:bg-sky-900/30"
-              onClick={() => addCodeBlock(selectedNode.id)}
-            >
-              <Code className="h-3 w-3 mr-1" />添加代码
-            </Button>
-          </div>
-          {(selectedNode.codeBlocks || []).length === 0 ? (
-            <div className="text-xs text-gray-700 italic py-2">暂无代码示例</div>
-          ) : (
-            <div className="space-y-3">
-              {(selectedNode.codeBlocks || []).map((block) => (
-                <div key={block.id} className="border border-sky-900/50 rounded-lg overflow-hidden">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-950/30">
-                    <Select
-                      value={block.language}
-                      onValueChange={(val) => updateCodeBlock(selectedNode.id, block.id, 'language', val)}
-                    >
-                      <SelectTrigger className="h-6 w-24 text-xs border-0 bg-transparent p-0 text-sky-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LANGUAGES.map((lang) => (
-                          <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      value={block.description || ''}
-                      onChange={(e) => updateCodeBlock(selectedNode.id, block.id, 'description', e.target.value)}
-                      placeholder="法术说明（可选）"
-                      className="h-6 flex-1 text-xs border-0 bg-transparent p-0 text-gray-700"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 hover:bg-sky-900/30 hover:text-sky-400"
-                      onClick={() => editorRef.current?.insertCode(block.code, block.language)}
-                      title="插入到笔记"
-                    >
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    </Button>
-                  </div>
-                  <Textarea
-                    value={block.code}
-                    onChange={(e) => updateCodeBlock(selectedNode.id, block.id, 'code', e.target.value)}
-                    placeholder={`// 输入${block.language}代码示例...`}
-                    rows={5}
-                    className="font-mono text-xs bg-gray-950 text-green-400 border-0 rounded-none min-h-[80px]"
-                  />
-                </div>
-              ))}
-            </div>
           )}
         </div>
 

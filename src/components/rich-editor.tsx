@@ -105,8 +105,11 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     useImperativeHandle(ref, () => ({
       insertCode(code: string, language = 'cpp') {
         if (!editor) return;
-        // Insert code block with the code content
-        editor.chain().focus().setCodeBlock().insertContent(code).run();
+        // Insert description + code block with C++ framework
+        const cppFramework = `#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n\n    return 0;\n}`;
+        const codeContent = code.trim() || cppFramework;
+        const html = `<p><strong>题目描述：</strong></p><pre><code class="language-${language}">${codeContent}</code></pre><p></p>`;
+        editor.chain().focus().insertContent(html).run();
       },
     }), [editor]);
 

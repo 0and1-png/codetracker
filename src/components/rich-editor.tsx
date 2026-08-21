@@ -71,7 +71,9 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
     const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
     const [selectedShape, setSelectedShape] = useState<string | null>(null);
-    const [resizing, setResizing] = useState<{ id: string; edge: string } | null>(null);
+    const [draggingShape, setDraggingShape] = useState<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+    const [resizingShape, setResizingShape] = useState<{ id: string; edge: string; startX: number; startY: number; origShape: Shape } | null>(null);
+    const [draggingArrowEnd, setDraggingArrowEnd] = useState<{ id: string; startX: number; startY: number; origEndX: number; origEndY: number; isStart?: boolean } | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const prevContentRef = useRef(content);
@@ -247,6 +249,85 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       setDrawingMode('none');
     }, [isDrawing, drawingMode, drawStart, drawCurrent]);
 
+    // Shape drag handlers
+    const handleShapeMouseDown = useCallback((e: React.MouseEvent, shape: Shape) => {
+      if (drawingMode !== 'none') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedShape(shape.id);
+      if (shape.type === 'arrow') {
+        // Check if clicking near start or end point
+        const rect = getEditorRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const distToEnd = Math.sqrt((mx - (shape.endX || shape.x)) ** 2 + (my - (shape.endY || shape.y)) ** 2);
+        const distToStart = Math.sqrt((mx - shape.x) ** 2 + (my - shape.y) ** 2);
+        if (distToEnd < 12) {
+          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.endX || shape.x, origEndY: shape.endY || shape.y });
+          return;
+        }
+        if (distToStart < 12) {
+          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.x, origEndY: shape.y, isStart: true });
+          return;
+        }
+      }
+      setDraggingShape({ id: shape.id, startX: e.clientX, startY: e.clientY, origX: shape.x, origY: shape.y });
+    }, [drawingMode, getEditorRect]);
+
+    const handleShapeMouseMove = useCallback((e: React.MouseEvent) => {
+      const rect = getEditorRect();
+      if (draggingShape) {
+        const dx = e.clientX - draggingShape.startX;
+        const dy = e.clientY - draggingShape.startY;
+        setShapes(prev => prev.map(s => {
+          if (s.id !== draggingShape.id) return s;
+          const newX = draggingShape.origX + dx;
+          const newY = draggingShape.origY + dy;
+          if (s.type === 'arrow') {
+            const ow = (s.endX || s.x) - s.x;
+            const oh = (s.endY || s.y) - s.y;
+            return { ...s, x: newX, y: newY, endX: newX + ow, endY: newY + oh };
+          }
+          return { ...s, x: newX, y: newY };
+        }));
+      }
+      if (draggingArrowEnd) {
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        setShapes(prev => prev.map(s => {
+          if (s.id !== draggingArrowEnd.id) return s;
+          if (draggingArrowEnd.isStart) {
+            return { ...s, x: mx, y: my };
+          }
+          return { ...s, endX: mx, endY: my };
+        }));
+      }
+      if (resizingShape) {
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const { edge, origShape } = resizingShape;
+        let { x, y, width, height } = origShape;
+        if (edge.includes('e')) width = Math.max(40, mx - x);
+        if (edge.includes('w')) { const newW = Math.max(40, x + width - mx); x = x + width - newW; width = newW; }
+        if (edge.includes('s')) height = Math.max(40, my - y);
+        if (edge.includes('n')) { const newH = Math.max(40, y + height - my); y = y + height - newH; height = newH; }
+        setShapes(prev => prev.map(s => s.id === resizingShape.id ? { ...s, x, y, width, height } : s));
+      }
+    }, [draggingShape, draggingArrowEnd, resizingShape, getEditorRect]);
+
+    const handleShapeMouseUp = useCallback(() => {
+      setDraggingShape(null);
+      setDraggingArrowEnd(null);
+      setResizingShape(null);
+    }, []);
+
+    const handleResizeMouseDown = useCallback((e: React.MouseEvent, shape: Shape, edge: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedShape(shape.id);
+      setResizingShape({ id: shape.id, edge, startX: e.clientX, startY: e.clientY, origShape: { ...shape } });
+    }, []);
+
     // Save shapes to editor content
     useEffect(() => {
       if (shapes.length > 0 && editor) {
@@ -375,7 +456,11 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         </div>
 
         {/* Editor with overlay */}
-        <div ref={editorContainerRef} className="relative">
+        <div ref={editorContainerRef} className="relative"
+          onMouseMove={handleShapeMouseMove}
+          onMouseUp={handleShapeMouseUp}
+          onMouseLeave={handleShapeMouseUp}
+        >
           <EditorContent editor={editor} />
 
           {/* Shapes overlay */}
@@ -386,42 +471,84 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
                 left: shape.x, top: shape.y,
                 width: shape.type === 'arrow' ? 'auto' : shape.width,
                 height: shape.type === 'arrow' ? 'auto' : shape.height,
-                cursor: selectedShape === shape.id ? 'move' : 'pointer',
+                cursor: draggingShape?.id === shape.id ? 'grabbing' : selectedShape === shape.id ? 'move' : 'pointer',
                 zIndex: selectedShape === shape.id ? 20 : 10,
+                touchAction: 'none',
               }}
-              onClick={() => setSelectedShape(shape.id)}
+              onMouseDown={(e) => handleShapeMouseDown(e, shape)}
             >
               {shape.type === 'textbox' ? (
-                <div
-                  className={`rounded-lg border-2 shadow-sm overflow-hidden ${selectedShape === shape.id ? 'ring-2 ring-blue-400' : ''}`}
-                  style={{ backgroundColor: shape.color, borderColor: shape.borderColor || '#86EFAC', width: shape.width, height: shape.height }}
-                >
+                <>
                   <div
-                    contentEditable
-                    suppressContentEditableWarning
-                    className="w-full h-full p-2 text-sm outline-none focus:outline-dashed focus:outline-2 focus:outline-blue-300"
-                    style={{ fontSize: '13px', lineHeight: '1.5', color: '#374151' }}
-                    onBlur={(e) => {
-                      const text = e.currentTarget.textContent || '';
-                      setShapes(prev => prev.map(s => s.id === shape.id ? { ...s, text } : s));
-                    }}
-                    dangerouslySetInnerHTML={{ __html: shape.text || '' }}
-                  />
-                </div>
+                    className={`rounded-lg border-2 shadow-sm overflow-hidden ${selectedShape === shape.id ? 'ring-2 ring-blue-400' : ''}`}
+                    style={{ backgroundColor: shape.color, borderColor: shape.borderColor || '#86EFAC', width: shape.width, height: shape.height }}
+                  >
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      className="w-full h-full p-2 text-sm outline-none focus:outline-dashed focus:outline-2 focus:outline-blue-300"
+                      style={{ fontSize: '13px', lineHeight: '1.5', color: '#374151' }}
+                      onBlur={(e) => {
+                        const text = e.currentTarget.textContent || '';
+                        setShapes(prev => prev.map(s => s.id === shape.id ? { ...s, text } : s));
+                      }}
+                      dangerouslySetInnerHTML={{ __html: shape.text || '' }}
+                    />
+                  </div>
+                  {/* Resize handles for selected textbox */}
+                  {selectedShape === shape.id && (
+                    <>
+                      <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-nw-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'nw')} />
+                      <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-ne-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'ne')} />
+                      <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-sw-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'sw')} />
+                      <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-se-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'se')} />
+                      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-n-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'n')} />
+                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-s-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 's')} />
+                      <div className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-w-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'w')} />
+                      <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-blue-500 rounded-full cursor-e-resize"
+                        onMouseDown={(e) => handleResizeMouseDown(e, shape, 'e')} />
+                    </>
+                  )}
+                </>
               ) : (
-                <svg width={Math.abs((shape.endX || 0) - shape.x)} height={Math.abs((shape.endY || 0) - shape.y)}
-                  style={{ overflow: 'visible' }}
-                  className={selectedShape === shape.id ? 'opacity-90' : 'opacity-80'}>
-                  <defs>
-                    <marker id={`arrowhead-${shape.id}`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                      <polygon points="0 0, 10 3.5, 0 7" fill={shape.color} />
-                    </marker>
-                  </defs>
-                  <line x1="0" y1="0" x2={Math.abs((shape.endX || 0) - shape.x)} y2={Math.abs((shape.endY || 0) - shape.y)}
-                    stroke={shape.color} strokeWidth="2.5" markerEnd={`url(#arrowhead-${shape.id})`}
-                    transform={`translate(${(shape.endX || 0) > shape.x ? 0 : Math.abs((shape.endX || 0) - shape.x)}, ${(shape.endY || 0) > shape.y ? 0 : Math.abs((shape.endY || 0) - shape.y)})`}
-                  />
-                </svg>
+                <div className="relative" style={{ width: 1, height: 1 }}>
+                  <svg
+                    width={Math.abs((shape.endX || 0) - shape.x) + 20}
+                    height={Math.abs((shape.endY || 0) - shape.y) + 20}
+                    style={{ overflow: 'visible', position: 'absolute', left: -10, top: -10, pointerEvents: 'none' }}
+                  >
+                    <defs>
+                      <marker id={`arrowhead-${shape.id}`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill={shape.color} />
+                      </marker>
+                    </defs>
+                    <line x1="0" y1="0"
+                      x2={Math.abs((shape.endX || 0) - shape.x) + 10}
+                      y2={Math.abs((shape.endY || 0) - shape.y) + 10}
+                      stroke={shape.color} strokeWidth="2.5" markerEnd={`url(#arrowhead-${shape.id})`}
+                      className={selectedShape === shape.id ? 'opacity-100' : 'opacity-80'}
+                      style={{ pointerEvents: 'stroke' }}
+                    />
+                  </svg>
+                  {/* Arrow start/end draggable points */}
+                  {selectedShape === shape.id && (
+                    <>
+                      <div className="absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full cursor-move -translate-x-1/2 -translate-y-1/2 z-10"
+                        style={{ left: 0, top: 0 }}
+                        title="拖拽起点" />
+                      <div className="absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full cursor-move -translate-x-1/2 -translate-y-1/2 z-10"
+                        style={{ left: (shape.endX || 0) - shape.x, top: (shape.endY || 0) - shape.y }}
+                        title="拖拽终点" />
+                    </>
+                  )}
+                </div>
               )}
             </div>
           ))}

@@ -800,7 +800,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
           {/* ====== Tab 1: Curriculum Tree ====== */}
           <TabsContent value="curriculum">
-            <div className="flex gap-4 h-[calc(100vh-180px)]">
+            <div className="flex gap-4 h-[calc(100vh-180px)] overflow-hidden">
               {/* Left: Tree navigation */}
               <div className={`${treeCollapsed ? 'w-10' : 'w-72'} shrink-0 transition-all duration-200 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col`}>
                 <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-between bg-[#F7F8FA]">

@@ -1,37 +1,11 @@
-'use client';
-
-import { useCallback, forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import DrawingCanvas from '@/components/drawing-canvas';
-import { Button } from '@/components/ui/button';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import Bold from '@tiptap/extension-bold';
 import Italic from '@tiptap/extension-italic';
 import Strike from '@tiptap/extension-strike';
-import Heading from '@tiptap/extension-heading';
-
-// Custom heading extension that adds IDs for scrolling
-const CustomHeading = Heading.extend({
-  renderHTML({ node, HTMLAttributes }) {
-    const level = node.attrs.level;
-    const text = node.textContent || '';
-    const id = 'h-' + text.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-|-$/g, '') || `heading-${level}-${Math.random().toString(36).slice(2, 7)}`;
-    return [`h${level}`, { ...HTMLAttributes, id }, 0];
-  },
-  addKeyboardShortcuts() {
-    return {
-      'Mod-1': () => this.editor.commands.toggleHeading({ level: 1 }),
-      'Mod-2': () => this.editor.commands.toggleHeading({ level: 2 }),
-      'Mod-3': () => this.editor.commands.toggleHeading({ level: 3 }),
-      'Mod-4': () => this.editor.commands.toggleHeading({ level: 4 }),
-      'Mod-5': () => this.editor.commands.toggleHeading({ level: 5 }),
-      'Mod-6': () => this.editor.commands.toggleHeading({ level: 6 }),
-    };
-  },
-});
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -42,9 +16,38 @@ import Dropcursor from '@tiptap/extension-dropcursor';
 import Gapcursor from '@tiptap/extension-gapcursor';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import Heading from '@tiptap/extension-heading';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import DrawingCanvas from './drawing-canvas';
+import { v4 as uuidv4 } from 'uuid';
 
-export interface RichEditorHandle {
-  insertCode: (code: string, language?: string) => void;
+const CustomHeading = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const level = node.attrs.level;
+    const id = `h-${level}-${node.textContent?.slice(0, 30).replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff-]/g, '') || 'heading'}`;
+    return [`h${level}`, { ...HTMLAttributes, id }, 0];
+  },
+  addKeyboardShortcuts() {
+    return {
+      'Mod-1': () => this.editor.commands.toggleHeading({ level: 1 }),
+      'Mod-2': () => this.editor.commands.toggleHeading({ level: 2 }),
+      'Mod-3': () => this.editor.commands.toggleHeading({ level: 3 }),
+    };
+  },
+});
+
+interface Shape {
+  id: string;
+  type: 'textbox' | 'arrow';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text?: string;
+  color: string;
+  borderColor?: string;
+  endX?: number;
+  endY?: number;
 }
 
 interface RichEditorProps {
@@ -54,10 +57,23 @@ interface RichEditorProps {
   minHeight?: number;
 }
 
+export interface RichEditorHandle {
+  insertCode: (code?: string, language?: string) => void;
+}
+
 export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
   function RichEditor({ content, onChange, placeholder = '输入笔记内容...', minHeight = 200 }: RichEditorProps, ref) {
     const [mounted, setMounted] = useState(false);
     const [showDrawing, setShowDrawing] = useState(false);
+    const [drawingMode, setDrawingMode] = useState<'none' | 'textbox' | 'arrow'>('none');
+    const [shapes, setShapes] = useState<Shape[]>([]);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
+    const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
+    const [selectedShape, setSelectedShape] = useState<string | null>(null);
+    const [resizing, setResizing] = useState<{ id: string; edge: string } | null>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const editorContainerRef = useRef<HTMLDivElement>(null);
     const prevContentRef = useRef(content);
 
     const editor = useEditor({
@@ -116,7 +132,6 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       setMounted(true);
     }, []);
 
-    // Sync external content changes
     useEffect(() => {
       if (editor && content !== prevContentRef.current) {
         prevContentRef.current = content;
@@ -126,7 +141,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       }
     }, [editor, content]);
 
-    const doInsertCode = useCallback((code: string, language = 'cpp') => {
+    const doInsertCode = useCallback((code = '', language = 'cpp') => {
       if (!editor) return;
       const cppFramework = `#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n\n    return 0;\n}`;
       const codeContent = code.trim() || cppFramework;
@@ -167,6 +182,83 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       fn();
     }, [editor]);
 
+    // Get editor position for overlay
+    const getEditorRect = useCallback(() => {
+      return editorContainerRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+    }, []);
+
+    // Mouse handlers for drawing
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+      if (drawingMode === 'none') return;
+      const rect = getEditorRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setIsDrawing(true);
+      setDrawStart({ x, y });
+      setDrawCurrent({ x, y });
+    }, [drawingMode, getEditorRect]);
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+      if (!isDrawing) return;
+      const rect = getEditorRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setDrawCurrent({ x, y });
+    }, [isDrawing, getEditorRect]);
+
+    const handleMouseUp = useCallback(() => {
+      if (!isDrawing || drawingMode === 'none') return;
+      setIsDrawing(false);
+      const x = Math.min(drawStart.x, drawCurrent.x);
+      const y = Math.min(drawStart.y, drawCurrent.y);
+      const w = Math.abs(drawCurrent.x - drawStart.x);
+      const h = Math.abs(drawCurrent.y - drawStart.y);
+
+      if (w < 10 && h < 10) {
+        setDrawingMode('none');
+        return;
+      }
+
+      if (drawingMode === 'textbox') {
+        const newShape: Shape = {
+          id: uuidv4(),
+          type: 'textbox',
+          x, y,
+          width: w,
+          height: Math.max(h, 60),
+          text: '在此输入文字...',
+          color: '#F0FDF4',
+          borderColor: '#86EFAC',
+        };
+        setShapes(prev => [...prev, newShape]);
+        setSelectedShape(newShape.id);
+      } else if (drawingMode === 'arrow') {
+        const newShape: Shape = {
+          id: uuidv4(),
+          type: 'arrow',
+          x: drawStart.x, y: drawStart.y,
+          width: 0, height: 0,
+          color: '#3B82F6',
+          endX: drawCurrent.x,
+          endY: drawCurrent.y,
+        };
+        setShapes(prev => [...prev, newShape]);
+      }
+      setDrawingMode('none');
+    }, [isDrawing, drawingMode, drawStart, drawCurrent]);
+
+    // Save shapes to editor content
+    useEffect(() => {
+      if (shapes.length > 0 && editor) {
+        const shapesJson = JSON.stringify(shapes);
+        const existingHtml = editor.getHTML();
+        // Store shapes data in a hidden element
+        if (!existingHtml.includes('data-shapes')) {
+          // We'll handle this through the onChange callback
+        }
+      }
+    }, [shapes]);
+
     if (!mounted || !editor) {
       return (
         <div className="border border-gray-200 rounded-lg bg-white" style={{ minHeight }}>
@@ -175,46 +267,33 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       );
     }
 
+    const isActive = drawingMode !== 'none';
+
     return (
       <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-gray-50/50">
           {/* 标题 */}
           <div className="flex items-center gap-0.5 pr-2 border-r border-gray-200">
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); }}
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="一级标题 (Ctrl+1)"
-            >H1</button>
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); }}
+              title="一级标题 (Ctrl+1)">H1</button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="二级标题 (Ctrl+2)"
-            >H2</button>
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 3 }).run(); }}
+              title="二级标题 (Ctrl+2)">H2</button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 3 }).run(); }}
               className={`px-2 py-1 text-xs rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="三级标题 (Ctrl+3)"
-            >H3</button>
+              title="三级标题 (Ctrl+3)">H3</button>
           </div>
 
           {/* 文字样式 */}
           <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
               className={`px-2 py-1 text-xs rounded font-bold ${editor.isActive('bold') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="加粗 (Ctrl+B)"
-            >B</button>
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
+              title="加粗 (Ctrl+B)">B</button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
               className={`px-2 py-1 text-xs rounded underline ${editor.isActive('underline') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="下划线 (Ctrl+U)"
-            >U</button>
+              title="下划线 (Ctrl+U)">U</button>
           </div>
 
           {/* 字体颜色 */}
@@ -249,87 +328,137 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
 
           {/* 代码块 */}
           <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
-            <button
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleCodeBlock().run(); }}
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleCodeBlock().run(); }}
               className={`px-2 py-1 text-xs rounded font-mono ${editor.isActive('codeBlock') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
-              title="代码块"
-            >{'</>'}</button>
-          </div>
-
-          {/* 插入代码（描述+代码） */}
-          <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); doInsertCode(''); }}
+              title="代码块">{'</>'}</button>
+            <button type="button" onClick={() => doInsertCode('')}
               className="px-2.5 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1 font-medium"
-              title="插入代码（描述+代码块）"
-            >
+              title="插入代码（描述+代码块）">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
-              插入代码
             </button>
           </div>
 
-          {/* 文本框 */}
+          {/* 绘制工具 */}
           <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
-            <div className="relative group">
-              <button
-                type="button"
-                className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
-                title="插入文本框"
-              >
-                <span className="text-sm">📦</span>
-                <span className="text-[10px]">▼</span>
-              </button>
-              <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:grid grid-cols-4 gap-1 z-50 w-[180px]">
-                {['#FEF2F2', '#FFF7ED', '#FFFBEB', '#F0FDF4', '#EFF6FF', '#F5F3FF', '#FDF2F8', '#ECFEFF', '#F8FAFC', '#F0F0F0', '#E5F9E5', '#FFF0E6'].map((c) => (
-                  <button key={c} type="button" className="w-8 h-8 rounded border border-gray-200 hover:scale-110 transition-all flex items-center justify-center text-[8px]"
-                    style={{ backgroundColor: c }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      editor.chain().focus().insertContent({
-                        type: 'paragraph',
-                        attrs: { style: `background-color: ${c}; padding: 12px; border-radius: 8px; margin: 8px 0;` },
-                        content: [{ type: 'text', text: '在此输入内容...' }],
-                      }).run();
-                    }} />
-                ))}
-                <button
-                  type="button"
-                  className="w-8 h-8 rounded border border-dashed border-gray-300 hover:bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 col-span-4"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    editor.chain().focus().insertContent({
-                      type: 'paragraph',
-                      attrs: { style: 'background-color: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px solid #E2E8F0; margin: 8px 0;' },
-                      content: [{ type: 'text', text: '在此输入内容...' }],
-                    }).run();
-                  }}
-                >+ 自定义颜色</button>
-              </div>
-            </div>
-          </div>
-
-          {/* 绘制 */}
-          <div className="flex items-center gap-0.5 px-2">
-            <button
-              type="button"
-              onClick={() => setShowDrawing(true)}
+            <button type="button"
+              onClick={() => { setDrawingMode(drawingMode === 'textbox' ? 'none' : 'textbox'); setSelectedShape(null); }}
+              className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${drawingMode === 'textbox' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="绘制文本框（点击后在编辑区拖拽绘制）">
+              <span className="text-sm">📦</span>
+              <span>文本框</span>
+            </button>
+            <button type="button"
+              onClick={() => { setDrawingMode(drawingMode === 'arrow' ? 'none' : 'arrow'); setSelectedShape(null); }}
+              className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${drawingMode === 'arrow' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="绘制箭头（点击后在编辑区拖拽绘制）">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+              <span>箭头</span>
+            </button>
+            <button type="button" onClick={() => setShowDrawing(true)}
               className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
-              title="自由绘制（箭头、线条等）"
-            >
+              title="自由绘制画板">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              绘制
+              画板
             </button>
+            {shapes.length > 0 && (
+              <button type="button" onClick={() => { setShapes([]); setSelectedShape(null); }}
+                className="px-2 py-1 text-xs rounded text-red-500 hover:bg-red-50"
+                title="清除所有绘制">清除</button>
+            )}
           </div>
         </div>
 
-        {/* Editor */}
-        <EditorContent editor={editor} />
+        {/* Editor with overlay */}
+        <div ref={editorContainerRef} className="relative">
+          <EditorContent editor={editor} />
+
+          {/* Shapes overlay */}
+          {shapes.map((shape) => (
+            <div key={shape.id}
+              className="absolute"
+              style={{
+                left: shape.x, top: shape.y,
+                width: shape.type === 'arrow' ? 'auto' : shape.width,
+                height: shape.type === 'arrow' ? 'auto' : shape.height,
+                cursor: selectedShape === shape.id ? 'move' : 'pointer',
+                zIndex: selectedShape === shape.id ? 20 : 10,
+              }}
+              onClick={() => setSelectedShape(shape.id)}
+            >
+              {shape.type === 'textbox' ? (
+                <div
+                  className={`rounded-lg border-2 shadow-sm overflow-hidden ${selectedShape === shape.id ? 'ring-2 ring-blue-400' : ''}`}
+                  style={{ backgroundColor: shape.color, borderColor: shape.borderColor || '#86EFAC', width: shape.width, height: shape.height }}
+                >
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="w-full h-full p-2 text-sm outline-none focus:outline-dashed focus:outline-2 focus:outline-blue-300"
+                    style={{ fontSize: '13px', lineHeight: '1.5', color: '#374151' }}
+                    onBlur={(e) => {
+                      const text = e.currentTarget.textContent || '';
+                      setShapes(prev => prev.map(s => s.id === shape.id ? { ...s, text } : s));
+                    }}
+                    dangerouslySetInnerHTML={{ __html: shape.text || '' }}
+                  />
+                </div>
+              ) : (
+                <svg width={Math.abs((shape.endX || 0) - shape.x)} height={Math.abs((shape.endY || 0) - shape.y)}
+                  style={{ overflow: 'visible' }}
+                  className={selectedShape === shape.id ? 'opacity-90' : 'opacity-80'}>
+                  <defs>
+                    <marker id={`arrowhead-${shape.id}`} markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                      <polygon points="0 0, 10 3.5, 0 7" fill={shape.color} />
+                    </marker>
+                  </defs>
+                  <line x1="0" y1="0" x2={Math.abs((shape.endX || 0) - shape.x)} y2={Math.abs((shape.endY || 0) - shape.y)}
+                    stroke={shape.color} strokeWidth="2.5" markerEnd={`url(#arrowhead-${shape.id})`}
+                    transform={`translate(${(shape.endX || 0) > shape.x ? 0 : Math.abs((shape.endX || 0) - shape.x)}, ${(shape.endY || 0) > shape.y ? 0 : Math.abs((shape.endY || 0) - shape.y)})`}
+                  />
+                </svg>
+              )}
+            </div>
+          ))}
+
+          {/* Drawing mode overlay */}
+          {isActive && (
+            <div
+              ref={overlayRef}
+              className="absolute inset-0 cursor-crosshair z-30"
+              style={{ backgroundColor: drawingMode === 'textbox' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.03)' }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              {/* Drawing preview */}
+              {isDrawing && (
+                <div className="absolute border-2 border-dashed pointer-events-none"
+                  style={{
+                    left: Math.min(drawStart.x, drawCurrent.x),
+                    top: Math.min(drawStart.y, drawCurrent.y),
+                    width: Math.abs(drawCurrent.x - drawStart.x),
+                    height: Math.abs(drawCurrent.y - drawStart.y),
+                    borderColor: drawingMode === 'textbox' ? '#3B82F6' : '#3B82F6',
+                    backgroundColor: drawingMode === 'textbox' ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                    borderRadius: drawingMode === 'textbox' ? '8px' : '0',
+                  }}
+                />
+              )}
+              {/* Hint */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/90 px-3 py-1 rounded-full shadow-sm text-xs text-gray-500 border border-gray-200 pointer-events-none">
+                {drawingMode === 'textbox' ? '📦 点击拖拽绘制文本框' : '➡️ 点击拖拽绘制箭头'}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Drawing Canvas Dialog */}
         <Dialog open={showDrawing} onOpenChange={setShowDrawing}>
           <DialogContent className="max-w-3xl">

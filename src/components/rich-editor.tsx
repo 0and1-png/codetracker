@@ -2,6 +2,9 @@
 
 import { useCallback, forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import DrawingCanvas from '@/components/drawing-canvas';
+import { Button } from '@/components/ui/button';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
@@ -54,6 +57,7 @@ interface RichEditorProps {
 export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
   function RichEditor({ content, onChange, placeholder = '输入笔记内容...', minHeight = 200 }: RichEditorProps, ref) {
     const [mounted, setMounted] = useState(false);
+    const [showDrawing, setShowDrawing] = useState(false);
     const prevContentRef = useRef(content);
 
     const editor = useEditor({
@@ -148,6 +152,15 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     useImperativeHandle(ref, () => ({
       insertCode: doInsertCode,
     }), [doInsertCode]);
+
+    const handleSaveDrawing = useCallback((dataUrl: string) => {
+      if (!editor) return;
+      editor.chain().focus().insertContent({
+        type: 'image',
+        attrs: { src: dataUrl, alt: 'drawing', class: 'drawing-image' },
+      }).run();
+      setShowDrawing(false);
+    }, [editor]);
 
     const execCmd = useCallback((fn: () => boolean) => {
       if (!editor) return;
@@ -245,7 +258,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           </div>
 
           {/* 插入代码（描述+代码） */}
-          <div className="flex items-center gap-0.5 px-2">
+          <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); doInsertCode(''); }}
@@ -258,10 +271,75 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
               插入代码
             </button>
           </div>
+
+          {/* 文本框 */}
+          <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
+            <div className="relative group">
+              <button
+                type="button"
+                className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
+                title="插入文本框"
+              >
+                <span className="text-sm">📦</span>
+                <span className="text-[10px]">▼</span>
+              </button>
+              <div className="absolute top-full left-0 mt-1 p-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:grid grid-cols-4 gap-1 z-50 w-[180px]">
+                {['#FEF2F2', '#FFF7ED', '#FFFBEB', '#F0FDF4', '#EFF6FF', '#F5F3FF', '#FDF2F8', '#ECFEFF', '#F8FAFC', '#F0F0F0', '#E5F9E5', '#FFF0E6'].map((c) => (
+                  <button key={c} type="button" className="w-8 h-8 rounded border border-gray-200 hover:scale-110 transition-all flex items-center justify-center text-[8px]"
+                    style={{ backgroundColor: c }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor.chain().focus().insertContent({
+                        type: 'paragraph',
+                        attrs: { style: `background-color: ${c}; padding: 12px; border-radius: 8px; margin: 8px 0;` },
+                        content: [{ type: 'text', text: '在此输入内容...' }],
+                      }).run();
+                    }} />
+                ))}
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded border border-dashed border-gray-300 hover:bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 col-span-4"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    editor.chain().focus().insertContent({
+                      type: 'paragraph',
+                      attrs: { style: 'background-color: #F8FAFC; padding: 12px; border-radius: 8px; border: 1px solid #E2E8F0; margin: 8px 0;' },
+                      content: [{ type: 'text', text: '在此输入内容...' }],
+                    }).run();
+                  }}
+                >+ 自定义颜色</button>
+              </div>
+            </div>
+          </div>
+
+          {/* 绘制 */}
+          <div className="flex items-center gap-0.5 px-2">
+            <button
+              type="button"
+              onClick={() => setShowDrawing(true)}
+              className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
+              title="自由绘制（箭头、线条等）"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              绘制
+            </button>
+          </div>
         </div>
 
         {/* Editor */}
         <EditorContent editor={editor} />
+        {/* Drawing Canvas Dialog */}
+        <Dialog open={showDrawing} onOpenChange={setShowDrawing}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>✏️ 自由绘制</DialogTitle>
+            </DialogHeader>
+            <DrawingCanvas onSave={handleSaveDrawing} onClose={() => setShowDrawing(false)} />
+          </DialogContent>
+        </Dialog>
+
         <div className="flex flex-wrap gap-2 px-2 py-1 text-[10px] text-gray-400 border-t border-gray-100">
           <span>Ctrl+1 H1</span>
           <span>Ctrl+2 H2</span>

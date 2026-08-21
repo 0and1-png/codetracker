@@ -37,8 +37,8 @@ export function TableOfContents({ content, onHeadingClick, onClose }: TableOfCon
       if (!text) return;
       
       const level = parseInt(h.tagName.substring(1), 10);
-      const id = `toc-heading-${index}-${text.slice(0, 20).replace(/\s+/g, '-')}`;
-      h.setAttribute('id', id);
+      // Match the ID generation from CustomHeading extension in rich-editor.tsx
+      const id = `h-${level}-${text.slice(0, 30).replace(/\s+/g, '-').replace(/[^\w\u4e00-\u9fff-]/g, '')}`;
       tocItems.push({ id, text, level });
     });
 

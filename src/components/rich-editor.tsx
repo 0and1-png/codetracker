@@ -19,9 +19,67 @@ import Gapcursor from '@tiptap/extension-gapcursor';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import Heading from '@tiptap/extension-heading';
+import OrderedList from '@tiptap/extension-ordered-list';
+import ListItem from '@tiptap/extension-list-item';
+import BulletList from '@tiptap/extension-bullet-list';
+import { Node, mergeAttributes } from '@tiptap/core';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DrawingCanvas from './drawing-canvas';
 import { v4 as uuidv4 } from 'uuid';
+
+// Fraction node for mathematical fractions
+const FractionNode = Node.create({
+  name: 'fraction',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  selectable: true,
+  draggable: false,
+
+  addAttributes() {
+    return {
+      numerator: { default: '1' },
+      denominator: { default: '2' },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'span[data-fraction]' }];
+  },
+
+  renderHTML({ node, HTMLAttributes }) {
+    return [
+      'span',
+      mergeAttributes(HTMLAttributes, {
+        'data-fraction': '',
+        style: 'display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; font-size: 0.7em; line-height: 1.1; margin: 0 2px;',
+      }),
+      [
+        'span',
+        { style: 'padding: 0 4px; border-bottom: 1.5px solid currentColor;' },
+        node.attrs.numerator,
+      ],
+      [
+        'span',
+        { style: 'padding: 0 4px;' },
+        node.attrs.denominator,
+      ],
+    ];
+  },
+
+  addCommands() {
+    return {
+      insertFraction: (numerator: string, denominator: string) => ({ chain }: any) => {
+        return chain()
+          .insertContent({
+            type: this.name,
+            attrs: { numerator, denominator },
+          })
+          .run();
+      },
+    } as any;
+  },
+});
 
 const CustomHeading = Heading.extend({
   renderHTML({ node, HTMLAttributes }) {
@@ -102,6 +160,10 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         History,
         Dropcursor,
         Gapcursor,
+        OrderedList,
+        ListItem,
+        BulletList,
+        FractionNode.configure({}),
         Image.configure({ inline: true, allowBase64: true }),
         Placeholder.configure({ placeholder }),
       ],
@@ -113,6 +175,18 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         attributes: {
           class: 'prose prose-sm max-w-none focus:outline-none px-4 py-3',
           style: `min-height: ${minHeight}px`,
+        },
+        handleKeyDown: (view, event) => {
+          // Tab key for indentation (insert spaces)
+          if (event.key === 'Tab') {
+            event.preventDefault();
+            const { state, dispatch } = view;
+            const { tr } = state;
+            tr.insertText('    ');
+            dispatch(tr);
+            return true;
+          }
+          return false;
         },
         handlePaste: (view, event) => {
           const items = event.clipboardData?.items;
@@ -432,6 +506,41 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
                   </div>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* 列表 */}
+          <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleOrderedList().run(); }}
+              className={`px-2 py-1 text-xs rounded ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="有序列表（自动编号）">
+              <span className="text-sm font-mono">1.</span>
+            </button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBulletList().run(); }}
+              className={`px-2 py-1 text-xs rounded ${editor.isActive('bulletList') ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-200'}`}
+              title="无序列表">
+              <span className="text-sm">•</span>
+            </button>
+          </div>
+
+          {/* 分数 */}
+          <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
+            <div className="relative">
+              <button type="button"
+                onClick={() => {
+                  const num = prompt('输入分子：', '1');
+                  if (num === null) return;
+                  const den = prompt('输入分母：', '2');
+                  if (den === null) return;
+                  (editor.chain().focus() as any).insertFraction(num || '1', den || '2').run();
+                }}
+                className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
+                title="插入分数">
+                <span className="text-sm font-serif" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: '1.1', fontSize: '11px' }}>
+                  <span style={{ borderBottom: '1.5px solid currentColor', padding: '0 2px' }}>a</span>
+                  <span style={{ padding: '0 2px' }}>b</span>
+                </span>
+              </button>
             </div>
           </div>
 

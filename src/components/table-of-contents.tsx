@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ListTree, Hash } from 'lucide-react';
+import { ListTree, Hash, ChevronLeft } from 'lucide-react';
 
 interface TocItem {
   id: string;
@@ -12,9 +12,10 @@ interface TocItem {
 interface TableOfContentsProps {
   content: string; // HTML content from the editor
   onHeadingClick?: (id: string) => void;
+  onClose?: () => void;
 }
 
-export function TableOfContents({ content, onHeadingClick }: TableOfContentsProps) {
+export function TableOfContents({ content, onHeadingClick, onClose }: TableOfContentsProps) {
   const [items, setItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
 
@@ -82,7 +83,16 @@ export function TableOfContents({ content, onHeadingClick }: TableOfContentsProp
     <div className="py-2">
       <div className="flex items-center gap-1.5 px-3 py-2 mb-1">
         <ListTree className="h-3.5 w-3.5 text-[#6B8BA4]" />
-        <span className="text-xs font-medium text-[#4A5568]">目录</span>
+        <span className="text-xs font-medium text-[#4A5568] flex-1">目录</span>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-0.5 rounded hover:bg-gray-100 text-[#94a3b8] hover:text-[#475569] transition-colors"
+            title="收起"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
       <nav className="space-y-0.5 px-2">
         {items.map((item) => (

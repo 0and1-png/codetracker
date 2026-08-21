@@ -8,7 +8,7 @@ import {
   ArrowLeft, BookOpen, Plus, Trash2, X, ChevronDown, ChevronRight,
   FileText, Palette, Edit3, Upload,
   FolderOpen, Tag, ChevronUp,
-  Sparkles, Scroll, Flame, Swords,
+  Sparkles, Scroll, Flame, Swords, ChevronLeft, PanelLeft,
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
@@ -114,6 +114,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [course, setCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<string>('curriculum');
   const [mounted, setMounted] = useState(false);
+  const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const [tocCollapsed, setTocCollapsed] = useState(false);
+  const [editorCollapsed, setEditorCollapsed] = useState(false);
 
   // Curriculum state
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -833,48 +836,90 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <TabsContent value="curriculum">
             <div className="flex gap-4 h-[calc(100vh-180px)]">
               {/* Left: Tree navigation */}
-              <div className="w-72 shrink-0 bg-white border border-gray-200 rounded-xl rounded-xl overflow-hidden flex flex-col">
+              <div className={`${treeCollapsed ? 'w-10' : 'w-72'} shrink-0 transition-all duration-200 bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col`}>
                 <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-between bg-[#F7F8FA]">
-                  <span className="text-xs font-medium text-[#4A5568]">课程大纲</span>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
-                    onClick={() => openAddNodeDialog(null)}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />添加卷章
-                  </Button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-                  {course.curriculum.length === 0 ? (
-                    <div className="text-center py-10 text-[#A0AEC0]">
-                      <Scroll className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p className="text-xs">尚无知识点题库心要</p>
-                      <Button
-                        size="sm"
-                        className="mt-2 h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
-                        onClick={() => openAddNodeDialog(null)}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />添加第一卷
-                      </Button>
-                    </div>
+                  {treeCollapsed ? (
+                    <button onClick={() => setTreeCollapsed(false)} className="mx-auto text-[#4A5568] hover:text-[#2B3A8A]">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
                   ) : (
-                    course.curriculum.map((node) => renderTreeNode(node, 0, course.curriculum))
+                    <>
+                      <span className="text-xs font-medium text-[#4A5568]">课程大纲</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
+                          onClick={() => openAddNodeDialog(null)}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" />添加卷章
+                        </Button>
+                        <button onClick={() => setTreeCollapsed(true)} className="text-[#4A5568] hover:text-[#2B3A8A] ml-1">
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
+                {!treeCollapsed && (
+                  <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+                    {course.curriculum.length === 0 ? (
+                      <div className="text-center py-10 text-[#A0AEC0]">
+                        <Scroll className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-xs">尚无知识点题库心要</p>
+                        <Button
+                          size="sm"
+                          className="mt-2 h-7 text-xs bg-gradient-to-r from-[#6B8BA4] to-[#5A7A93] text-white hover:from-[#5A7A93] hover:to-[#4A6A83] shadow-sm"
+                          onClick={() => openAddNodeDialog(null)}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" />添加第一卷
+                        </Button>
+                      </div>
+                    ) : (
+                      course.curriculum.map((node) => renderTreeNode(node, 0, course.curriculum))
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Table of Contents */}
               {selectedNode && (
-                <div className="w-56 shrink-0">
-                  <TableOfContents content={selectedNode.content || ''} />
+                <div className={`${tocCollapsed ? 'w-10' : 'w-56'} shrink-0 transition-all duration-200`}>
+                  {tocCollapsed ? (
+                    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                      <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-center bg-[#F7F8FA]">
+                        <button onClick={() => setTocCollapsed(false)} className="text-[#4A5568] hover:text-[#2B3A8A]">
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <TableOfContents
+                      content={selectedNode.content || ''}
+                      onClose={() => setTocCollapsed(true)}
+                    />
+                  )}
                 </div>
               )}
 
               {/* Right: Node detail editor */}
-              <div className="flex-1 bg-white border border-gray-200 rounded-xl rounded-xl overflow-y-auto">
-                <div className="p-5">
-                  {renderNodeDetail()}
-                </div>
+              <div className={`${editorCollapsed ? 'w-10' : 'flex-1'} transition-all duration-200 bg-white border border-gray-200 rounded-xl overflow-y-auto`}>
+                {editorCollapsed ? (
+                  <div className="px-3 py-2.5 border-b border-[#EDF2F7] flex items-center justify-center bg-[#F7F8FA]">
+                    <button onClick={() => setEditorCollapsed(false)} className="text-[#4A5568] hover:text-[#2B3A8A]">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs font-medium text-[#4A5568]">笔记记录</span>
+                      <button onClick={() => setEditorCollapsed(true)} className="text-[#4A5568] hover:text-[#2B3A8A]">
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {renderNodeDetail()}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

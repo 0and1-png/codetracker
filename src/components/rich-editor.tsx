@@ -9,6 +9,16 @@ import Bold from '@tiptap/extension-bold';
 import Italic from '@tiptap/extension-italic';
 import Strike from '@tiptap/extension-strike';
 import Heading from '@tiptap/extension-heading';
+
+// Custom heading extension that adds IDs for scrolling
+const CustomHeading = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const level = node.attrs.level;
+    const text = node.textContent || '';
+    const id = 'h-' + text.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-|-$/g, '') || `heading-${level}-${Math.random().toString(36).slice(2, 7)}`;
+    return [`h${level}`, { ...HTMLAttributes, id }, 0];
+  },
+});
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -45,7 +55,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         Bold,
         Italic,
         Strike,
-        Heading.configure({ levels: [1, 2, 3] }),
+        CustomHeading.configure({ levels: [1, 2, 3] }),
         Underline,
         TextStyle,
         Color,

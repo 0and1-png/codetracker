@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RichEditor, type RichEditorHandle } from '@/components/rich-editor';
+import { TableOfContents } from '@/components/table-of-contents';
 import Link from 'next/link';
 import {
   ArrowLeft, BookOpen, Plus, Trash2, X, ChevronDown, ChevronRight,
@@ -861,6 +862,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
                   )}
                 </div>
               </div>
+
+              {/* Table of Contents */}
+              {selectedNode && (
+                <div className="w-56 shrink-0">
+                  <TableOfContents content={selectedNode.content || ''} />
+                </div>
+              )}
 
               {/* Right: Node detail editor */}
               <div className="flex-1 bg-white border border-gray-200 rounded-xl rounded-xl overflow-y-auto">

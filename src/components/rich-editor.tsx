@@ -110,6 +110,7 @@ const TextBoxNode = Node.create({
     return {
       backgroundColor: { default: '#F0FDF4' },
       borderColor: { default: '#86EFAC' },
+      width: { default: '100%' },
     };
   },
 
@@ -123,7 +124,7 @@ const TextBoxNode = Node.create({
       {
         'data-type': 'textbox',
         class: 'rounded-lg border-2 p-3 my-2 min-h-[60px]',
-        style: `background-color: ${node.attrs.backgroundColor}; border-color: ${node.attrs.borderColor};`,
+        style: `background-color: ${node.attrs.backgroundColor}; border-color: ${node.attrs.borderColor}; width: ${node.attrs.width};`,
       },
       0,
     ];
@@ -131,11 +132,11 @@ const TextBoxNode = Node.create({
 
   addCommands() {
     return {
-      insertTextBox: (backgroundColor?: string, borderColor?: string) => ({ chain }: any) => {
+      insertTextBox: (backgroundColor?: string, borderColor?: string, width?: string) => ({ chain }: any) => {
         return chain()
           .insertContent({
             type: 'textBox',
-            attrs: { backgroundColor: backgroundColor || '#F0FDF4', borderColor: borderColor || '#86EFAC' },
+            attrs: { backgroundColor: backgroundColor || '#F0FDF4', borderColor: borderColor || '#86EFAC', width: width || '100%' },
             content: [{ type: 'text', text: '在此输入文字...' }],
           })
           .run();
@@ -173,7 +174,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
   function RichEditor({ content, onChange, placeholder = '输入笔记内容...', minHeight = 200 }: RichEditorProps, ref) {
     const [mounted, setMounted] = useState(false);
     const [showDrawing, setShowDrawing] = useState(false);
-    const [drawingMode, setDrawingMode] = useState<'none' | 'arrow'>('none');
+    const [drawingMode, setDrawingMode] = useState<'none' | 'arrow' | 'textbox'>('none');
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
@@ -315,13 +316,14 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
 
     // Get editor position for overlay
     const getEditorRect = useCallback(() => {
-      return editorContainerRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+      return editorContainerRef.current?.getBoundingClientRect() || null;
     }, []);
 
     // Mouse handlers for drawing
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
       if (drawingMode === 'none') return;
       const rect = getEditorRect();
+      if (!rect) return;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       setIsDrawing(true);
@@ -332,6 +334,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
       if (!isDrawing) return;
       const rect = getEditorRect();
+      if (!rect) return;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       setDrawCurrent({ x, y });
@@ -361,9 +364,21 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           endY: drawCurrent.y,
         };
         setShapes(prev => [...prev, newShape]);
+      } else if (drawingMode === 'textbox' && editor) {
+        // Calculate width as percentage of editor container width
+        const containerWidth = editorContainerRef.current?.clientWidth || 500;
+        const pct = Math.max(30, Math.min(100, Math.round((w / containerWidth) * 100)));
+        const colors = ['#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#FFF7ED', '#F5F5F4', '#ECFDF5'];
+        const borderColors = ['#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#FDBA74', '#D6D3D1', '#6EE7B7'];
+        const idx = Math.floor(Math.random() * colors.length);
+        (editor.chain() as any).focus().insertContent({
+          type: 'textBox',
+          attrs: { backgroundColor: colors[idx], borderColor: borderColors[idx], width: `${pct}%` },
+          content: [{ type: 'text', text: '在此输入文字...' }],
+        }).run();
       }
       setDrawingMode('none');
-    }, [isDrawing, drawingMode, drawStart, drawCurrent]);
+    }, [isDrawing, drawingMode, drawStart, drawCurrent, editor]);
 
     // Shape drag handlers
     const handleShapeMouseDown = useCallback((e: React.MouseEvent, shape: Shape) => {
@@ -373,6 +388,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       setSelectedShape(shape.id);
       if (shape.type === 'arrow') {
         const rect = getEditorRect();
+        if (!rect) return;
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
         const distToEnd = Math.sqrt((mx - (shape.endX || shape.x)) ** 2 + (my - (shape.endY || shape.y)) ** 2);
@@ -391,6 +407,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
 
     const handleShapeMouseMove = useCallback((e: React.MouseEvent) => {
       const rect = getEditorRect();
+      if (!rect) return;
       if (draggingShape) {
         const dx = e.clientX - draggingShape.startX;
         const dy = e.clientY - draggingShape.startY;
@@ -577,15 +594,9 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         {/* 绘制工具 */}
         <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
           <button type="button"
-            onClick={() => {
-              const colors = ['#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#FFF7ED', '#F5F5F4', '#ECFDF5'];
-              const bgColor = colors[Math.floor(Math.random() * colors.length)];
-              const borderColors = ['#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#FDBA74', '#D6D3D1', '#6EE7B7'];
-              const bdColor = borderColors[Math.floor(Math.random() * borderColors.length)];
-              (editor.chain().focus() as any).insertTextBox(bgColor, bdColor).run();
-            }}
-            className="px-2 py-1 text-xs rounded flex items-center gap-1 text-gray-600 hover:bg-gray-200 transition-colors"
-            title="插入文本框">
+            onClick={() => { setDrawingMode(drawingMode === 'textbox' ? 'none' : 'textbox'); setSelectedShape(null); }}
+            className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${drawingMode === 'textbox' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+            title="绘制文本框（点击后在编辑区拖拽绘制）">
             <span className="text-sm">📦</span>
             <span>文本框</span>
           </button>
@@ -695,9 +706,21 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           {drawingMode !== 'none' && !isDrawing && (
             <div className="absolute inset-0 bg-blue-500/5 z-20 flex items-center justify-center pointer-events-none rounded-b-lg">
               <div className="text-sm text-blue-500 bg-white/90 px-4 py-2 rounded-lg shadow">
-                ➡️ 在编辑区点击并拖拽鼠标绘制箭头
+                {drawingMode === 'arrow' ? '➡️ 在编辑区点击并拖拽鼠标绘制箭头' : '📦 在编辑区点击并拖拽鼠标绘制文本框'}
               </div>
             </div>
+          )}
+
+          {/* Drawing preview */}
+          {isDrawing && drawingMode === 'textbox' && (
+            <div className="absolute border-2 border-dashed border-blue-400 bg-blue-50/30 pointer-events-none z-10 rounded-lg"
+              style={{
+                left: Math.min(drawStart.x, drawCurrent.x),
+                top: Math.min(drawStart.y, drawCurrent.y),
+                width: Math.abs(drawCurrent.x - drawStart.x),
+                height: Math.abs(drawCurrent.y - drawStart.y),
+              }}
+            />
           )}
         </div>
 

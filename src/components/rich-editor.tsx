@@ -147,7 +147,7 @@ const TextBoxNode = Node.create({
 
 interface Shape {
   id: string;
-  type: 'arrow';
+  type: 'arrow' | 'textbox';
   x: number;
   y: number;
   width: number;
@@ -157,6 +157,7 @@ interface Shape {
   borderColor?: string;
   endX?: number;
   endY?: number;
+  backgroundColor?: string;
 }
 
 interface RichEditorProps {
@@ -364,18 +365,21 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           endY: drawCurrent.y,
         };
         setShapes(prev => [...prev, newShape]);
-      } else if (drawingMode === 'textbox' && editor) {
-        // Calculate width as percentage of editor container width
-        const containerWidth = editorContainerRef.current?.clientWidth || 500;
-        const pct = Math.max(30, Math.min(100, Math.round((w / containerWidth) * 100)));
-        const colors = ['#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#FFF7ED', '#F5F5F4', '#ECFDF5'];
-        const borderColors = ['#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#FDBA74', '#D6D3D1', '#6EE7B7'];
+      } else if (drawingMode === 'textbox') {
+        const colors = ['#FFF7ED', '#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#F5F5F4', '#ECFDF5'];
+        const borderColors = ['#FDBA74', '#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#D6D3D1', '#6EE7B7'];
         const idx = Math.floor(Math.random() * colors.length);
-        (editor.chain() as any).focus().insertContent({
-          type: 'textBox',
-          attrs: { backgroundColor: colors[idx], borderColor: borderColors[idx], width: `${pct}%` },
-          content: [{ type: 'text', text: '在此输入文字...' }],
-        }).run();
+        const newShape: Shape = {
+          id: uuidv4(),
+          type: 'textbox',
+          x, y,
+          width: w,
+          height: h,
+          color: borderColors[idx],
+          backgroundColor: colors[idx],
+          text: '在此输入文字...',
+        };
+        setShapes(prev => [...prev, newShape]);
       }
       setDrawingMode('none');
     }, [isDrawing, drawingMode, drawStart, drawCurrent, editor]);
@@ -640,7 +644,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
             <EditorContent editor={editor} />
           </div>
 
-          {/* Shapes overlay - only arrows */}
+          {/* Shapes overlay */}
           {shapes.map((shape) => (
             <div key={shape.id}
               className="absolute"
@@ -652,38 +656,68 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
               }}
               onMouseDown={(e) => handleShapeMouseDown(e, shape)}
             >
-              {/* Arrow */}
-              <svg style={{ overflow: 'visible', pointerEvents: 'none' }} width={Math.abs((shape.endX || shape.x) - shape.x)} height={Math.abs((shape.endY || shape.y) - shape.y)}>
-                <line x1={shape.x < (shape.endX || 0) ? 0 : Math.abs((shape.endX || shape.x) - shape.x)}
-                  y1={shape.y < (shape.endY || 0) ? 0 : Math.abs((shape.endY || shape.y) - shape.y)}
-                  x2={shape.x < (shape.endX || 0) ? Math.abs((shape.endX || shape.x) - shape.x) : 0}
-                  y2={shape.y < (shape.endY || 0) ? Math.abs((shape.endY || shape.y) - shape.y) : 0}
-                  stroke={shape.color} strokeWidth={2} markerEnd={`url(#arrowhead-${shape.id})`} />
-                <defs>
-                  <marker id={`arrowhead-${shape.id}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill={shape.color} />
-                  </marker>
-                </defs>
-              </svg>
-              {/* Start/End points */}
-              {selectedShape === shape.id && (
+              {shape.type === 'arrow' ? (
                 <>
-                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
-                    style={{ left: -6, top: -6 }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedShape(shape.id);
-                      setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.x, origEndY: shape.y, isStart: true });
-                    }} />
-                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
-                    style={{ left: (shape.endX || shape.x) - shape.x - 6, top: (shape.endY || shape.y) - shape.y - 6 }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedShape(shape.id);
-                      setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.endX || shape.x, origEndY: shape.endY || shape.y });
-                    }} />
+                  <svg style={{ overflow: 'visible', pointerEvents: 'none' }} width={Math.abs((shape.endX || shape.x) - shape.x)} height={Math.abs((shape.endY || shape.y) - shape.y)}>
+                    <line x1={shape.x < (shape.endX || 0) ? 0 : Math.abs((shape.endX || shape.x) - shape.x)}
+                      y1={shape.y < (shape.endY || 0) ? 0 : Math.abs((shape.endY || shape.y) - shape.y)}
+                      x2={shape.x < (shape.endX || 0) ? Math.abs((shape.endX || shape.x) - shape.x) : 0}
+                      y2={shape.y < (shape.endY || 0) ? Math.abs((shape.endY || shape.y) - shape.y) : 0}
+                      stroke={shape.color} strokeWidth={2} markerEnd={`url(#arrowhead-${shape.id})`} />
+                    <defs>
+                      <marker id={`arrowhead-${shape.id}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill={shape.color} />
+                      </marker>
+                    </defs>
+                  </svg>
+                  {/* Start/End points */}
+                  {selectedShape === shape.id && (
+                    <>
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
+                        style={{ left: -6, top: -6 }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedShape(shape.id);
+                          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.x, origEndY: shape.y, isStart: true });
+                        }} />
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
+                        style={{ left: (shape.endX || shape.x) - shape.x - 6, top: (shape.endY || shape.y) - shape.y - 6 }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedShape(shape.id);
+                          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.endX || shape.x, origEndY: shape.endY || shape.y });
+                        }} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Text box */}
+                  <div className="rounded-lg border-2 overflow-hidden shadow-sm"
+                    style={{
+                      width: Math.abs((shape.endX || shape.x) - shape.x),
+                      height: Math.abs((shape.endY || shape.y) - shape.y),
+                      borderColor: selectedShape === shape.id ? '#3B82F6' : shape.borderColor || '#CBD5E1',
+                      backgroundColor: shape.backgroundColor || '#FFFFFF',
+                      pointerEvents: 'none',
+                    }}>
+                    <div
+                      className="w-full h-full p-2 text-sm focus:outline-none"
+                      style={{ color: '#374151', pointerEvents: 'none' }}>
+                      {shape.text || '点击输入文字'}
+                    </div>
+                  </div>
+                  {/* Resize handles */}
+                  {selectedShape === shape.id && (shape.type === 'textbox' ? (
+                    <>
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-nw-resize z-30" style={{ left: -6, top: -6 }} />
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-ne-resize z-30" style={{ left: Math.abs((shape.endX || shape.x) - shape.x) - 6, top: -6 }} />
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-se-resize z-30" style={{ left: Math.abs((shape.endX || shape.x) - shape.x) - 6, top: Math.abs((shape.endY || shape.y) - shape.y) - 6 }} />
+                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-sw-resize z-30" style={{ left: -6, top: Math.abs((shape.endY || shape.y) - shape.y) - 6 }} />
+                    </>
+                  ) : null)}
                 </>
               )}
             </div>

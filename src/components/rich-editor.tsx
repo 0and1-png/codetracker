@@ -180,6 +180,11 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
     const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
+    // Use refs to avoid stale closures in event handlers
+    const isDrawingRef = useRef(false);
+    const drawingModeRef = useRef<'none' | 'arrow' | 'textbox'>('none');
+    const drawStartRef = useRef({ x: 0, y: 0 });
+    const drawCurrentRef = useRef({ x: 0, y: 0 });
     const [selectedShape, setSelectedShape] = useState<string | null>(null);
     const [draggingShape, setDraggingShape] = useState<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
     const [resizingShape, setResizingShape] = useState<{ id: string; edge: string; startX: number; startY: number; origShape: Shape } | null>(null);
@@ -322,50 +327,60 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
 
     // Mouse handlers for drawing
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-      if (drawingMode === 'none') return;
+      if (drawingModeRef.current === 'none') return;
       const rect = getEditorRect();
       if (!rect) return;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      isDrawingRef.current = true;
+      drawStartRef.current = { x, y };
+      drawCurrentRef.current = { x, y };
       setIsDrawing(true);
       setDrawStart({ x, y });
       setDrawCurrent({ x, y });
-    }, [drawingMode, getEditorRect]);
+    }, [getEditorRect]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-      if (!isDrawing) return;
+      if (!isDrawingRef.current) return;
       const rect = getEditorRect();
       if (!rect) return;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      drawCurrentRef.current = { x, y };
       setDrawCurrent({ x, y });
-    }, [isDrawing, getEditorRect]);
+    }, [getEditorRect]);
 
     const handleMouseUp = useCallback(() => {
-      if (!isDrawing || drawingMode === 'none') return;
-      setIsDrawing(false);
-      const x = Math.min(drawStart.x, drawCurrent.x);
-      const y = Math.min(drawStart.y, drawCurrent.y);
-      const w = Math.abs(drawCurrent.x - drawStart.x);
-      const h = Math.abs(drawCurrent.y - drawStart.y);
+      const mode = drawingModeRef.current;
+      if (!isDrawingRef.current || mode === 'none') return;
+      isDrawingRef.current = false;
+      const ds = drawStartRef.current;
+      const dc = drawCurrentRef.current;
+      if (!ds || !dc) return;
+      const x = Math.min(ds.x, dc.x);
+      const y = Math.min(ds.y, dc.y);
+      const w = Math.abs(dc.x - ds.x);
+      const h = Math.abs(dc.y - ds.y);
 
       if (w < 10 && h < 10) {
+        drawingModeRef.current = 'none';
         setDrawingMode('none');
+        setIsDrawing(false);
         return;
       }
 
-      if (drawingMode === 'arrow') {
+      if (mode === 'arrow') {
         const newShape: Shape = {
           id: uuidv4(),
           type: 'arrow',
-          x: drawStart.x, y: drawStart.y,
+          x: ds.x, y: ds.y,
           width: 0, height: 0,
           color: '#3B82F6',
-          endX: drawCurrent.x,
-          endY: drawCurrent.y,
+          endX: dc.x,
+          endY: dc.y,
         };
         setShapes(prev => [...prev, newShape]);
-      } else if (drawingMode === 'textbox') {
+      } else if (mode === 'textbox') {
         const colors = ['#FFF7ED', '#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#F5F5F4', '#ECFDF5'];
         const borderColors = ['#FDBA74', '#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#D6D3D1', '#6EE7B7'];
         const idx = Math.floor(Math.random() * colors.length);
@@ -381,8 +396,10 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         };
         setShapes(prev => [...prev, newShape]);
       }
+      drawingModeRef.current = 'none';
       setDrawingMode('none');
-    }, [isDrawing, drawingMode, drawStart, drawCurrent, editor]);
+      setIsDrawing(false);
+    }, [editor]);
 
     // Shape drag handlers
     const handleShapeMouseDown = useCallback((e: React.MouseEvent, shape: Shape) => {

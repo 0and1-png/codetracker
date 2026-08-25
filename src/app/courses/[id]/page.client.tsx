@@ -183,10 +183,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     const found = list.find((c) => c.id === courseId);
     if (found) {
       setCourse(found);
-      if (found.curriculum && found.curriculum.length > 0) {
-        const firstLevel = new Set(found.curriculum.map((n) => n.id));
-        setExpandedIds(firstLevel);
-      }
+      // 默认不展开，用户点击节点时展开
     }
   }, [courseId]);
 

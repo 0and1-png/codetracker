@@ -147,7 +147,7 @@ const TextBoxNode = Node.create({
 
 interface Shape {
   id: string;
-  type: 'arrow' | 'textbox';
+  type: 'arrow';
   x: number;
   y: number;
   width: number;
@@ -175,14 +175,14 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
   function RichEditor({ content, onChange, placeholder = '输入笔记内容...', minHeight = 200 }: RichEditorProps, ref) {
     const [mounted, setMounted] = useState(false);
     const [showDrawing, setShowDrawing] = useState(false);
-    const [drawingMode, setDrawingMode] = useState<'none' | 'arrow' | 'textbox'>('none');
+    const [drawingMode, setDrawingMode] = useState<'none' | 'arrow'>('none');
     const [shapes, setShapes] = useState<Shape[]>([]);
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawStart, setDrawStart] = useState({ x: 0, y: 0 });
     const [drawCurrent, setDrawCurrent] = useState({ x: 0, y: 0 });
     // Use refs to avoid stale closures in event handlers
     const isDrawingRef = useRef(false);
-    const drawingModeRef = useRef<'none' | 'arrow' | 'textbox'>('none');
+    const drawingModeRef = useRef<'none' | 'arrow'>('none');
     const drawStartRef = useRef({ x: 0, y: 0 });
     const drawCurrentRef = useRef({ x: 0, y: 0 });
     const [selectedShape, setSelectedShape] = useState<string | null>(null);
@@ -378,21 +378,6 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           color: '#3B82F6',
           endX: dc.x,
           endY: dc.y,
-        };
-        setShapes(prev => [...prev, newShape]);
-      } else if (mode === 'textbox') {
-        const colors = ['#FFF7ED', '#F0FDF4', '#FEF08A', '#FECACA', '#DBEAFE', '#EDE9FE', '#FCE7F3', '#E0F2FE', '#F5F5F4', '#ECFDF5'];
-        const borderColors = ['#FDBA74', '#86EFAC', '#FDE047', '#FCA5A5', '#93C5FD', '#C4B5FD', '#F9A8D4', '#7DD3FC', '#D6D3D1', '#6EE7B7'];
-        const idx = Math.floor(Math.random() * colors.length);
-        const newShape: Shape = {
-          id: uuidv4(),
-          type: 'textbox',
-          x, y,
-          width: w,
-          height: h,
-          color: borderColors[idx],
-          backgroundColor: colors[idx],
-          text: '在此输入文字...',
         };
         setShapes(prev => [...prev, newShape]);
       }
@@ -615,10 +600,12 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         {/* 绘制工具 */}
         <div className="flex items-center gap-0.5 px-2 border-r border-gray-200">
           <button type="button"
-            onClick={() => { setDrawingMode(drawingMode === 'textbox' ? 'none' : 'textbox'); setSelectedShape(null); }}
-            className={`px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors ${drawingMode === 'textbox' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-            title="绘制文本框（点击后在编辑区拖拽绘制）">
-            <span className="text-sm">📦</span>
+            onClick={() => {
+              (editor?.chain().focus() as any).insertTextBox('#f0f9ff', '#3b82f6').run();
+            }}
+            className="px-2 py-1 text-xs rounded flex items-center gap-1 transition-colors text-gray-600 hover:bg-gray-200"
+            title="插入文本框">
+            <span className="text-sm"></span>
             <span>文本框</span>
           </button>
           <button type="button"
@@ -673,68 +660,37 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
               }}
               onMouseDown={(e) => handleShapeMouseDown(e, shape)}
             >
-              {shape.type === 'arrow' ? (
+              <svg style={{ overflow: 'visible', pointerEvents: 'none' }} width={Math.abs((shape.endX || shape.x) - shape.x)} height={Math.abs((shape.endY || shape.y) - shape.y)}>
+                <line x1={shape.x < (shape.endX || 0) ? 0 : Math.abs((shape.endX || shape.x) - shape.x)}
+                  y1={shape.y < (shape.endY || 0) ? 0 : Math.abs((shape.endY || shape.y) - shape.y)}
+                  x2={shape.x < (shape.endX || 0) ? Math.abs((shape.endX || shape.x) - shape.x) : 0}
+                  y2={shape.y < (shape.endY || 0) ? Math.abs((shape.endY || shape.y) - shape.y) : 0}
+                  stroke={shape.color} strokeWidth={2} markerEnd={`url(#arrowhead-${shape.id})`} />
+                <defs>
+                  <marker id={`arrowhead-${shape.id}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill={shape.color} />
+                  </marker>
+                </defs>
+              </svg>
+              {/* Start/End points */}
+              {selectedShape === shape.id && (
                 <>
-                  <svg style={{ overflow: 'visible', pointerEvents: 'none' }} width={Math.abs((shape.endX || shape.x) - shape.x)} height={Math.abs((shape.endY || shape.y) - shape.y)}>
-                    <line x1={shape.x < (shape.endX || 0) ? 0 : Math.abs((shape.endX || shape.x) - shape.x)}
-                      y1={shape.y < (shape.endY || 0) ? 0 : Math.abs((shape.endY || shape.y) - shape.y)}
-                      x2={shape.x < (shape.endX || 0) ? Math.abs((shape.endX || shape.x) - shape.x) : 0}
-                      y2={shape.y < (shape.endY || 0) ? Math.abs((shape.endY || shape.y) - shape.y) : 0}
-                      stroke={shape.color} strokeWidth={2} markerEnd={`url(#arrowhead-${shape.id})`} />
-                    <defs>
-                      <marker id={`arrowhead-${shape.id}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                        <polygon points="0 0, 8 3, 0 6" fill={shape.color} />
-                      </marker>
-                    </defs>
-                  </svg>
-                  {/* Start/End points */}
-                  {selectedShape === shape.id && (
-                    <>
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
-                        style={{ left: -6, top: -6 }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedShape(shape.id);
-                          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.x, origEndY: shape.y, isStart: true });
-                        }} />
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
-                        style={{ left: (shape.endX || shape.x) - shape.x - 6, top: (shape.endY || shape.y) - shape.y - 6 }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedShape(shape.id);
-                          setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.endX || shape.x, origEndY: shape.endY || shape.y });
-                        }} />
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Text box */}
-                  <div className="rounded-lg border-2 overflow-hidden shadow-sm"
-                    style={{
-                      width: Math.abs((shape.endX || shape.x) - shape.x),
-                      height: Math.abs((shape.endY || shape.y) - shape.y),
-                      borderColor: selectedShape === shape.id ? '#3B82F6' : shape.borderColor || '#CBD5E1',
-                      backgroundColor: shape.backgroundColor || '#FFFFFF',
-                      pointerEvents: 'none',
-                    }}>
-                    <div
-                      className="w-full h-full p-2 text-sm focus:outline-none"
-                      style={{ color: '#374151', pointerEvents: 'none' }}>
-                      {shape.text || '点击输入文字'}
-                    </div>
-                  </div>
-                  {/* Resize handles */}
-                  {selectedShape === shape.id && (shape.type === 'textbox' ? (
-                    <>
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-nw-resize z-30" style={{ left: -6, top: -6 }} />
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-ne-resize z-30" style={{ left: Math.abs((shape.endX || shape.x) - shape.x) - 6, top: -6 }} />
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-se-resize z-30" style={{ left: Math.abs((shape.endX || shape.x) - shape.x) - 6, top: Math.abs((shape.endY || shape.y) - shape.y) - 6 }} />
-                      <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-sw-resize z-30" style={{ left: -6, top: Math.abs((shape.endY || shape.y) - shape.y) - 6 }} />
-                    </>
-                  ) : null)}
+                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
+                    style={{ left: -6, top: -6 }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedShape(shape.id);
+                      setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.x, origEndY: shape.y, isStart: true });
+                    }} />
+                  <div className="absolute w-3 h-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer z-30"
+                    style={{ left: (shape.endX || shape.x) - shape.x - 6, top: (shape.endY || shape.y) - shape.y - 6 }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedShape(shape.id);
+                      setDraggingArrowEnd({ id: shape.id, startX: e.clientX, startY: e.clientY, origEndX: shape.endX || shape.x, origEndY: shape.endY || shape.y });
+                    }} />
                 </>
               )}
             </div>
@@ -757,13 +713,13 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
           {drawingMode !== 'none' && !isDrawing && (
             <div className="absolute inset-0 bg-blue-500/5 z-20 flex items-center justify-center pointer-events-none rounded-b-lg">
               <div className="text-sm text-blue-500 bg-white/90 px-4 py-2 rounded-lg shadow">
-                {drawingMode === 'arrow' ? '➡️ 在编辑区点击并拖拽鼠标绘制箭头' : '📦 在编辑区点击并拖拽鼠标绘制文本框'}
+                ➡️ 在编辑区点击并拖拽鼠标绘制箭头
               </div>
             </div>
           )}
 
           {/* Drawing preview */}
-          {isDrawing && drawingMode === 'textbox' && (
+          {isDrawing && drawingMode === 'arrow' && (
             <div className="absolute border-2 border-dashed border-blue-400 bg-blue-50/30 pointer-events-none z-10 rounded-lg"
               style={{
                 left: Math.min(drawStart.x, drawCurrent.x),

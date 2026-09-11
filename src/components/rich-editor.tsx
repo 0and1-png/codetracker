@@ -191,9 +191,20 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const [draggingArrowEnd, setDraggingArrowEnd] = useState<{ id: string; startX: number; startY: number; origEndX: number; origEndY: number; isStart?: boolean } | null>(null);
     const [showColorPicker, setShowColorPicker] = useState(false);
     const [showBgColorPicker, setShowBgColorPicker] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const overlayRef = useRef<HTMLDivElement>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
     const prevContentRef = useRef(content);
+
+    // Esc 退出全屏
+    useEffect(() => {
+      if (!isFullscreen) return;
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setIsFullscreen(false);
+      };
+      window.addEventListener('keydown', onKey);
+      return () => window.removeEventListener('keydown', onKey);
+    }, [isFullscreen]);
 
     const editor = useEditor({
       immediatelyRender: false,
@@ -631,15 +642,33 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
               title="清除所有绘制">清除</button>
           )}
         </div>
+
+        {/* 全屏切换 */}
+        <div className="flex items-center gap-0.5 pl-2 ml-auto">
+          <button type="button" onClick={() => setIsFullscreen(!isFullscreen)}
+            className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
+            title={isFullscreen ? '退出全屏 (Esc)' : '全屏编辑'}>
+            {isFullscreen ? (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+              </svg>
+            )}
+            <span>{isFullscreen ? '退出全屏' : '全屏'}</span>
+          </button>
+        </div>
       </div>
     );
 
-    return (
-      <div className="border border-gray-200 rounded-lg bg-white">
+    const editorContent = (
+      <>
         <div className="sticky top-0 z-20">
           {toolbar}
         </div>
-        <div ref={editorContainerRef} className="relative"
+        <div ref={editorContainerRef} className={`relative ${isFullscreen ? 'flex-1 overflow-auto' : ''}`}
           onMouseMove={handleShapeMouseMove}
           onMouseUp={handleShapeMouseUp}
           onMouseLeave={handleShapeMouseUp}
@@ -740,7 +769,20 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
             <DrawingCanvas onSave={handleSaveDrawing} onClose={() => setShowDrawing(false)} />
           </DialogContent>
         </Dialog>
-      </div>
+      </>
+    );
+
+    return (
+      <>
+        <div className={`border border-gray-200 rounded-lg bg-white ${isFullscreen ? 'hidden' : ''}`}>
+          {editorContent}
+        </div>
+        {isFullscreen && (
+          <div className="editor-fullscreen fixed inset-0 z-[9999] bg-white flex flex-col">
+            {editorContent}
+          </div>
+        )}
+      </>
     );
   }
 );

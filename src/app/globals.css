@@ -310,6 +310,15 @@ body {
   line-height: 1.7;
 }
 
+/* 全屏编辑模式 */
+.editor-fullscreen .ProseMirror {
+  min-height: calc(100vh - 120px);
+  font-size: 15px;
+  padding: 24px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
 .ProseMirror p {
   margin: 0.5em 0;
 }

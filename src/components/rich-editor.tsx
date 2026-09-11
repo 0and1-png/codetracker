@@ -194,17 +194,28 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     const [isFullscreen, setIsFullscreen] = useState(false);
     const overlayRef = useRef<HTMLDivElement>(null);
     const editorContainerRef = useRef<HTMLDivElement>(null);
+    const fullscreenRef = useRef<HTMLDivElement>(null);
     const prevContentRef = useRef(content);
 
-    // Esc 退出全屏
+    // 同步全屏状态（监听原生 fullscreenchange 事件）
     useEffect(() => {
-      if (!isFullscreen) return;
-      const onKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setIsFullscreen(false);
-      };
-      window.addEventListener('keydown', onKey);
-      return () => window.removeEventListener('keydown', onKey);
-    }, [isFullscreen]);
+      const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+      document.addEventListener('fullscreenchange', onChange);
+      return () => document.removeEventListener('fullscreenchange', onChange);
+    }, []);
+
+    const toggleFullscreen = () => {
+      if (!document.fullscreenElement) {
+        fullscreenRef.current?.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+      // 触发一次 DOM 刷新，全屏时保证编辑器正常渲染
+      requestAnimationFrame(() => {
+        setSelectedShape(null);
+        setIsDrawing(false);
+      });
+    };
 
     const editor = useEditor({
       immediatelyRender: false,
@@ -645,7 +656,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
 
         {/* 全屏切换 */}
         <div className="flex items-center gap-0.5 pl-2 ml-auto">
-          <button type="button" onClick={() => setIsFullscreen(!isFullscreen)}
+          <button type="button" onClick={toggleFullscreen}
             className="px-2 py-1 text-xs rounded text-gray-600 hover:bg-gray-200 flex items-center gap-1"
             title={isFullscreen ? '退出全屏 (Esc)' : '全屏编辑'}>
             {isFullscreen ? (
@@ -668,7 +679,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         <div className="sticky top-0 z-20">
           {toolbar}
         </div>
-        <div ref={editorContainerRef} className={`relative ${isFullscreen ? 'flex-1 overflow-auto' : ''}`}
+        <div ref={editorContainerRef} className="relative flex-1 overflow-auto"
           onMouseMove={handleShapeMouseMove}
           onMouseUp={handleShapeMouseUp}
           onMouseLeave={handleShapeMouseUp}
@@ -773,16 +784,9 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
     );
 
     return (
-      <>
-        <div className={`border border-gray-200 rounded-lg bg-white ${isFullscreen ? 'hidden' : ''}`}>
-          {editorContent}
-        </div>
-        {isFullscreen && (
-          <div className="editor-fullscreen fixed inset-0 z-[9999] bg-white flex flex-col">
-            {editorContent}
-          </div>
-        )}
-      </>
+      <div ref={fullscreenRef as React.RefObject<HTMLDivElement>} className={`border flex flex-col h-full ${isFullscreen ? 'editor-fullscreen fixed inset-0 z-[9999] rounded-none border-0 bg-white' : 'border-gray-200 rounded-lg bg-white'}`}>
+        {editorContent}
+      </div>
     );
   }
 );

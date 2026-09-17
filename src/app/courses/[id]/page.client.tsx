@@ -115,7 +115,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const [activeTab, setActiveTab] = useState<string>('curriculum');
   const [mounted, setMounted] = useState(false);
   const [treeCollapsed, setTreeCollapsed] = useState(false);
-  const [tocCollapsed, setTocCollapsed] = useState(false);
+  const [tocCollapsed, setTocCollapsed] = useState(true);
   const [editorCollapsed, setEditorCollapsed] = useState(false);
 
   // Curriculum state

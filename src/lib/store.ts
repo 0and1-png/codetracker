@@ -565,6 +565,8 @@ export function updateCourse(course: Course): void {
   if (idx >= 0) {
     courses[idx] = course;
     saveCourses(courses);
+    // Sync to Supabase so notes sync across devices
+    syncCourseToSupabase(course);
   }
 }
 

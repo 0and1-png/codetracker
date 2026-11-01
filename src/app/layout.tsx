@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Link from 'next/link';
+import { AuthGuard } from '@/components/auth-guard';
+import { UserNav } from '@/components/user-nav';
 
 export const metadata: Metadata = {
   title: {
@@ -30,11 +32,12 @@ export default function RootLayout({
             <div className="flex items-center gap-4 text-sm text-blue-200">
               <Link href="/" className="hover:text-white transition-colors">工作台</Link>
               <Link href="/courses" className="hover:text-white transition-colors">课程管理</Link>
+              <UserNav />
             </div>
           </div>
         </nav>
         <main className="min-h-[calc(100vh-3.5rem)]">
-          {children}
+          <AuthGuard>{children}</AuthGuard>
         </main>
       </body>
     </html>

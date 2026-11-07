@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
 // 万能密码账号
 const MASTER_ACCOUNT = {
@@ -23,9 +23,19 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    // 检查 Supabase 配置
+    if (!isSupabaseConfigured()) {
+      setError('数据库未配置，请联系管理员');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('登录尝试:', { name, password: '***' });
+
       // 万能密码检查
-      if (name === MASTER_ACCOUNT.name && password.toLowerCase() === MASTER_ACCOUNT.password) {
+      if (name.trim() === MASTER_ACCOUNT.name && password.toLowerCase().trim() === MASTER_ACCOUNT.password) {
+        console.log('万能密码登录成功');
         localStorage.setItem('user', JSON.stringify({ id: 'master', name: MASTER_ACCOUNT.name }));
         router.push('/');
         return;
@@ -36,11 +46,18 @@ export default function LoginPage() {
         const { data, error } = await supabase
           .from('users')
           .select('*')
-          .eq('name', name)
-          .eq('password', password.toLowerCase())
-          .single();
+          .eq('name', name.trim())
+          .eq('password', password.toLowerCase().trim())
+          .maybeSingle();
 
-        if (error || !data) {
+        if (error) {
+          console.error('登录查询错误:', error);
+          setError('登录失败，请检查网络连接');
+          setLoading(false);
+          return;
+        }
+
+        if (!data) {
           setError('姓名或密码错误，请先注册');
           setLoading(false);
           return;
@@ -60,11 +77,18 @@ export default function LoginPage() {
         }
 
         // 检查是否已存在
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: checkError } = await supabase
           .from('users')
           .select('id')
           .eq('name', trimmedName)
-          .single();
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('检查用户错误:', checkError);
+          setError('注册失败，请检查网络连接');
+          setLoading(false);
+          return;
+        }
 
         if (existingUser) {
           setError('该姓名已被注册，请直接登录');
@@ -76,12 +100,14 @@ export default function LoginPage() {
           .from('users')
           .insert([{ name: trimmedName, password: trimmedPassword }])
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('注册错误:', error);
           if (error.code === '23505') {
             setError('该姓名已被注册');
+          } else if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
+            setError('数据库表未创建，请联系管理员');
           } else {
             setError(`注册失败：${error.message}`);
           }
@@ -92,6 +118,9 @@ export default function LoginPage() {
         if (data) {
           localStorage.setItem('user', JSON.stringify({ id: data.id, name: data.name }));
           router.push('/');
+        } else {
+          setError('注册失败，未返回用户数据');
+          setLoading(false);
         }
       }
     } catch (err) {
